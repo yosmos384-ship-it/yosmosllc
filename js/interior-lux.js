@@ -419,8 +419,13 @@ export function artLux(f, cell, cx, cy, z, w, h, o = {}) {
 }
 
 // ------------------------------------------------------------------ rugs
+// V8: the top is tessellated into ~0.4 m cells (was ONE quad = 2 huge triangles). A big triangle with a vertex exactly on
+// a camera's plane (the living-room 360 node stood exactly on the rug's z edge) was drawn with a degenerate
+// perspective interpolation → one whole triangle came out as a flat, untextured "wedge / flap" in front of the sofa
+// (visible in the 360 renders). Small cells confine any such clipping case to a few cm and make the texture stable.
 export function rugLux(f, w, l, pos, color, o = {}) {
-  f.box('rug', [w, 0.012, l], [pos[0], pos[1] + 0.006, pos[2]], color, { r: 0, uv: 'keep', ry: o.ry || 0 });
+  const sx = Math.max(2, Math.ceil(w / 0.4)), sz = Math.max(2, Math.ceil(l / 0.4));
+  f.add('rug', new THREE.BoxGeometry(w, 0.012, l, sx, 1, sz), [pos[0], pos[1] + 0.006, pos[2]], color, { uv: 'keep', ry: o.ry || 0 });
 }
 
 // ------------------------------------------------------------------ styling props

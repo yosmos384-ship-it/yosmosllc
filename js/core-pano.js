@@ -253,8 +253,8 @@ export function createPano(env) {
     for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
     const total = cum[cum.length - 1] || 1e-6;
     const dist = from.distanceTo(to);
-    // V7 owner: slower, calmer flights between 360 nodes (V2–V6: 0.7–2.4 s along a path, 0.55–1.3 s straight)
-    const dur = route ? Math.min(3.2, Math.max(1.6, 1.2 + total * 0.12)) : Math.min(2.0, 1.6 + dist * 0.04);
+    // V8 owner: slower, calmer flights between 360 nodes — 1.6–2.0 s (V2–V6: 0.7–2.4 s along a path, 0.55–1.3 s straight)
+    const dur = route ? Math.min(2.0, Math.max(1.6, 1.3 + total * 0.08)) : Math.min(2.0, 1.6 + dist * 0.04);
     // look toward target while gliding (keep current yaw if mostly vertical move); with a path: the last leg's heading
     let dx = to.x - from.x, dz = to.z - from.z;
     if (route) for (let i = pts.length - 1; i > 0; i--) { const ax = pts[i].x - pts[i - 1].x, az = pts[i].z - pts[i - 1].z; if (Math.hypot(ax, az) > 0.5) { dx = ax; dz = az; break; } }

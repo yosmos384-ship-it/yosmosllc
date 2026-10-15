@@ -330,7 +330,7 @@ export function buildLiving(E, G, top, buildRadio) {
     try { buildRemote(E, G, CT.sub(0.2, th, 0.215, 0.15), tv); } catch (e) { console.warn('[interior] tv remote failed', e); }
     CT.solid(E, [tl, th, tw], [0, th / 2, 0]);
   }
-  rugLux(root, 2.6, 3.0, [7.35, F0, 5.5], 0xd9d1c2);
+  rugLux(root, 2.6, 2.94, [7.35, F0, 5.53], 0xd9d1c2); // V8: z 4.06–7.0 (was 4.0–7.0: its edge sat exactly on the living 360 node's plane z 4.0)
   // end table (travertine drum) + vintage radio
   const ET = root.sub(8.65, F0, 6.84, -PI / 2);
   ET.cyl('travertine', 0.185, 0.185, 0.56, [0, 0.28, 0], 0xffffff, { seg: 40 });

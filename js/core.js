@@ -43,7 +43,7 @@ export async function boot() {
   // loading-screen hook for the UI: window.addEventListener('tour:phase', (e) => e.detail.phase / e.detail.t)
   const perfMark = (k) => { const t = Math.round(performance.now()); PERF.marks[k] = t; try { console.info('[perf]', k, t + 'ms'); window.dispatchEvent(new CustomEvent('tour:phase', { detail: { phase: k, t } })); } catch (_) {} return t; };
   perfMark('boot');
-  try { for (const k of ['q', 'tod', 'hint', 'dpad', 'navmode', 'style', 'radioVol', 'radioFav', 'rbColumbus5', 'rbWNCI6']) localStorage.removeItem('eakin_' + k); } catch (_) { /* private mode */ } // V7: drop stale state keys (see store())
+  try { for (const k of ['q', 'tod', 'hint', 'dpad', 'navmode', 'style', 'radioVol', 'radioFav', 'rbColumbus5', 'rbWNCI6', 'rbHits7']) localStorage.removeItem('eakin_' + k); } catch (_) { /* private mode */ } // V7: drop stale state keys (see store())
   /* ================================================================ platform / quality */
   const isTouch = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || (('ontouchstart' in window) && navigator.maxTouchPoints > 0);
   const isPhone = isTouch && Math.min(screen.width || 1000, screen.height || 1000) < 820;

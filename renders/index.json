@@ -1,6 +1,6 @@
 {
  "version": 7,
- "generated": "2026-10-15T15:16:18.075Z",
+ "generated": "2026-10-15T19:46:54.163Z",
  "size": [
   4096,
   2048
@@ -164,9 +164,9 @@
   "modern/living": {
    "full": "renders/modern/living.jpg",
    "sm": "renders/modern/living_sm.jpg",
-   "bytes": 623897,
-   "smBytes": 64734,
-   "yaw": null
+   "bytes": 620126,
+   "smBytes": 64716,
+   "yaw": -2.879793265790644
   },
   "modern/kitchen": {
    "full": "renders/modern/kitchen.jpg",
@@ -213,9 +213,9 @@
   "classic/living": {
    "full": "renders/classic/living.jpg",
    "sm": "renders/classic/living_sm.jpg",
-   "bytes": 639072,
-   "smBytes": 65627,
-   "yaw": null
+   "bytes": 597946,
+   "smBytes": 61080,
+   "yaw": -2.879793265790644
   },
   "classic/kitchen": {
    "full": "renders/classic/kitchen.jpg",
@@ -262,9 +262,9 @@
   "dark/living": {
    "full": "renders/dark/living.jpg",
    "sm": "renders/dark/living_sm.jpg",
-   "bytes": 606511,
-   "smBytes": 64458,
-   "yaw": null
+   "bytes": 523275,
+   "smBytes": 58953,
+   "yaw": -2.879793265790644
   },
   "dark/kitchen": {
    "full": "renders/dark/kitchen.jpg",
@@ -311,9 +311,9 @@
   "mediterranean/living": {
    "full": "renders/mediterranean/living.jpg",
    "sm": "renders/mediterranean/living_sm.jpg",
-   "bytes": 691171,
-   "smBytes": 73235,
-   "yaw": null
+   "bytes": 652641,
+   "smBytes": 69340,
+   "yaw": -2.879793265790644
   },
   "mediterranean/kitchen": {
    "full": "renders/mediterranean/kitchen.jpg",
@@ -360,9 +360,9 @@
   "japandi/living": {
    "full": "renders/japandi/living.jpg",
    "sm": "renders/japandi/living_sm.jpg",
-   "bytes": 679597,
-   "smBytes": 69892,
-   "yaw": null
+   "bytes": 654980,
+   "smBytes": 67362,
+   "yaw": -2.879793265790644
   },
   "japandi/kitchen": {
    "full": "renders/japandi/kitchen.jpg",
@@ -409,9 +409,9 @@
   "industrial/living": {
    "full": "renders/industrial/living.jpg",
    "sm": "renders/industrial/living_sm.jpg",
-   "bytes": 661516,
-   "smBytes": 67574,
-   "yaw": null
+   "bytes": 612823,
+   "smBytes": 62243,
+   "yaw": -2.879793265790644
   },
   "industrial/kitchen": {
    "full": "renders/industrial/kitchen.jpg",
@@ -456,7 +456,7 @@
    "yaw": 6.283185307179586
   }
  },
- "totalBytes": 24542306,
+ "totalBytes": 24280507,
  "renderLog": [
   {
    "style": "mediterranean",
@@ -893,6 +893,120 @@
     81.5,
     100.1,
     109.2
+   ]
+  },
+  {
+   "style": "modern",
+   "node": "living",
+   "yaw": -2.879793265790644,
+   "totalMs": 464902,
+   "faceMs": [
+    87201,
+    49953,
+    28226,
+    83778,
+    56018,
+    19779
+   ],
+   "mean": [
+    132.7,
+    124.7,
+    112.5
+   ]
+  },
+  {
+   "style": "classic",
+   "node": "living",
+   "yaw": -2.879793265790644,
+   "totalMs": 449168,
+   "faceMs": [
+    86365,
+    50041,
+    29475,
+    87630,
+    55652,
+    20031
+   ],
+   "mean": [
+    106.9,
+    99.1,
+    87.3
+   ]
+  },
+  {
+   "style": "dark",
+   "node": "living",
+   "yaw": -2.879793265790644,
+   "totalMs": 446516,
+   "faceMs": [
+    108799,
+    31089,
+    28759,
+    85446,
+    54873,
+    20079
+   ],
+   "mean": [
+    99.1,
+    94.5,
+    86.4
+   ]
+  },
+  {
+   "style": "mediterranean",
+   "node": "living",
+   "yaw": -2.879793265790644,
+   "totalMs": 447027,
+   "faceMs": [
+    105671,
+    31187,
+    28748,
+    87440,
+    55799,
+    20470
+   ],
+   "mean": [
+    124.4,
+    107.9,
+    94
+   ]
+  },
+  {
+   "style": "japandi",
+   "node": "living",
+   "yaw": -2.879793265790644,
+   "totalMs": 454408,
+   "faceMs": [
+    90014,
+    50765,
+    29263,
+    87288,
+    56431,
+    20768
+   ],
+   "mean": [
+    126.8,
+    118.6,
+    104.3
+   ]
+  },
+  {
+   "style": "industrial",
+   "node": "living",
+   "yaw": -2.879793265790644,
+   "totalMs": 442080,
+   "faceMs": [
+    85914,
+    50580,
+    29178,
+    86071,
+    54737,
+    20063
+   ],
+   "mean": [
+    99.9,
+    89.1,
+    81.8
    ]
   }
  ]

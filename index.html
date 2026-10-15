@@ -70,7 +70,20 @@ body.loading .ui{opacity:0;pointer-events:none}
 #loader .lang-sw{margin-top:14px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px}
 #loader .lang-sw button{flex-direction:row;gap:6px;font-size:13px}
 #loader .lang-sw button .fl{font-size:18px}
+/* V8: flags-only language pill floating just above the compact intro card (outside its 244×62 footprint) */
+#intro .lang-intro{position:absolute;bottom:calc(100% + 6px);left:0;right:auto;background:var(--glass-strong);border:1px solid var(--line);border-radius:12px;padding:3px;gap:2px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+html[dir=rtl] #intro .lang-intro{left:auto;right:0} /* the pill itself is dir=ltr: align it with the card's docked edge */
+#intro .lang-intro button{flex:0 0 auto;flex-direction:row;min-width:44px;min-height:40px;padding:0 6px}
+#intro .lang-intro button .ln{display:none}
+#intro .lang-intro button .fl{font-size:20px}
+/* wide screens: the tools column sits right above the docked card → put the pill beside the card, toward the centre */
+@media (min-width:700px){#intro .lang-intro{bottom:auto;top:50%;transform:translateY(-50%);left:calc(100% + 8px);right:auto}html[dir=rtl] #intro .lang-intro{left:auto;right:calc(100% + 8px)}}
 body.ltr .tbtn,body.ltr .sp-it,body.ltr .rp-st{text-align:left}
+/* V8: LTR (English / Spanish) — undo the RTL-only alignments */
+body.ltr #leftStack>*{direction:ltr}
+body.ltr #radioChip,body.ltr #radioChip .rc-txt small{text-align:left}
+body.ltr .rp-note,body.ltr .plabel span{direction:ltr}
+body.ltr #intro h1,body.ltr #loader .brand{text-align:left}
 
 /* ---------- tools column ---------- */
 #tools{top:calc(var(--gut) + env(safe-area-inset-top,0px));right:calc(var(--gut) + env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:8px;align-items:stretch;width:150px}
@@ -111,7 +124,7 @@ body.mode-dollhouse #roomHud, body.mode-plan #roomHud{max-width:none;min-width:1
 #radioChip .rc-ico{font-size:15px;line-height:1}
 #radioChip .rc-txt{display:flex;flex-direction:column;line-height:1.15;min-width:0}
 #radioChip .rc-txt b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#radioChip .rc-txt small{font-size:10px;color:var(--accent);white-space:nowrap;direction:ltr;text-align:right}
+#radioChip .rc-txt small{font-size:10px;color:var(--accent);white-space:nowrap;direction:ltr;text-align:right;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 #radioChip .rc-eq{display:none;align-items:flex-end;gap:2px;height:12px}
 #radioChip.on .rc-eq{display:inline-flex}
 #radioChip .rc-eq i{display:block;width:3px;height:100%;border-radius:2px;background:var(--accent);transform-origin:bottom;animation:eq .8s ease-in-out infinite alternate}
@@ -569,6 +582,7 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
     initI18n();
     const card = document.querySelector('#loader .card'); if (card) mountSwitcher(card, { className: 'lang-loader' });
     const ti = document.getElementById('toolsInner'); if (ti) mountSwitcher(ti, { className: 'lang-tools glass', prepend: true });
+    const it = document.getElementById('intro'); if (it) mountSwitcher(it, { className: 'lang-intro' }); // V8: also on the intro card
   } catch (e) { console.warn('[i18n]', e); }
   // V7: a refresh / back-forward restore always starts from the very beginning
   window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
@@ -594,6 +608,6 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
     .then((m) => m.boot())
     .catch((e) => fatal('טעינת מנוע התלת-ממד נכשלה (three.js / core.js) — בדקו חיבור לאינטרנט ורעננו', e));
 </script>
-<div id="ver-tag" style="position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));z-index:50;font:600 11px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.75);background:rgba(20,24,30,.45);padding:2px 8px;border-radius:9px;pointer-events:none">גרסה 7</div>
+<div id="ver-tag" style="position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));z-index:50;font:600 11px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.75);background:rgba(20,24,30,.45);padding:2px 8px;border-radius:9px;pointer-events:none">גרסה 8</div>
 </body>
 </html>

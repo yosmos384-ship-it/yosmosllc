@@ -52,7 +52,7 @@ export const RB_MIRRORS = ['https://de1.api.radio-browser.info', 'https://nl1.ap
 // two lookups per mirror (in parallel): WNCI by name (it carries no tags there) + every US "top 40" station
 export const RB_QUERY = '/json/stations/search?name=WNCI&state=Ohio&countrycode=US&hidebroken=true&order=clickcount&reverse=true&limit=50';
 export const RB_QUERY_HITS = '/json/stations/search?tag=top%2040&countrycode=US&hidebroken=true&order=clickcount&reverse=true&limit=500';
-const CACHE_KEY = 'rbHits7', CACHE_MS = 24 * 3600e3, RB_TIMEOUT = 4000, PLAY_TIMEOUT = 7000, STALL_MS = 7000, DUCK_K = 0.35;
+const CACHE_KEY = 'rbHits8', CACHE_MS = 24 * 3600e3, RB_TIMEOUT = 4000, PLAY_TIMEOUT = 7000, STALL_MS = 7000, DUCK_K = 0.35;
 
 // dial position 0..1 (FM 88–108 and AM 540–1600 share the needle travel) → engine dial units (FMIN..FMAX)
 export function dialPos(s) {
@@ -110,8 +110,10 @@ export function pickHits(lists, opts = {}) {
     extras.set(call, e);
   }
   const urlsOf = (cand, base) => {
-    const list = [...cand.values()].sort((a, b) => (b.https - a.https) || (b.pop - a.pop) || (b.br - a.br)).map((c) => c.url);
-    if (base && !list.includes(base)) list.push(base); // the verified built-in stream is always a fallback
+    // V8: the verified built-in stream (an audio/aac shoutcast URL, plays everywhere) goes FIRST; radio-browser
+    // alternatives (often HLS .m3u8, which desktop Chrome/Firefox cannot play in <audio>) are fallbacks after it
+    const list = [...cand.values()].sort((a, b) => (b.https - a.https) || (/\.m3u8/i.test(a.url) - /\.m3u8/i.test(b.url)) || (b.pop - a.pop) || (b.br - a.br)).map((c) => c.url).filter((u) => u !== base);
+    if (base) list.unshift(base);
     return list.slice(0, 4);
   };
   const strip = (h) => { const { brand, url, cand, ...rest } = h; return rest; }; // eslint-disable-line no-unused-vars

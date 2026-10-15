@@ -41,7 +41,7 @@ export const DICT = {
   'סיור בבית אחרי שיפוץ · או בחרו מצב תצוגה בסרגל העליון': ['Tour the renovated house · or pick a view mode in the top bar', 'Recorre la casa remodelada · o elige un modo de vista en la barra superior'],
   'כניסה לסיור': ['Enter the tour', 'Entrar al recorrido'],
   '3351 Eakin Rd — כניסה לסיור': ['3351 Eakin Rd — enter the tour', '3351 Eakin Rd — entrar al recorrido'],
-  'גרסה 7': ['Version 7', 'Versión 7'],
+  'גרסה 8': ['Version 8', 'Versión 8'],
   'שפה': ['Language', 'Idioma'],
   'בחירת שפה': ['Choose language', 'Elegir idioma'],
   'חלק מהרכיבים לא נטענו': ['Some components did not load', 'Algunos componentes no se cargaron'],

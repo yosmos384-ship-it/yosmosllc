@@ -880,7 +880,7 @@ export function createRender(env) {
   function lookStats() {
     return {
       exposure: +renderer.toneMappingExposure.toFixed(3), toneMapping: look.toneMapping, path: look.path, customTone: look.customTone,
-      sky: look.sky, fill: look.fill, inside: +look.inside.toFixed(2), envMaterials: look.envSet,
+      sky: look.sky, fill: look.fill, inside: +look.inside.toFixed(2), envMaterials: look.envSet, room: look.room || null, roomK: +(look.roomK || 1).toFixed(3), // V8: room exposure lift (bath1 / bath2)
       hemi: env.hemi ? +env.hemi.intensity.toFixed(3) : null,
       clamp: look.clamp ? { materials: look.clamp.materials, albedoClamped: look.clamp.albedoClamped, emissiveCapped: look.clamp.emissiveCapped, examples: look.clamp.examples } : null,
       grade: !!fx.grade, bloom: fx.bloom ? { s: fx.bloom.strength, t: fx.bloom.threshold } : null,
