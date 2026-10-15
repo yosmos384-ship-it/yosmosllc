@@ -1,6 +1,8 @@
 // core-ui.js — minimap renderer + DOM UI helpers: zoom (pinch / wheel FOV), arrow D-pad, radio chip + panel, style
 // picker, collapsible phone tools, iOS / audio-unlock guards. Owner: CORE (UI). No side effects on import.
 
+import { tr } from './i18n.js'; // V7: canvas text (minimap room names) is translated at draw time
+
 export const FLOOR_HE = { upper: 'קומה עליונה', main: 'קומת כניסה', basement: 'מרתף', outside: 'חוץ', roof: 'גג' };
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const now = () => performance.now();
@@ -76,7 +78,7 @@ export function createMinimap(canvas, plan) {
         const cur = rm.he === roomName;
         if (compact && !cur) continue; // phone / small card: only the current room is labelled
         if (w < (compact ? 14 : 22)) continue;
-        let txt = rm.he;
+        let txt = tr(rm.he);
         if (compact && g.measureText(txt).width > w + 8) continue;
         g.fillStyle = cur ? '#ffffff' : 'rgba(255,255,255,0.9)';
         g.fillText(txt, X((x0 + x1) / 2), Y((z0 + z1) / 2) + (compact ? fs : 0));
@@ -191,7 +193,7 @@ export function createDpad(el, opts = {}) {
       if (e && e.type === 'pointercancel') return;
       if (dur < TAP) {
         if (d === 'f' || d === 'b') { if (opts.onStep) try { opts.onStep(d === 'f' ? 1 : -1); } catch (_) {} }
-        else st.impulse += (d === 'l' ? 1 : -1) * 0.42;
+        else st.impulse += (d === 'l' ? 1 : -1) * 0.3; // V7: ~17° per tap (was 24°)
       }
     };
     b.addEventListener('pointerdown', down);
@@ -209,11 +211,11 @@ export function createDpad(el, opts = {}) {
     read(dt) {
       let forward = 0, turn = 0, run = false;
       const hf = hold('f'), hb = hold('b'), hl = hold('l'), hr = hold('r');
-      if (hf >= TAP) { forward += Math.min(1, 0.45 + (hf - TAP) * 0.8); run = hf > 2.2; }
+      if (hf >= TAP) { forward += Math.min(1, 0.45 + (hf - TAP) * 0.5); run = hf > 3.2; } // V7: gentler acceleration, run after ~3 s
       if (hb >= TAP) forward -= Math.min(0.8, 0.4 + (hb - TAP) * 0.6);
-      const rate = (h) => (h >= TAP ? Math.min(2.2, 0.8 + (h - TAP) * 1.6) : 0);
+      const rate = (h) => (h >= TAP ? Math.min(1.3, 0.5 + (h - TAP) * 0.9) : 0); // V7: gentler turning (was 0.8→2.2 rad/s)
       turn = (rate(hl) - rate(hr)) * dt;
-      if (Math.abs(st.impulse) > 1e-4) { const s = Math.sign(st.impulse) * Math.min(Math.abs(st.impulse), dt * 3.2); turn += s; st.impulse -= s; }
+      if (Math.abs(st.impulse) > 1e-4) { const s = Math.sign(st.impulse) * Math.min(Math.abs(st.impulse), dt * 2.2); turn += s; st.impulse -= s; }
       return { forward, turn, run };
     },
     release() { for (const k of Object.keys(held)) delete held[k]; st.impulse = 0; for (const b of el.querySelectorAll('.on')) b.classList.remove('on'); },
@@ -254,49 +256,80 @@ function makePanel(el, trigger) {
 export function closePanels() { for (const p of [...openPanels]) hidePanel(p); }
 
 /* ============================================================================================ radio chip + panel */
-// V6: ONE station — WNCI 97.9 FM Columbus (להיטים). Chip "📻 WNCI 97.9 · להיטים · ● LIVE". Panel (sticky header with ✕):
-// now playing, ▶/⏹ + volume, and — after a failed retry — "השידור לא זמין כרגע" with a "נסו שוב" button. No station list,
-// no prev / next / random / favourite. CSP-blocked page (claude.ai artifact): the synth plays as "רדיו גיבוי" + a note.
+// V7: HITS radio (V5-style multi-station engine, Top-40 / CHR only). Chip "📻 WNCI 97.9 · להיטים · ● LIVE". Panel
+// (sticky header with ✕): now playing, ⏮ ⏯ ⏭ 🎲 + volume, "השידור לא זמין כרגע" + "נסו שוב" when every station failed,
+// and the HITS list (WNCI first) — each row is ONE tap = play here (spinner while connecting; failures toast + auto-skip
+// in the engine; tapping the playing row stops it). CSP-blocked page (claude.ai artifact): the list is greyed with
+// "השידור החי עובד באתר yosmosllc.com" and the synth plays as "רדיו גיבוי".
 export function createRadioUI({ radio, chip, panel, toast }) {
   if (!radio || !chip || !panel) return null;
   chip.innerHTML = '<span class="rc-ico" aria-hidden="true">📻</span><span class="rc-eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="rc-txt"><b></b><small></small></span>';
   chip.setAttribute('aria-haspopup', 'dialog');
-  const NOTE = 'השידור החי עובד באתר yosmosllc.com', BACKUP = 'רדיו גיבוי', UNAV = 'השידור לא זמין כרגע', ST = 'WNCI 97.9 · להיטים';
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const NOTE = 'השידור החי עובד באתר yosmosllc.com', BACKUP = 'רדיו גיבוי', UNAV = 'השידור לא זמין כרגע', HITS = 'להיטים';
+  const fq = (s) => (s && isFinite(s.fr) && s.fr ? (s.band === 'AM' ? Math.round(s.fr) + ' AM' : (+s.fr).toFixed(1)) : '');
+  const label = (s) => (s ? (s.call ? s.call + ' ' + fq(s) : s.name) : '');
   panel.innerHTML = `
-    <div class="sh-head"><b>📻 WNCI 97.9 FM <span class="sh-dim">Columbus, Ohio</span></b><button class="sh-x" data-act="close" aria-label="סגור">×</button></div>
+    <div class="sh-head"><b>📻 רדיו להיטים <span class="sh-dim">Top 40 · USA</span></b><button class="sh-x" data-act="close" aria-label="סגור">×</button></div>
     <div class="sh-body">
       <div class="rp-now"><div class="rp-name"></div><div class="rp-sub"></div></div>
       <div class="rp-ctrl" dir="ltr">
+        <button data-act="prev" aria-label="התחנה הקודמת" title="התחנה הקודמת">⏮</button>
         <button data-act="toggle" class="rp-play" aria-label="הפעלה / עצירה"></button>
+        <button data-act="next" aria-label="התחנה הבאה" title="התחנה הבאה">⏭</button>
+        <button data-act="random" aria-label="תחנה אקראית" title="תחנה אקראית">🎲</button>
         <label class="rp-vol" title="עוצמה"><span aria-hidden="true">🔉</span><input type="range" min="0" max="100" step="1" aria-label="עוצמת הרדיו"></label>
       </div>
       <div class="rp-err" role="status"><span>${UNAV}</span><button data-act="retry" class="rp-retry">↻ נסו שוב</button></div>
-      <div class="rp-note"></div>
-      <div class="rp-foot"></div>
+      <section class="rp-sec" id="rpLive"><div class="rp-h">📡 תחנות להיטים — שידור חי <span class="rp-how"></span></div>
+        <div class="rp-note"></div>
+        <div class="rp-lvlist" role="listbox" aria-label="תחנות להיטים"></div>
+        <div class="rp-foot"></div></section>
     </div>`;
+  const lvlist = panel.querySelector('.rp-lvlist'), note = panel.querySelector('.rp-note'), err = panel.querySelector('.rp-err');
+  let builtFor = '';
+  function buildList(L) {
+    const blocked = L.avail === 'no';
+    const rows = (L.list && L.list.length) ? L.list : (radio.hits || []);
+    const sig = (blocked ? 'B' : 'Y') + '|' + rows.map((s) => s.key).join(',');
+    if (sig === builtFor) return;
+    builtFor = sig;
+    lvlist.innerHTML = rows.map((s, i) => `<div class="rp-row" data-row="${esc(s.key)}"><button class="rp-lvb" role="option" data-key="${esc(s.key)}"${blocked ? ' disabled aria-disabled="true"' : ''}>`
+      + `<span class="rp-f">${esc(fq(s))}</span><span class="rp-t"><b><bdi dir="ltr">${esc(s.call || '')}</bdi>${s.call ? ' · ' : ''}<bdi dir="ltr">${esc(s.name)}</bdi></b>`
+      + `<small><bdi dir="ltr">${esc(s.city || '')}</bdi> · ${esc(s.he || HITS)}${i === 0 ? ' · <span class="rp-best">ברירת מחדל</span>' : ''}</small></span><span class="rp-lvs" aria-hidden="true">▶</span></button></div>`).join('');
+    panel.classList.toggle('rp-blocked', blocked);
+    panel.querySelector('.rp-how').textContent = blocked ? '' : '(הקשה = ניגון כאן)';
+    note.textContent = blocked ? NOTE : '';
+    note.style.display = blocked ? '' : 'none';
+    panel.querySelector('.rp-foot').textContent = blocked
+      ? 'כאן אין גישה לשידור חי, לכן מתנגן ' + BACKUP + '.'
+      : 'הרדיו מתחיל ב-WNCI 97.9 בהקשה הראשונה באתר · תחנה שלא עונה — מדלגים אוטומטית לתחנת הלהיטים הבאה · 🔊 בסרגל הכלים משתיק הכול.';
+  }
   const P = makePanel(panel, chip);
-  const vol = panel.querySelector('input[type=range]'), note = panel.querySelector('.rp-note'), err = panel.querySelector('.rp-err');
+  const vol = panel.querySelector('input[type=range]');
   function render(s) {
     s = s || radio.state;
-    const L = s.live || radio.live || { avail: 'no', on: false, status: 'idle' };
-    const backup = !!s.synthOn, syn = s.station || {}, blocked = L.avail === 'no';
-    const conn = L.on && L.status === 'connecting', retrying = L.on && L.status === 'retrying', unav = !L.on && L.status === 'unavailable' && !backup;
+    const L = s.live || radio.live || { avail: 'no', on: false, status: 'idle', list: [] };
+    buildList(L);
+    const S = L.on ? L.station : null, conn = L.on && (L.status === 'connecting' || L.status === 'error'), backup = !!s.synthOn;
+    const unav = !L.on && L.status === 'unavailable' && !backup, syn = s.station || {};
     chip.classList.toggle('on', !!s.on);
     chip.classList.toggle('live', !!L.on);
     chip.classList.toggle('backup', backup);
     chip.classList.toggle('unav', unav);
-    chip.classList.toggle('tuning', !!(s.on && (s.tuning || conn || retrying)));
+    chip.classList.toggle('tuning', !!(s.on && (s.tuning || conn)));
     let b, sm, name, sub;
     if (L.on) {
-      b = ST; sm = conn ? 'מתחבר…' : retrying ? 'מנסה שוב…' : '● LIVE';
-      name = '📡 WNCI 97.9 FM · להיטים';
-      sub = conn ? 'מתחבר לשידור…' : retrying ? 'השידור לא ענה — מנסים שוב בעוד רגע…' : 'שידור חי מקולומבוס, אוהיו';
+      b = S ? label(S) + ' · ' + HITS : HITS;
+      sm = conn ? 'מתחבר…' : '● LIVE';
+      name = S ? '📡 ' + label(S) + ' · ' + S.name : '📡 ' + HITS;
+      sub = conn ? 'מתחבר לשידור…' : 'שידור חי · ' + (S ? S.city + ' · ' + HITS : '');
     } else if (backup) {
       b = BACKUP; sm = s.tuning ? 'מכוון…' : syn.he || ''; name = '📻 ' + BACKUP + ' · ' + (syn.he || ''); sub = NOTE;
     } else if (unav) {
-      b = 'WNCI 97.9'; sm = UNAV; name = '📡 WNCI 97.9 FM'; sub = 'השידור לא ענה גם בניסיון החוזר';
+      b = 'WNCI 97.9 · ' + HITS; sm = UNAV; name = '📡 ' + HITS; sub = 'אף תחנת להיטים לא ענתה כרגע';
     } else {
-      b = ST; sm = 'כבוי'; name = 'הרדיו כבוי'; sub = blocked ? NOTE : 'לחצו ▶ כדי לנגן את WNCI 97.9';
+      b = 'WNCI 97.9 · ' + HITS; sm = 'כבוי'; name = 'הרדיו כבוי'; sub = L.avail === 'no' ? NOTE : 'בחרו תחנה או לחצו ▶';
     }
     chip.querySelector('b').textContent = b;
     chip.querySelector('small').textContent = sm;
@@ -305,11 +338,12 @@ export function createRadioUI({ radio, chip, panel, toast }) {
     panel.querySelector('.rp-sub').textContent = sub;
     const pb = panel.querySelector('.rp-play'); pb.textContent = s.on ? '⏹' : '▶'; pb.classList.toggle('on', !!s.on);
     err.style.display = unav ? '' : 'none';
-    panel.classList.toggle('rp-blocked', blocked);
-    note.textContent = blocked ? NOTE : ''; note.style.display = blocked ? '' : 'none';
-    panel.querySelector('.rp-foot').textContent = blocked
-      ? 'כאן אין גישה לשידור חי, לכן מתנגן ' + BACKUP + '.'
-      : 'הרדיו מתחיל לנגן בהקשה הראשונה באתר · 🔊 בסרגל הכלים משתיק הכול.';
+    for (const row of lvlist.children) {
+      const k = row.dataset.row, me = L.on && L.key === k, btn = row.querySelector('.rp-lvb');
+      btn.classList.toggle('on', me && L.status === 'playing'); btn.classList.toggle('busy', me && (L.status === 'connecting' || L.status === 'error'));
+      btn.setAttribute('aria-selected', me ? 'true' : 'false');
+      const ic = btn.querySelector('.rp-lvs'); ic.textContent = me ? (L.status === 'playing' ? '■' : '') : '▶';
+    }
     if (document.activeElement !== vol) vol.value = String(Math.round(s.vol * 100));
   }
   chip.addEventListener('click', (e) => { e.stopPropagation(); render(); P.toggle(); });
@@ -318,23 +352,38 @@ export function createRadioUI({ radio, chip, panel, toast }) {
     e.stopPropagation();
     const act = b.dataset.act;
     if (act === 'close') P.hide();
+    else if (act === 'prev') radio.prev();
+    else if (act === 'next') radio.next();
+    else if (act === 'random') radio.random();
     else if (act === 'toggle') radio.toggle();
     else if (act === 'retry') radio.retry();
+    else if (b.dataset.key != null) {
+      const L = radio.live, k = b.dataset.key;
+      if (L.on && L.key === k && L.status === 'playing') radio.stop(); else radio.playStation(k);
+    }
   });
   vol.addEventListener('input', () => radio.setVolume(+vol.value / 100));
-  const openAt = () => { render(); P.show(); };
+  // open requests (3D radio dial window) → show the panel at the list
+  const openAt = () => {
+    render(); P.show();
+    const el = panel.querySelector('#rpLive');
+    requestAnimationFrame(() => { try { el && el.scrollIntoView({ block: 'nearest' }); } catch (_) {} });
+  };
   if (radio.onPanelRequest) radio.onPanelRequest(openAt);
   if (radio.onNotice) radio.onNotice((msg) => toast && toast(msg, 3400));
   let lastKey = '';
   radio.onChange((s) => {
     render(s);
     const L = s.live || {};
-    const key = L.on && L.status === 'playing' ? 'L' : (s.synthOn && s.cur >= 0 ? 'B' : '');
-    if (key && key !== lastKey && !P.open && toast) toast(key === 'L' ? '📻 WNCI 97.9 · להיטים — שידור חי' : '📻 ' + BACKUP + ' — ' + NOTE, key === 'L' ? 2800 : 3400);
+    const key = L.on && L.status === 'playing' && L.station ? 'L' + L.key : (s.synthOn && s.cur >= 0 ? 'B' : '');
+    if (key && key !== lastKey && !P.open && toast) {
+      if (key[0] === 'L') toast('📻 ' + label(L.station) + ' · ' + HITS + ' — שידור חי', 2800);
+      else toast('📻 ' + BACKUP + ' — ' + NOTE, 3400);
+    }
     lastKey = key;
   });
   render();
-  return { panel: P, render, openAt };
+  return { panel: P, render, openAt, reset() { builtFor = ''; render(); } };
 }
 
 /* ============================================================================================ style picker */
@@ -408,6 +457,8 @@ export function setupCompactUI({ tools, btnMore, btnPanoMore }) {
     if (window.matchMedia && matchMedia('(max-width: 900px)').matches) setTimeout(() => body.classList.remove('tools-open'), 260);
   });
   setupDialogs();
+  // V7 RENDERS: "🖼 הדמיות" pre-rendered 360 gallery (buttons in the 360 bar, the tools column and the loader card)
+  import('./gallery.js').then((m) => m.installGallery()).catch((e) => console.warn('[gallery] not available', e));
 }
 
 /* ============================================================================================ V6: dialogs */

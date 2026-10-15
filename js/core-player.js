@@ -112,6 +112,7 @@ export function createWorld() {
 
 export function createPlayer({ camera, world, start }) {
   const R = 0.25, EYE = 1.6, STEP = 0.4;
+  const WALK_SPEED = 1.25, RUN_SPEED = 2.6; // m/s (V7 owner: slower walking; V2–V6 2.0 / 4.2)
   const st = { x: 0, z: 0, feet: 0, yaw: 0, pitch: 0, vx: 0, vz: 0, vy: 0, grounded: true, bob: 0, camY: 0, blocked: false, speed: 0 };
   const near = [];
   camera.rotation.order = 'YXZ';
@@ -183,7 +184,7 @@ export function createPlayer({ camera, world, start }) {
     }
     let f = inp.forward || 0, s = inp.strafe || 0;
     let l = Math.hypot(f, s); if (l > 1) { f /= l; s /= l; }
-    const speed = inp.run ? 4.2 : 2.0;
+    const speed = inp.run ? RUN_SPEED : WALK_SPEED; // V7: ~38 % slower (was 2.0 / 4.2)
     const sn = Math.sin(st.yaw), cs = Math.cos(st.yaw);
     let wx = (-sn * f + cs * s) * speed, wz = (-cs * f - sn * s) * speed;
     if (typeof inp.moveX === 'number' && typeof inp.moveZ === 'number' && isFinite(inp.moveX) && isFinite(inp.moveZ)) {
@@ -226,6 +227,7 @@ export function createPlayer({ camera, world, start }) {
   }
 
   return {
+    speeds: { walk: WALK_SPEED, run: RUN_SPEED },
     state: st, update, teleport, apply, R, EYE,
     get eye() { return new THREE.Vector3(st.x, st.feet + EYE, st.z); },
     get feet() { return st.feet; },

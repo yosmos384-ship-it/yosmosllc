@@ -39,6 +39,9 @@ const byNight = (n, d, e, nt) => (n < 0.55 ? lerp(d, e, n / 0.55) : lerp(e, nt, 
 export const LOOK = {
   expMin: 0.6, expMax: 1.1,
   indoorLift: [1.06, 1.03, 1.0],          // day / evening / night multiplier on TOD.exp while the camera is inside
+  // V7: small / obscured-window bathrooms read 2–3× darker than the other rooms by day → extra exposure there
+  // (day / evening / night; the pre-rendered panoramas used bath1 ×2.1, bath2 ×1.35)
+  roomLift: { bath1: [1.8, 1.35, 1.0], bath2: [1.3, 1.15, 1.0] },
   fill: [0.38, 0.24, 0.12],               // interior RoomEnvironment fill (envMapIntensity scale) day / evening / night
   fillLowBoost: 1.2,                      // phones: no window RectAreaLights → a little more fill
   probeK: 0.9,                            // probe materials (the probe already holds the room's real light level)
@@ -253,6 +256,14 @@ export function createRender(env) {
     cam.getWorldPosition(_cp);
     return _cp.x > 0.05 && _cp.x < W - 0.05 && _cp.z > 0.05 && _cp.z < D - 0.05 && _cp.y < plan.upperFloor + 2.7 && _cp.y > plan.basementFloor;
   }
+  // V7: which plan room the camera is in (for LOOK.roomLift)
+  const roomRects = [];
+  try {
+    const FY = { main: [plan.mainFloor, plan.upperFloor], upper: [plan.upperFloor, plan.upperFloor + 3], basement: [plan.basementFloor, plan.mainFloor] };
+    for (const [fl, rooms] of Object.entries(plan.rooms || {})) for (const [k, rm] of Object.entries(rooms || {})) if (LOOK.roomLift[k] && rm && rm.r && FY[fl]) roomRects.push({ k, r: rm.r, y: FY[fl] });
+  } catch (_) { /* no plan */ }
+  const roomOf = (p) => { for (const R of roomRects) if (p.x > R.r[0] && p.x < R.r[2] && p.z > R.r[1] && p.z < R.r[3] && p.y > R.y[0] && p.y < R.y[1]) return R.k; return null; };
+  let roomK = 1;
   function updateExposure(cam, dt) {
     const t = tod();
     const n = clamp(+t.night || 0, 0, 1);
@@ -261,10 +272,14 @@ export function createRender(env) {
     insideK = expInit ? insideK + (ins - insideK) * a : ins;
     const base = typeof t.exp === 'number' && isFinite(t.exp) ? t.exp : byNight(n, 1.0, 0.85, 0.75);
     const lift = lerp(1, byNight(n, ...LOOK.indoorLift), insideK);
-    const target = clamp(base * lift, LOOK.expMin, LOOK.expMax);
+    const rk = ins ? roomOf(_cp) : null, rTarget = rk ? byNight(n, ...LOOK.roomLift[rk]) : 1;
+    roomK = expInit ? roomK + (rTarget - roomK) * a : rTarget;
+    const eMax = LOOK.expMax * Math.max(1, roomK);
+    const target = clamp(base * lift * roomK, LOOK.expMin, eMax);
     look.exposure = expInit ? look.exposure + (target - look.exposure) * a : target;
     expInit = true;
-    renderer.toneMappingExposure = clamp(look.exposure, LOOK.expMin, LOOK.expMax);
+    look.room = rk; look.roomK = roomK;
+    renderer.toneMappingExposure = clamp(look.exposure, LOOK.expMin, eMax);
     look.inside = insideK;
     // the HemisphereLight is not occluded by the house: inside it would flatten every room
     if (env.hemi && typeof t.hemiI === 'number' && isFinite(t.hemiI)) env.hemi.intensity = t.hemiI * lerp(1, LOOK.hemiIndoor, insideK);

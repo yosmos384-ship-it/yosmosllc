@@ -13,7 +13,8 @@ import { createMinimap, toastFn, FLOOR_HE, defaultFov, createZoom, createDpad, c
 import { createRadio } from './radio-engine.js'; // V3 UI: shared 6-station radio (UI chip/panel + 3D radio in the living room)
 import { createRender } from './core-render.js'; // V2: postFX, window lights, room reflection probes, mirrors
 import { createPathTrace } from './core-pathtrace.js'; // V2: "הדמיה מציאותית" (path-traced 360 / view, raster fallback)
-import { createStyles } from './styles.js'; // V3 STYLE: 3 renovation options (window.__tour.styles / ctx.styles)
+import { createStyles, STYLE_STRINGS } from './styles.js'; // V3 STYLE: 3 renovation options (window.__tour.styles / ctx.styles)
+import { onLangChange, register as i18nRegister, getLang } from './i18n.js'; // V7: languages (he / en / es)
 import { initTexCache, startTexUpgrades, texCacheStats } from './tex-cache.js'; // V6 PERF: IndexedDB texture cache + progressive textures
 
 const $ = (id) => document.getElementById(id);
@@ -28,7 +29,13 @@ const MODULES = [
   { id: 'exterior', file: './exterior.js', he: 'חצר, רחוב ושכנים' },
 ];
 
-function store(k, v) { try { if (v === undefined) return localStorage.getItem('eakin_' + k); localStorage.setItem('eakin_' + k, v); } catch (_) { return null; } return null; }
+// V7 owner: a refresh ALWAYS starts from the very first state — position, mode, style, time of day, panels, radio
+// station, quality, D-pad, nav mode … are never restored from storage. (Only the texture cache in IndexedDB and the
+// language picked in the switcher persist.) store() is kept as a no-op so old call sites stay harmless; old keys are
+// removed at boot so nothing stale lingers.
+function store() { return null; }
+// test / support override only: ?q=low|high (URL, not storage)
+function qParam() { try { const q = new URLSearchParams(location.search).get('q'); return q === 'low' || q === 'high' ? q : null; } catch (_) { return null; } }
 
 export async function boot() {
   // V6 PERF: per-phase timings (window.__tourPerf.marks, ms since navigation start) + '[perf]' console lines
@@ -36,10 +43,11 @@ export async function boot() {
   // loading-screen hook for the UI: window.addEventListener('tour:phase', (e) => e.detail.phase / e.detail.t)
   const perfMark = (k) => { const t = Math.round(performance.now()); PERF.marks[k] = t; try { console.info('[perf]', k, t + 'ms'); window.dispatchEvent(new CustomEvent('tour:phase', { detail: { phase: k, t } })); } catch (_) {} return t; };
   perfMark('boot');
+  try { for (const k of ['q', 'tod', 'hint', 'dpad', 'navmode', 'style', 'radioVol', 'radioFav', 'rbColumbus5', 'rbWNCI6']) localStorage.removeItem('eakin_' + k); } catch (_) { /* private mode */ } // V7: drop stale state keys (see store())
   /* ================================================================ platform / quality */
   const isTouch = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || (('ontouchstart' in window) && navigator.maxTouchPoints > 0);
   const isPhone = isTouch && Math.min(screen.width || 1000, screen.height || 1000) < 820;
-  let quality = store('q') === 'low' || store('q') === 'high' ? store('q') : (isPhone ? 'low' : 'high');
+  let quality = qParam() || (isPhone ? 'low' : 'high');
   const basePR = () => Math.min(window.devicePixelRatio || 1, quality === 'low' ? 1.5 : 2);
   document.body.classList.toggle('touch', !!isTouch);
 
@@ -616,8 +624,21 @@ export async function boot() {
   const minimap = createMinimap($('minimap'), plan);
   // V3 UI: walk-mode pinch / wheel zoom, arrow D-pad, radio chip + panel, style picker, compact phone panels
   const zoom = createZoom({ canvas, camera, getMode: () => mode, isTouch, isBusy: () => !!fly });
-  createRadioUI({ radio, chip: $('radioChip'), panel: $('radioPanel'), toast: (m, ms) => toast(m, ms) });
+  const radioUI = createRadioUI({ radio, chip: $('radioChip'), panel: $('radioPanel'), toast: (m, ms) => toast(m, ms) });
   const styleUI = createStyleUI({ btn: $('btnStyle'), panel: $('stylePanel'), toast: (m, ms) => toast(m, ms), getStyles: () => (window.__tour && window.__tour.styles) || ctx.styles });
+  // V7 languages: plan names + style strings into the dictionary; panels re-render on a language switch (the DOM
+  // translator in i18n.js translates their Hebrew text; canvas text — minimap, 360 labels, TV card — redraws itself)
+  try {
+    for (const fl of Object.values(plan.rooms || {})) for (const rm of Object.values(fl)) if (rm && rm.he) i18nRegister(rm.he, rm.en, rm.es);
+    for (const n of plan.panos || []) if (n.he) i18nRegister(n.he, n.en, n.es);
+    for (const d of plan.doors || []) if (d.he) i18nRegister(d.he, d.en, d.es);
+    for (const k of Object.keys(STYLE_STRINGS || {})) { const S = STYLE_STRINGS[k]; if (!S || !S.he) continue; for (const f of ['name', 'desc', 'materials']) if (S.he[f]) i18nRegister(S.he[f], S.en && S.en[f], S.es && S.es[f]); }
+  } catch (e) { console.warn('[i18n] register', e); }
+  onLangChange(() => {
+    try { radioUI && radioUI.reset(); } catch (_) {}
+    try { styleUI && styleUI.render(); } catch (_) {}
+    try { refreshHoverLabel(); } catch (_) {}
+  });
   setupCompactUI({ tools: $('tools'), btnMore: $('btnMore'), btnPanoMore: $('btnPanoMore') });
   function panoFrameYaw(node, pref, w) {
     if (!nav || !nav.framer || !node) return node ? node.camYaw : 0;
@@ -1168,6 +1189,8 @@ export async function boot() {
   $('btnFlash') && $('btnFlash').addEventListener('click', () => toggleFlash());
   $('btnErr') && $('btnErr').addEventListener('click', () => { if ($('errors').classList.contains('show')) $('errors').classList.remove('show'); else showErrors(); });
   $('btnHelp') && $('btnHelp').addEventListener('click', () => $('help').classList.toggle('show'));
+  // V7: "⟲ התחלה מחדש" = the same full reset as a page refresh (nothing is restored from storage on load)
+  $('btnRestart') && $('btnRestart').addEventListener('click', (e) => { e.stopPropagation(); toast('מתחילים מחדש…', 1200); setTimeout(() => { try { location.reload(); } catch (_) {} }, 180); });
   $('helpClose') && $('helpClose').addEventListener('click', () => $('help').classList.remove('show'));
   const qBtn = $('btnQuality');
   function setQuality(q) {
@@ -1228,7 +1251,7 @@ export async function boot() {
       const dp = dpad ? dpad.read(dt) : { forward: 0, turn: 0, run: false }; // V3 UI: arrow pad
       if (dp.turn) look.x -= dp.turn;
       const turn = (keys.has('ArrowLeft') ? 1 : 0) - (keys.has('ArrowRight') ? 1 : 0);
-      if (turn) look.x -= turn * 1.9 * dt;
+      if (turn) look.x -= turn * 1.4 * dt; // V7: gentler keyboard turning (was 1.9 rad/s)
       const fwd = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0) + dp.forward;
       const str = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
       const run = keys.has('ShiftLeft') || keys.has('ShiftRight') || dp.run;

@@ -1,7 +1,11 @@
-// styles.js — V3 "renovation options" (STYLE bot). Three complete renovation styles that can be switched live:
-//   modern  "מודרני יוקרתי"          (default)  warm greige plaster, natural oak herringbone, deep-green kitchen, Calacatta, brass
-//   classic "קלאסי חם"                         taupe/sage painted paneling, walnut-stained oak, cream shaker + soapstone, nickel
-//   dark    "סקנדינבי / כהה עכשווי"            charcoal limewash, light wire-brushed oak, matte-black kitchen + Nero Marquina
+// styles.js — renovation options (STYLE bot V3, expanded to 6 in V7). Switched live:
+//   modern        "מודרני יוקרתי"   (default)  warm greige plaster, natural oak herringbone, deep-green kitchen, Calacatta, brass
+//   classic       "קלאסי חם"                   taupe/sage painted paneling, walnut-stained oak, cream shaker + soapstone, nickel
+//   dark          "סקנדינבי / כהה עכשווי"      charcoal limewash, light wire-brushed oak, matte-black kitchen + Nero Marquina
+//   mediterranean "ים-תיכוני"   (V7)           warm limewash, handmade terracotta floors, honed limestone, dusty-blue cabinets, zellige
+//   japandi       "ג׳פנדי"      (V7)           pale oak, grasscloth/rice-paper walls, sage cabinets, limestone, black accents
+//   industrial    "לופט תעשייתי" (V7)          exposed brick, polished concrete, black metal, walnut, concrete counters
+// User-visible strings (names / blurbs / materials in he, en, es) live in STYLE_STRINGS (one object, for the i18n bot).
 //
 // Mechanism
 //  - init() (once, after all modules built) tags every material with userData.styleKey = semantic slot ('wall', 'floorMain',
@@ -16,7 +20,7 @@
 //    is kept and the visible average equals the target.
 //  - Every slot keeps the same map presence in all styles → a switch never recompiles shaders (no material.needsUpdate),
 //    it only swaps uniforms / textures and re-uploads a few colour attributes.
-//  - set(id) → Promise; persists to localStorage ('eakin_style'), refreshes probes + shadows, calls
+//  - set(id) → Promise; (V7: not persisted — a refresh starts at the default style), refreshes probes + shadows, calls
 //    window.__tour.render.normalizeMaterials() when present. list() → [{id, he, en, desc, materials}].
 // No side effects at import.
 import { STYLE_GEN as G, noiseField, rand } from './mats.js';
@@ -81,31 +85,126 @@ const DARK = {
   curtain: { c: '#6E6961' }, bedding: { c: '#8C877E' }, linen: { c: '#7A746B' }, rug: { c: '#4F4C47' }, towel: { c: '#8E8880' }, throw: { c: '#3E3C3A' },
 };
 
-export const STYLES = [
-  {
-    id: 'modern', he: 'מודרני יוקרתי', en: 'Modern Luxury',
-    desc: 'יוקרה חמה ושקטה: טיח גרז׳ חם, פרקט אלון אדרה טבעי, מטבח ירוק עמוק עם שיש קלקטה ופליז מוברש, חלונות פלדה שחורים, ספת בוקלה וכורסת עור קוניאק.',
-    materials: 'קירות: טיח גרז׳ חם · רצפה: אלון אדרה טבעי · מטבח: ירוק עמוק + שיש קלקטה · פרזול: פליז מוברש · אמבטיה: אריחי שיש גדולים · חוץ: אפור-חם + חלונות שחורים',
-    swatch: ['#D9D2C7', '#C49A6C', '#34483C', '#EDE8E0', '#D2AB62'],
-    light: [1, 1, 1], slots: MODERN,
+// V7: three more complete styles. Every slot is listed in every style (null colour = original look); a 'tex' recipe only
+// swaps maps on slots whose base material already has maps, so map presence (and the compiled program) never changes.
+const MEDITERRANEAN = {
+  wall: { c: '#DCD2C1' }, wallAccent: { c: '#D3C3A8', tex: 'limewash', ns: 0.9 }, wallKitchen: { c: '#D9CCB6', tex: 'limewash', ns: 0.8 },
+  wallBathPaint: { c: '#D6CBB8', tex: 'limewash', ns: 0.7 },
+  ceiling: { c: '#E3DDD1' }, trim: { c: '#DDD4C4' }, trimAccent: { c: '#CDBDA2' }, door: { c: '#B8946A', r: 0.5 },
+  floorMain: { c: '#B37A58', tex: 'terracotta', ns: 1.1, r: 1.0 }, floorBed: { c: '#B68A5E', ns: 1.2 }, stairWood: { c: '#A57A50' },
+  floorBath: { c: null, tex: 'encaustic', ns: 0.8 }, wallBath: { c: '#DADCD3', tex: 'zellige', ns: 1, r: 2.6 },
+  doorExt: { c: '#2F5465', r: 0.35 }, windowFrame: { c: '#3B3631', r: 0.45, m: 0.2 }, metalDark: { c: null }, hardware: { c: '#A8844F', r: 0.5 }, faucetMetal: { c: '#A8844F', r: 0.45 },
+  extWall: { c: '#E0D5C2', tex: 'limewash', ns: 0.8 }, extGable: { c: '#D9CDB8' }, extTrim: { c: '#E2D9C9' }, roof: { c: '#8A563A' }, shutter: { c: '#3E6B79' },
+  cedar: { c: null }, gutter: { c: '#7A4E36' },
+  basementWall: { c: '#D3C8B6' }, basementCeil: { c: '#DCD2C2' }, basementFloor: { c: null },
+  counter: { c: '#D6C6A8', tex: 'limestone', cc: 0.08, ns: 0.7 }, vanityTop: { c: '#DCCFB8', tex: 'limestone', cc: 0.08, ns: 0.7 }, cabinet: { c: '#5F7C86' }, hood: { c: '#D8CDBA' },
+  wood: { c: '#6E4A2E' }, woodLight: { c: '#B48A5E' }, stoneTable: { c: null },
+  sofaFabric: { c: '#D9CFBD', sheen: '#F2EADB' }, upholstery: { c: '#C8B79D' }, chairLeather: { c: '#8B5A36' },
+  headboard: { c: '#B8714F' }, velvetAccent: { c: '#B5694A' }, clubChair: { c: '#7A4A30' },
+  curtain: { c: '#E0D6C3' }, bedding: { c: '#E2D9C9' }, linen: { c: '#CDBB9F' }, rug: { c: null, tex: 'kilim', ns: 0.8 }, towel: { c: '#D9CBB2' }, throw: { c: '#B5653E' },
+};
+const JAPANDI = {
+  wall: { c: '#D8D0C2' }, wallAccent: { c: '#CEC1A8', tex: 'grasscloth', ns: 1 }, wallKitchen: { c: '#D9D1C3' }, wallBathPaint: { c: '#CFC6B6' },
+  ceiling: { c: '#E2DDD3' }, trim: { c: '#D3CABB' }, trimAccent: { c: '#C9BCA4' }, door: { c: '#C6AD86', r: 0.5 },
+  floorMain: { c: '#D3BB95', tex: '=floorBed', r: 1.1, ns: 1.2 }, floorBed: { c: '#D3BB95', r: 1.1, ns: 1.2 }, stairWood: { c: '#CBB28B', r: 1.05 },
+  floorBath: { c: '#B9B0A2', tex: 'microcement', ns: 0.6 }, wallBath: { c: '#A9B49E', tex: 'zellige', ns: 0.8, r: 2.6 },
+  doorExt: { c: '#1C1C1C' }, windowFrame: { c: '#1A1A1B' }, metalDark: { c: null }, hardware: { c: '#232323', r: 0.6 }, faucetMetal: { c: '#262626', r: 0.6 },
+  extWall: { c: '#C9C2B5' }, extGable: { c: '#2D2B29' }, extTrim: { c: '#2D2B29' }, roof: { c: '#2E2D2C' }, shutter: { c: '#2D2B29' },
+  cedar: { c: null }, gutter: { c: '#1E1E1E' },
+  basementWall: { c: '#C8C2B7' }, basementCeil: { c: '#D3CDC1' }, basementFloor: { c: null },
+  counter: { c: '#DDD5C7', tex: 'limestone', cc: 0.05, ns: 0.6 }, vanityTop: { c: '#DDD5C7', tex: 'limestone', cc: 0.05, ns: 0.6 }, cabinet: { c: '#8C9883' }, hood: { c: '#D5CCBA' },
+  wood: { c: '#4E3D2F' }, woodLight: { c: '#CBB08A' }, stoneTable: { c: '#BDB5A6' },
+  sofaFabric: { c: '#D3CAB8', sheen: '#EEE8DC' }, upholstery: { c: '#C3B8A2' }, chairLeather: { c: '#2A2826' },
+  headboard: { c: '#B7AE9A' }, velvetAccent: { c: '#7D8A73' }, clubChair: { c: '#3A3532' },
+  curtain: { c: '#E1DBCC' }, bedding: { c: '#DCD4C4' }, linen: { c: '#BFB29A' }, rug: { c: null, tex: 'jute', ns: 1 }, towel: { c: '#D3CBBA' }, throw: { c: '#8C9883' },
+};
+const INDUSTRIAL = {
+  wall: { c: '#BDB7AE' }, wallAccent: { c: null, tex: 'brick', ns: 1.2 }, wallKitchen: { c: null, tex: 'brick', ns: 1.2 }, wallBathPaint: { c: '#A7A299' },
+  ceiling: { c: '#CFCAC1' }, trim: { c: '#2A2B2C', r: 0.5 }, trimAccent: { c: '#2A2B2C', r: 0.5 }, door: { c: '#3B3530', r: 0.5 },
+  floorMain: { c: '#9E998F', tex: 'concrete', r: 0.75, ns: 0.6 }, floorBed: { c: '#5E4231', ns: 1.2 }, stairWood: { c: '#5A3F2E' },
+  floorBath: { c: null, tex: 'hexmosaic', ns: 1 }, wallBath: { c: '#3C4A47', tex: 'subway', ns: 1 },
+  doorExt: { c: '#1A1A1A' }, windowFrame: { c: '#151515' }, metalDark: { c: null }, hardware: { c: '#2B2B2C', r: 0.55 }, faucetMetal: { c: '#2B2B2C', r: 0.5 },
+  extWall: { c: null, tex: 'brick', ns: 1.2 }, extGable: { c: '#2E3236' }, extTrim: { c: '#1F2021' }, roof: { c: '#262728' }, shutter: { c: '#1F2021' },
+  cedar: { c: '#7A4E30' }, gutter: { c: '#1F2021' },
+  basementWall: { c: '#9F9A91' }, basementCeil: { c: '#3B3936' }, basementFloor: { c: null },
+  counter: { c: null, tex: 'concreteSlab', cc: 0.08, ns: 0.6 }, vanityTop: { c: null, tex: 'concreteSlab', cc: 0.08, ns: 0.6 }, cabinet: { c: '#3B4146' }, hood: { c: '#2E2F30' },
+  wood: { c: '#4A3020' }, woodLight: { c: '#6E4B33' }, stoneTable: { c: '#8A857C' },
+  sofaFabric: { c: '#7A4E30', tex: '=chairLeather', ns: 0.5, sheen: '#2A1E16' }, upholstery: { c: '#6F6A61' }, chairLeather: { c: '#4A2C1C' },
+  headboard: { c: '#3E4A55' }, velvetAccent: { c: '#8A5A2B' }, clubChair: { c: '#4A2C1C' },
+  curtain: { c: '#7D776C' }, bedding: { c: '#A39D92' }, linen: { c: '#6F6A61' }, rug: { c: '#7A5446', tex: 'oriental', ns: 0.8 }, towel: { c: '#8B867D' }, throw: { c: '#8A5A2B' },
+};
+
+// All user-visible style strings (he / en / es) in ONE object — the i18n bot reads / extends this.
+export const STYLE_STRINGS = {
+  modern: {
+    he: { name: 'מודרני יוקרתי', desc: 'יוקרה חמה ושקטה: טיח גרז׳ חם, פרקט אלון אדרה טבעי, מטבח ירוק עמוק עם שיש קלקטה ופליז מוברש, חלונות פלדה שחורים, ספת בוקלה וכורסת עור קוניאק.',
+      materials: 'קירות: טיח גרז׳ חם · רצפה: אלון אדרה טבעי · מטבח: ירוק עמוק + שיש קלקטה · פרזול: פליז מוברש · אמבטיה: אריחי שיש גדולים · חוץ: אפור-חם + חלונות שחורים' },
+    en: { name: 'Modern Luxury', desc: 'Quiet, warm luxury: greige plaster, natural oak herringbone, a deep-green kitchen with Calacatta marble and brushed brass, black steel windows, a bouclé sofa and a cognac leather chair.',
+      materials: 'Walls: warm greige plaster · Floor: natural oak herringbone · Kitchen: deep green + Calacatta · Hardware: brushed brass · Bath: large marble tiles · Exterior: warm grey + black windows' },
+    es: { name: 'Moderno de lujo', desc: 'Lujo cálido y sereno: yeso greige, roble natural en espiga, cocina verde profundo con mármol Calacatta y latón cepillado, ventanas de acero negro, sofá bouclé y sillón de cuero coñac.',
+      materials: 'Paredes: yeso greige cálido · Suelo: roble natural en espiga · Cocina: verde profundo + Calacatta · Herrajes: latón cepillado · Baño: grandes losas de mármol · Exterior: gris cálido + ventanas negras' },
   },
-  {
-    id: 'classic', he: 'קלאסי חם', en: 'Warm Classic',
-    desc: 'אמריקאי מסורתי וחם: חיפוי עץ צבוע בטאופ ומרווה, פרקט אלון בגוון אגוז, מטבח שייקר קרם עם משטחי סטון כהה וניקל מבריק, אריחי מטרו עם רובה כהה, שטיח פרסי, ספת צ׳סטרפילד מעור ותאורה חמימה.',
-    materials: 'קירות: טאופ + חיפוי מרווה · רצפה: אלון בגוון אגוז · מטבח: שייקר קרם + סטון כהה · פרזול: ניקל מבריק · אמבטיה: מטרו עם רובה כהה + שחמט · חוץ: גמלונים כחול נייבי, תריסים שחורים',
-    swatch: ['#C2B5A2', '#9AA38C', '#6F4C34', '#E3DBC9', '#45494A'],
-    light: [1, 0.93, 0.82], slots: CLASSIC,
+  classic: {
+    he: { name: 'קלאסי חם', desc: 'אמריקאי מסורתי וחם: חיפוי עץ צבוע בטאופ ומרווה, פרקט אלון בגוון אגוז, מטבח שייקר קרם עם משטחי סטון כהה וניקל מבריק, אריחי מטרו עם רובה כהה, שטיח פרסי, ספת צ׳סטרפילד מעור ותאורה חמימה.',
+      materials: 'קירות: טאופ + חיפוי מרווה · רצפה: אלון בגוון אגוז · מטבח: שייקר קרם + סטון כהה · פרזול: ניקל מבריק · אמבטיה: מטרו עם רובה כהה + שחמט · חוץ: גמלונים כחול נייבי, תריסים שחורים' },
+    en: { name: 'Warm Classic', desc: 'Warm traditional American: taupe walls with sage beadboard, walnut-stained oak, cream shaker kitchen with soapstone and polished nickel, subway tile with dark grout, an oriental rug, a leather chesterfield and warm lamps.',
+      materials: 'Walls: taupe + sage beadboard · Floor: walnut-stained oak · Kitchen: cream shaker + soapstone · Hardware: polished nickel · Bath: subway tile + checkerboard · Exterior: navy gables, black shutters' },
+    es: { name: 'Clásico cálido', desc: 'Tradicional americano y cálido: paredes topo con friso salvia, roble teñido nogal, cocina shaker crema con esteatita y níquel pulido, azulejo metro con junta oscura, alfombra persa, sofá chesterfield de cuero y luz cálida.',
+      materials: 'Paredes: topo + friso salvia · Suelo: roble tono nogal · Cocina: shaker crema + esteatita · Herrajes: níquel pulido · Baño: azulejo metro + damero · Exterior: hastiales azul marino, contraventanas negras' },
   },
-  {
-    id: 'dark', he: 'סקנדינבי / כהה עכשווי', en: 'Dark Contemporary',
-    desc: 'עכשווי ודרמטי: קירות סיד פחם במטבח ובסלון, פרקט אלון בהיר מוברש, מטבח שחור מט עם שיש נרו מרקינה ונגיעות אגוז, מיקרו-בטון באמבטיות, ספה נמוכה בקטיפה ירוקת-אזוב וחוץ פחם עם ארז.',
-    materials: 'קירות: סיד פחם + אפור חם · רצפה: אלון בהיר מוברש · מטבח: שחור מט + שיש נרו מרקינה · פרזול: גאנמטל · אמבטיה: מיקרו-בטון אפור חם · חוץ: פחם + חלונות שחורים + ארז',
-    swatch: ['#4A4744', '#CDB896', '#232221', '#1E1E1F', '#55613D'],
-    light: [1, 0.98, 0.95], slots: DARK,
+  dark: {
+    he: { name: 'סקנדינבי / כהה עכשווי', desc: 'עכשווי ודרמטי: קירות סיד פחם במטבח ובסלון, פרקט אלון בהיר מוברש, מטבח שחור מט עם שיש נרו מרקינה ונגיעות אגוז, מיקרו-בטון באמבטיות, ספה נמוכה בקטיפה ירוקת-אזוב וחוץ פחם עם ארז.',
+      materials: 'קירות: סיד פחם + אפור חם · רצפה: אלון בהיר מוברש · מטבח: שחור מט + שיש נרו מרקינה · פרזול: גאנמטל · אמבטיה: מיקרו-בטון אפור חם · חוץ: פחם + חלונות שחורים + ארז' },
+    en: { name: 'Dark Contemporary', desc: 'Contemporary and dramatic: charcoal limewash in the kitchen and living room, light wire-brushed oak, a matte-black kitchen with Nero Marquina and walnut touches, microcement baths, a moss-green velvet sofa and a charcoal-and-cedar exterior.',
+      materials: 'Walls: charcoal limewash + warm grey · Floor: light brushed oak · Kitchen: matte black + Nero Marquina · Hardware: gunmetal · Bath: warm grey microcement · Exterior: charcoal + black windows + cedar' },
+    es: { name: 'Contemporáneo oscuro', desc: 'Contemporáneo y dramático: cal carbón en cocina y salón, roble claro cepillado, cocina negro mate con Nero Marquina y toques de nogal, microcemento en los baños, sofá de terciopelo verde musgo y exterior carbón con cedro.',
+      materials: 'Paredes: cal carbón + gris cálido · Suelo: roble claro cepillado · Cocina: negro mate + Nero Marquina · Herrajes: gunmetal · Baño: microcemento gris cálido · Exterior: carbón + ventanas negras + cedro' },
   },
+  mediterranean: {
+    he: { name: 'ים-תיכוני', desc: 'חם, שמשי ומרגיע: קירות סיד בגווני חול, רצפת טרקוטה בעבודת יד בסלון ובמטבח, אלון חם בחדרי השינה, מטבח בכחול-אפרפר עם משטחי אבן גיר ופליז מיושן, זליג׳ ואריחי מצויירים באמבטיה, טקסטיל פשתן ושטיח קילים.',
+      materials: 'קירות: סיד חולי · רצפה: טרקוטה בעבודת יד + אלון חם · מטבח: כחול-אפרפר + אבן גיר · פרזול: פליז מיושן · אמבטיה: זליג׳ + אריחים מצויירים · חוץ: סיד לבן-חם, תריסים כחולים, גג טרקוטה' },
+    en: { name: 'Mediterranean', desc: 'Warm, sunny and calm: sand-toned limewash walls, handmade terracotta floors in the living room and kitchen, warm oak bedrooms, a dusty-blue kitchen with honed limestone and aged brass, zellige and patterned encaustic tile in the baths, linen and a kilim rug.',
+      materials: 'Walls: sand limewash · Floor: handmade terracotta + warm oak · Kitchen: dusty blue + honed limestone · Hardware: aged brass · Bath: zellige + encaustic tile · Exterior: warm white limewash, blue shutters, terracotta roof' },
+    es: { name: 'Mediterráneo', desc: 'Cálido, luminoso y sereno: paredes de cal en tonos arena, barro cocido artesanal en salón y cocina, roble cálido en los dormitorios, cocina azul grisáceo con piedra caliza apomazada y latón envejecido, zellige y baldosa hidráulica en los baños, lino y alfombra kilim.',
+      materials: 'Paredes: cal arena · Suelo: barro cocido artesanal + roble cálido · Cocina: azul grisáceo + piedra caliza · Herrajes: latón envejecido · Baño: zellige + baldosa hidráulica · Exterior: cal blanca cálida, contraventanas azules, tejado terracota' },
+  },
+  japandi: {
+    he: { name: 'ג׳פנדי', desc: 'שקט יפני-סקנדינבי: אלון בהיר מאוד, טפט סיבי אורז/פשתן בסלון, מטבח בירוק מרווה עם משטח אבן גיר, נגיעות מתכת שחורה, זליג׳ מרווה ומיקרו-בטון בהיר באמבטיה, טקסטיל טבעי ושטיח יוטה.',
+      materials: 'קירות: לבן-חם + טפט סיבים · רצפה: אלון בהיר · מטבח: מרווה + אבן גיר · פרזול: שחור מט · אמבטיה: זליג׳ מרווה + מיקרו-בטון · חוץ: אפור חם + עץ שרוף כהה' },
+    en: { name: 'Japandi', desc: 'Calm Japanese-Scandinavian: very pale oak, rice-paper / grasscloth walls in the living room, a sage kitchen with limestone counters, matte-black accents, sage zellige and pale microcement in the baths, natural textiles and a jute rug.',
+      materials: 'Walls: warm white + grasscloth · Floor: pale oak · Kitchen: sage + limestone · Hardware: matte black · Bath: sage zellige + microcement · Exterior: warm grey + charred-wood black' },
+    es: { name: 'Japandi', desc: 'Calma japonesa-escandinava: roble muy claro, papel de arroz / fibra natural en el salón, cocina verde salvia con encimera de piedra caliza, acentos negro mate, zellige salvia y microcemento claro en los baños, textiles naturales y alfombra de yute.',
+      materials: 'Paredes: blanco cálido + fibra natural · Suelo: roble claro · Cocina: salvia + piedra caliza · Herrajes: negro mate · Baño: zellige salvia + microcemento · Exterior: gris cálido + madera quemada negra' },
+  },
+  industrial: {
+    he: { name: 'לופט תעשייתי', desc: 'אופי של לופט: קירות לבנים חשופות בסלון ובמטבח, בטון מוחלק ברצפה, מסגרות ופרזול מתכת שחורה, פרקט אגוז בחדרי השינה, מטבח אפור-צפחה עם משטחי בטון, ספת עור קוניאק, מטרו ירוק-כהה ופסיפס משושים באמבטיה.',
+      materials: 'קירות: לבנים חשופות + אפור חם · רצפה: בטון מוחלק + אגוז · מטבח: אפור צפחה + משטח בטון · פרזול: מתכת שחורה · אמבטיה: מטרו ירוק-כהה + פסיפס משושים · חוץ: לבנים אדומות + מתכת שחורה' },
+    en: { name: 'Industrial Loft', desc: 'Loft character: exposed brick in the living room and kitchen, polished concrete floors, black metal frames and hardware, walnut bedrooms, a slate-grey kitchen with concrete counters, a cognac leather sofa, dark-green subway tile and a hex mosaic in the baths.',
+      materials: 'Walls: exposed brick + warm grey · Floor: polished concrete + walnut · Kitchen: slate grey + concrete counters · Hardware: black metal · Bath: dark-green subway + hex mosaic · Exterior: red brick + black metal' },
+    es: { name: 'Loft industrial', desc: 'Carácter de loft: ladrillo visto en salón y cocina, hormigón pulido en el suelo, marcos y herrajes de metal negro, nogal en los dormitorios, cocina gris pizarra con encimeras de hormigón, sofá de cuero coñac, metro verde oscuro y mosaico hexagonal en los baños.',
+      materials: 'Paredes: ladrillo visto + gris cálido · Suelo: hormigón pulido + nogal · Cocina: gris pizarra + hormigón · Herrajes: metal negro · Baño: metro verde oscuro + mosaico hexagonal · Exterior: ladrillo rojo + metal negro' },
+  },
+};
+
+const DEFS = [
+  { id: 'modern', swatch: ['#D9D2C7', '#C49A6C', '#34483C', '#EDE8E0', '#D2AB62'], light: [1, 1, 1], slots: MODERN },
+  { id: 'classic', swatch: ['#C2B5A2', '#9AA38C', '#6F4C34', '#E3DBC9', '#45494A'], light: [1, 0.93, 0.82], slots: CLASSIC },
+  { id: 'dark', swatch: ['#4A4744', '#CDB896', '#232221', '#1E1E1F', '#55613D'], light: [1, 0.98, 0.95], slots: DARK },
+  { id: 'mediterranean', swatch: ['#D3C3A8', '#B37A58', '#5F7C86', '#D6C6A8', '#3E6B79'], light: [1, 0.96, 0.91], slots: MEDITERRANEAN },
+  { id: 'japandi', swatch: ['#D8D0C2', '#D3BB95', '#8C9883', '#DDD5C7', '#1C1C1C'], light: [1, 0.97, 0.92], slots: JAPANDI },
+  { id: 'industrial', swatch: ['#8E4E3A', '#9E998F', '#3B4146', '#4A3020', '#1A1A1A'], light: [1, 0.94, 0.84], slots: INDUSTRIAL },
 ];
+// he / en / es = names; desc (he), descEn, descEs; materials (he), materialsEn, materialsEs
+export const STYLES = DEFS.map((d) => {
+  const S = STYLE_STRINGS[d.id];
+  return Object.assign({}, d, {
+    he: S.he.name, en: S.en.name, es: S.es.name, desc: S.he.desc, descEn: S.en.desc, descEs: S.es.desc,
+    materials: S.he.materials, materialsEn: S.en.materials, materialsEs: S.es.materials,
+  });
+});
 const BY_ID = Object.fromEntries(STYLES.map((s) => [s.id, s]));
-export function list() { return STYLES.map((s) => ({ id: s.id, he: s.he, en: s.en, desc: s.desc, materials: s.materials, swatch: s.swatch.slice() })); }
+const pub = (s) => ({ id: s.id, he: s.he, en: s.en, es: s.es, desc: s.desc, descEn: s.descEn, descEs: s.descEs, materials: s.materials, materialsEn: s.materialsEn, materialsEs: s.materialsEs, swatch: s.swatch.slice() });
+export function list() { return STYLES.map(pub); }
 
 /* ================================================================== colour helpers */
 const s2l = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
@@ -250,6 +349,185 @@ function synthTex(fn, S, opt) {
   const t = synth(S, S, fn, opt);
   return { map: t.map, normalMap: t.normal, roughnessMap: t.rough, avg: synthAvg(fn) };
 }
+/* ---------------- V7 recipes */
+// handmade terracotta (20 cm squares, irregular tone + edges, lime grout) — house floor, meter UVs
+function texTerracotta(THREE, S) {
+  const B = G.buffers(S, S), tile = 0.6, px = tile / S, ts = 0.2, gw = 0.008;
+  const f = noiseField(S, S, rand(701), 4, 5), f2 = noiseField(S, S, rand(702), 3, 36), wob = noiseField(S, S, rand(703), 3, 12);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const i = y * S + x, u = (x + 0.5) * px + (wob[i] - 0.5) * 0.004, v = (S - y - 0.5) * px + (f[i] - 0.5) * 0.004;
+    const c = Math.floor(u / ts), r = Math.floor(v / ts), lu = u - c * ts, lv = v - r * ts, d = Math.min(lu, ts - lu, lv, ts - lv);
+    if (d < gw / 2) { const k = 1 + (f2[i] - 0.5) * 0.1; G.put(B, i, 196 * k, 182 * k, 160 * k); B.hgt[i] = 0.12; B.rgh[i] = 0.92; continue; }
+    const h = G.hash3(c, r, 704), h2 = G.hash3(c, r, 705);
+    const hb = G.bevelH(d - gw / 2, 0.006);
+    const burn = Math.pow(G.clamp01(1 - (d - gw / 2) / 0.03), 2) * 0.12 * h2; // darker kiln edges
+    const k = (1 + (h - 0.5) * 0.22 + (f[i] - 0.5) * 0.16 + (f2[i] - 0.5) * 0.07 - burn) * (0.88 + 0.12 * hb);
+    G.put(B, i, (166 + h2 * 22) * k, (98 + h2 * 16 + h * 6) * k, (70 + h * 12) * k);
+    B.hgt[i] = 0.3 + 0.6 * hb + (f[i] - 0.5) * 0.08 + (f2[i] - 0.5) * 0.04;
+    B.rgh[i] = 0.62 + (f2[i] - 0.5) * 0.16 + (1 - hb) * 0.1;
+  }
+  return fin(THREE, B, { tile: [tile, tile], depth: 0.004, cavity: 1.0, cavityR: 2 });
+}
+// encaustic cement tile (20 cm, indigo / cream / terracotta quatrefoil) — mediterranean bath floor, authored colours
+function texEncaustic(THREE, S) {
+  const B = G.buffers(S, S), tile = 0.4, px = tile / S, ts = 0.2, gw = 0.0015;
+  const f = noiseField(S, S, rand(711), 4, 6), f2 = noiseField(S, S, rand(712), 3, 48);
+  const IND = [52, 74, 102], CRM = [226, 216, 196], TER = [176, 98, 70], SND = [200, 178, 140];
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const i = y * S + x, u = (x + 0.5) * px, v = (S - y - 0.5) * px;
+    const c = Math.floor(u / ts), r = Math.floor(v / ts), lu = (u - c * ts) / ts - 0.5, lv = (v - r * ts) / ts - 0.5;
+    const d = Math.min(0.5 - Math.abs(lu), 0.5 - Math.abs(lv)) * ts;
+    if (d < gw / 2) { G.put(B, i, 170, 164, 152); B.hgt[i] = 0.1; B.rgh[i] = 0.85; continue; }
+    const ax = Math.abs(lu), ay = Math.abs(lv), rr = Math.hypot(lu, lv), ang = Math.atan2(lv, lu);
+    const petal = 0.2 + 0.09 * Math.cos(4 * ang);           // quatrefoil
+    let col = CRM;
+    if (ax > 0.44 || ay > 0.44) col = IND;                 // border band
+    else if (rr < 0.06) col = TER;
+    else if (rr < petal) col = IND;
+    else if (rr < petal + 0.025) col = SND;
+    else if (Math.abs(ax + ay - 0.62) < 0.035) col = TER;   // diamond
+    else if ((ax > 0.36 && ay > 0.36)) col = IND;          // corner quarter-circles meet the next tile
+    const k = 1 + (f[i] - 0.5) * 0.1 + (f2[i] - 0.5) * 0.05;
+    G.put(B, i, col[0] * k, col[1] * k, col[2] * k);
+    const hb = G.bevelH(d - gw / 2, 0.0015);
+    B.hgt[i] = 0.4 + 0.5 * hb + (f2[i] - 0.5) * 0.05; B.rgh[i] = 0.55 + (f[i] - 0.5) * 0.12;
+  }
+  return fin(THREE, B, { tile: [tile, tile], depth: 0.001, cavity: 0.8, cavityR: 1 });
+}
+// zellige (10 cm glazed handmade squares, near-white so a slot colour tints it cleanly) — bath walls
+function texZellige(THREE, S) {
+  const B = G.buffers(S, S), tile = 0.5, px = tile / S, ts = 0.1, gw = 0.0022;
+  const f = noiseField(S, S, rand(721), 4, 10), f2 = noiseField(S, S, rand(722), 3, 30);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const i = y * S + x, u = (x + 0.5) * px, v = (S - y - 0.5) * px;
+    const c = Math.floor(u / ts), r = Math.floor(v / ts), lu = u - c * ts, lv = v - r * ts, d = Math.min(lu, ts - lu, lv, ts - lv);
+    if (d < gw / 2) { G.put(B, i, 205, 200, 190); B.hgt[i] = 0.05; B.rgh[i] = 0.85; continue; }
+    const h = G.hash3(c, r, 723), pool = f[i] - 0.5;
+    const edge = 1 - G.smooth(0, 0.01, d - gw / 2);
+    const k = 1 + (h - 0.5) * 0.16 + pool * 0.3 - edge * 0.14 + (f2[i] - 0.5) * 0.05;
+    G.put(B, i, 222 * k, 221 * k, 214 * k);
+    B.hgt[i] = G.clamp01(0.55 + pool * 0.5 * G.smooth(0, 0.012, d) + 0.3 * G.smooth(0, 0.004, d - gw / 2));
+    B.rgh[i] = 0.08 + (f2[i] - 0.5) * 0.06 + edge * 0.05;
+  }
+  return fin(THREE, B, { tile: [tile, tile], depth: 0.002, cavity: 0.7, cavityR: 2 });
+}
+// grasscloth / rice-paper wallcovering: horizontal natural fibres, 91 cm panel seams — japandi accent wall
+function texGrasscloth(THREE, S) {
+  const B = G.buffers(S, S), tile = 0.91, px = tile / S;
+  const fib = noiseField(S, S, rand(731), 3, 2, 220), fib2 = noiseField(S, S, rand(732), 2, 6, 420), cl = noiseField(S, S, rand(733), 3, 3);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const i = y * S + x, u = (x + 0.5) * px;
+    const seam = Math.min(u, tile - u) < 0.0015;
+    const s1 = fib[i] * 0.65 + fib2[i] * 0.35;
+    const k = 0.84 + s1 * 0.26 + (cl[i] - 0.5) * 0.1 - (seam ? 0.12 : 0);
+    G.put(B, i, 216 * k, 205 * k, 182 * k);
+    B.hgt[i] = G.clamp01(s1 * 0.8 + (seam ? -0.3 : 0) + 0.1);
+    B.rgh[i] = 0.9 + (s1 - 0.5) * 0.08;
+  }
+  return fin(THREE, B, { tile: [tile, tile], depth: 0.0012, cavity: 0.8, cavityR: 1 });
+}
+// exposed reclaimed brick, running bond (21.5 × 6.5 cm + 1 cm recessed mortar) — industrial walls + exterior
+function texBrick(THREE, S) {
+  const B = G.buffers(S, S), bw = 0.225, bh = 0.075, TW = bw * 4, TH = bh * 10, pu = TW / S, pv = TH / S, mj = 0.01;
+  const f = noiseField(S, S, rand(741), 5, 6), f2 = noiseField(S, S, rand(742), 3, 60), lime = noiseField(S, S, rand(743), 4, 3);
+  for (let y = 0; y < S; y++) {
+    const v = (S - y - 0.5) * pv, r = Math.min(9, Math.floor(v / bh)), lv = v - r * bh;
+    for (let x = 0; x < S; x++) {
+      const i = y * S + x; let u = (x + 0.5) * pu - (r % 2) * bw * 0.5; u = ((u % TW) + TW) % TW;
+      const c = Math.floor(u / bw), lu = u - c * bw, d = Math.min(lu, bw - lu, lv, bh - lv);
+      const wash = G.smooth(0.62, 0.85, lime[i]) * 0.22; // faint patchy old limewash residue
+      if (d < mj / 2) {
+        const k = 1 + (f2[i] - 0.5) * 0.2; G.put(B, i, 168 * k, 160 * k, 148 * k); B.hgt[i] = 0.1 + f2[i] * 0.1; B.rgh[i] = 0.95; continue;
+      }
+      const h = G.hash3(c, r, 744), h2 = G.hash3(c, r, 745);
+      const base = h < 0.12 ? [92, 52, 40] : h < 0.3 ? [150, 86, 62] : h < 0.8 ? [132, 70, 50] : [118, 78, 60];
+      const hb = G.bevelH(d - mj / 2, 0.006 + h2 * 0.006);
+      const chip = f2[i] > 0.8 ? 0.82 : 1;
+      const k = (1 + (f[i] - 0.5) * 0.3 + (h2 - 0.5) * 0.14) * (0.86 + 0.14 * hb) * chip;
+      G.put(B, i, G.lerp(base[0] * k, 196, wash), G.lerp(base[1] * k, 188, wash), G.lerp(base[2] * k, 176, wash));
+      B.hgt[i] = 0.45 + 0.45 * hb + (f[i] - 0.5) * 0.1 - (chip < 1 ? 0.12 : 0);
+      B.rgh[i] = 0.82 + (f2[i] - 0.5) * 0.12;
+    }
+  }
+  return fin(THREE, B, { tile: [TW, TH], depth: 0.01, cavity: 1.2, cavityR: 2 });
+}
+// polished concrete floor with faint trowel clouds + sparse saw-cut joints (2.4 m)
+function texConcrete(THREE, S) {
+  const t = G.concrete ? G.concrete(THREE, S, 751, 2.4) : texSurface(THREE, S, 751, 2.4, { rgb: [170, 168, 163], colA: 0.18, colB: 0.06, warp: 0.8, rough: 0.3, roughA: 0.12, base: 3, base2: 40, depth: 0.0004 });
+  if (!t.avg) t.avg = rgbLin([168, 166, 161]);
+  return t;
+}
+// small hex mosaic (2.5 cm, white with scattered charcoal) — industrial bath floor, authored colours
+function texHexMosaic(THREE, S) {
+  const COLS = 14, ROWS = 16, TW = 0.3, W = TW / COLS, R = W / Math.sqrt(3), Hs = 1.5 * R, TH = ROWS * Hs;
+  const B = G.buffers(S, S), pu = TW / S, pv = TH / S, gw = 0.0016, f = noiseField(S, S, rand(761), 3, 20);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const i = y * S + x, u = (x + 0.5) * pu, v = (S - y - 0.5) * pv;
+    // nearest hex centre (pointy-top) among the candidates of two offset grids
+    let best = 1e9, bc = 0, br = 0;
+    const r0 = Math.floor(v / Hs);
+    for (let rr = r0 - 1; rr <= r0 + 1; rr++) {
+      const off = (rr & 1) * W / 2, c0 = Math.floor((u - off) / W);
+      for (let cc = c0 - 1; cc <= c0 + 1; cc++) {
+        const cx = cc * W + off + W / 2, cy = rr * Hs + R, dd = Math.hypot(u - cx, v - cy);
+        if (dd < best) { best = dd; bc = cc; br = rr; }
+      }
+    }
+    // distance to the hex edge ≈ inradius − projected distance
+    const off = (br & 1) * W / 2, cx = bc * W + off + W / 2, cy = br * Hs + R, dx = Math.abs(u - cx), dy = Math.abs(v - cy);
+    const pd = Math.max(dx, dx * 0.5 + dy * 0.8660254), d = W / 2 - pd;
+    if (d < gw / 2) { G.put(B, i, 132, 130, 126); B.hgt[i] = 0.1; B.rgh[i] = 0.85; continue; }
+    const h = G.hash3(((bc % COLS) + COLS) % COLS, ((br % ROWS) + ROWS) % ROWS, 762), dark = h < 0.16;
+    const k = 1 + (f[i] - 0.5) * 0.06 + (h - 0.5) * 0.05;
+    if (dark) G.put(B, i, 48 * k, 49 * k, 51 * k); else G.put(B, i, 226 * k, 224 * k, 218 * k);
+    const hb = G.bevelH(d - gw / 2, 0.0012);
+    B.hgt[i] = 0.3 + 0.6 * hb; B.rgh[i] = 0.2 + (1 - hb) * 0.3;
+  }
+  return fin(THREE, B, { tile: [TW, TH], depth: 0.0012, cavity: 0.9, cavityR: 1 });
+}
+// interior synth (0..1 tile) recipes: honed limestone, concrete slab, kilim rug, jute rug
+function limestoneFn(u, v, o) {
+  const { n2, fbm } = NZ;
+  const cl = fbm(u * 3, v * 3, 3, 3, 5), bed = fbm(u * 1, v * 9, 1, 9, 4), fos = n2(u * 160, v * 160, 160, 160);
+  const shell = fos > 0.9 ? (fos - 0.9) * 2.5 : 0;
+  const base = 0.86 + (cl - 0.5) * 0.06 + (bed - 0.5) * 0.05 - shell * 0.2;
+  o.r = base; o.g = base * 0.975; o.b = base * 0.93; o.h = cl * 0.15 - shell * 0.3; o.ro = 0.55 + (cl - 0.5) * 0.1;
+}
+function concreteSlabFn(u, v, o) {
+  const { n2, fbm } = NZ;
+  const cl = fbm(u * 3 + 7, v * 3, 3, 3, 5), tr = fbm(u * 2, v * 6 + 3, 2, 6, 3), pin = n2(u * 300, v * 300, 300, 300);
+  const pore = pin > 0.92 ? 0.55 : 1;
+  const base = (0.6 + (cl - 0.5) * 0.14 + (tr - 0.5) * 0.06) * pore;
+  o.r = base; o.g = base * 0.99; o.b = base * 0.965; o.h = cl * 0.1 - (pore < 1 ? 0.3 : 0); o.ro = 0.4 + (cl - 0.5) * 0.16 + (pore < 1 ? 0.3 : 0);
+}
+const KIL = { red: [0.56, 0.3, 0.23], ind: [0.22, 0.27, 0.34], crm: [0.84, 0.79, 0.68], och: [0.72, 0.58, 0.38], brn: [0.38, 0.28, 0.21] }; // faded vegetable dyes
+function kilimFn(u, v, o) {
+  const { n2, fbm } = NZ;
+  const e = Math.min(u, 1 - u, v, 1 - v);
+  let c;
+  if (e < 0.03) c = KIL.brn;
+  else if (e < 0.09) c = (Math.floor((u + v) * 40) % 2) ? KIL.crm : KIL.ind; // stepped border
+  else {
+    const band = Math.floor(v * 7), lv = v * 7 - band, cx = Math.abs(((u * 4) % 1) - 0.5) * 2;
+    const dia = Math.abs(cx) + Math.abs(lv - 0.5) * 2;
+    const field = band % 2 ? KIL.red : KIL.crm;
+    c = dia < 0.3 ? KIL.ind : dia < 0.42 ? KIL.crm : dia < 0.5 ? KIL.ind : field;
+    if (Math.abs(lv - 0.5) > 0.46) c = KIL.brn;
+  }
+  const ab = (fbm(u * 2, v * 12, 2, 12, 3) - 0.5) * 0.16, wv = n2(u * 260, v * 130, 260, 130);
+  const k = 1 + ab + (wv - 0.5) * 0.1;
+  o.r = c[0] * k; o.g = c[1] * k; o.b = c[2] * k; o.h = wv * 0.5; o.ro = 0.96;
+}
+function juteFn(u, v, o) {
+  const { n2 } = NZ;
+  const N = 40, a = u * N, b = v * N, ia = Math.floor(a), ib = Math.floor(b), fa = a - ia, fb = b - ib;
+  const over = ((Math.floor(ia / 2) + Math.floor(ib / 2)) & 1) === 0; // basket weave 2×2
+  const h = over ? Math.sin(Math.PI * fb) : Math.sin(Math.PI * fa);
+  const fib = n2(u * 600, v * 600, 600, 600);
+  const e = Math.min(u, 1 - u, v, 1 - v), edge = e < 0.03 ? 0.85 : 1;
+  const k = (0.82 + h * 0.2 + (fib - 0.5) * 0.12) * edge;
+  o.r = 0.74 * k; o.g = 0.64 * k; o.b = 0.47 * k; o.h = h * 0.8 + fib * 0.1; o.ro = 0.97;
+}
 const RECIPES = {
   beadboard: (THREE, q) => texBeadboard(THREE, q ? 256 : 512),
   subway: (THREE, q) => texSubway(THREE, q ? 256 : 512),
@@ -259,7 +537,20 @@ const RECIPES = {
   soapstone: (THREE, q) => synthTex(soapstoneFn, q ? 256 : 512, { ns: 1 }),
   nero: (THREE, q) => synthTex(neroFn, q ? 256 : 512, { ns: 1.2 }),
   oriental: (THREE, q) => synthTex(orientalFn, q ? 256 : 512, { ns: 2, wrap: false }),
+  // V7
+  terracotta: (THREE, q) => texTerracotta(THREE, q ? 256 : 512),
+  encaustic: (THREE, q) => texEncaustic(THREE, q ? 256 : 512),
+  zellige: (THREE, q) => texZellige(THREE, q ? 256 : 512),
+  grasscloth: (THREE, q) => texGrasscloth(THREE, q ? 256 : 512),
+  brick: (THREE, q) => texBrick(THREE, q ? 256 : 512),
+  concrete: (THREE, q) => texConcrete(THREE, q ? 256 : 512),
+  hexmosaic: (THREE, q) => texHexMosaic(THREE, q ? 256 : 512),
+  limestone: (THREE, q) => synthTex(limestoneFn, q ? 256 : 512, { ns: 0.8 }),
+  concreteSlab: (THREE, q) => synthTex(concreteSlabFn, q ? 256 : 512, { ns: 0.8 }),
+  kilim: (THREE, q) => synthTex(kilimFn, q ? 256 : 512, { ns: 2, wrap: false }),
+  jute: (THREE, q) => synthTex(juteFn, q ? 256 : 512, { ns: 3, wrap: false }),
 };
+export const STYLE_RECIPES = RECIPES; // read-only (texture previews / tests)
 // nominal average albedo (sRGB 0..255) of the ORIGINAL textures, used only when a canvas cannot be read (node tests)
 const NOMINAL = {
   plasterWall: [240, 237, 232], ceilingPlaster: [246, 245, 242], oakHerringbone: [196, 160, 116], oakWidePlank: [198, 162, 118], oakSolid: [200, 164, 120],
@@ -592,7 +883,7 @@ export function createStyles(ctx) {
       if (tok !== state.token) return state.current; // a newer request won
       applyNow(style);
       state.current = style.id;
-      try { localStorage.setItem(LS_KEY, style.id); } catch (_) { }
+      // V7: the style is not persisted (a refresh starts from the default style)
       for (const fn of listeners) { try { fn(style.id); } catch (_) { } }
     } finally { if (tok === state.token) state.busy = false; }
     return style.id;
@@ -604,7 +895,6 @@ export function createStyles(ctx) {
     stats.initMs = Math.round(now() - t0);
     state.ready = true;
     let want = state.pending;
-    if (!want) { try { want = localStorage.getItem(LS_KEY); } catch (_) { want = null; } }
     if (want && BY_ID[want] && want !== DEFAULT) await set(want);
     else { state.current = DEFAULT; applyNow(BY_ID[DEFAULT]); }
     return api;
@@ -631,7 +921,7 @@ export function createStyles(ctx) {
   const api = {
     init, set, list, report,
     get current() { return state.current; }, get ready() { return state.ready; }, get busy() { return state.busy; },
-    get(id) { const s = BY_ID[id || state.current]; return s ? { id: s.id, he: s.he, en: s.en, desc: s.desc, materials: s.materials, swatch: s.swatch.slice() } : null; },
+    get(id) { const s = BY_ID[id || state.current]; return s ? pub(s) : null; },
     onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     stats, STYLES,
   };

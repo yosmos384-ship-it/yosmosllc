@@ -1025,6 +1025,8 @@ export const STYLE_GEN = {
   finish, buffers, put, samp, worley, blurWrap, hash3, bevelH, clamp, clamp01, lerp, smooth, fract,
   surface: genSurface, boards: genBoards, widePlank: genWidePlank, herringbone: genHerringbone,
   linen: genLinen, leather: genLeather, boucle: genBoucle, brushed: genBrushed,
+  concrete: genConcretePolished, travertine: genTravertine, // V7 STYLES: industrial floor / mediterranean stone
+
   PAL: { oak: OAK_PAL, walnut: WALNUT_PAL, cedar: CEDAR_PAL },
 };
 

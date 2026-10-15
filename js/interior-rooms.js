@@ -2,6 +2,7 @@
 // Layout positions are the validated V1 ones (door swings, stair, windows); pieces are restyled and drapes added.
 import { THREE, PI, Batch, shaker, hinged, drawer, plant, rng } from './interior-lib.js';
 import { mug } from './interior-kitchen.js';
+import { buildTV, buildRemote } from './interior-tv.js';
 import {
   C as LX, soft, tube, bpull, bknob, bcup, fluted, tableLampLux, lampMats, pendant, curtains, artLux, rugLux,
   vase, branches, bookStack, candle, oliveTree, curvedSofa, loungeChair, mirrorDisc, lemons,
@@ -138,12 +139,7 @@ export function closet(E, G, f, o = {}) {
   f.solid(E, [w, h, d + ft], [0, h / 2, (d + ft) / 2]);
 }
 
-function bench(E, f, w = 1.2, d = 0.42) {
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) f.cyl('walnut', 0.02, 0.014, 0.34, [sx * (w / 2 - 0.06), 0.17, sz * (d / 2 - 0.06)], 0xffffff, { seg: 12 });
-  f.box('walnut', [w - 0.02, 0.04, d - 0.04], [0, 0.34, 0], 0xffffff, { r: 0.012, grain: 'h' });
-  soft(f, 'boucle', [w, 0.13, d], [0, 0.42, 0], LX.cream, { e1: 0.35, e2: 0.12, flat: 0.5, sagTop: 0.01, noise: 0.004, nu: 30, nv: 10, seed: 41 });
-  f.solid(E, [w, 0.48, d], [0, 0.24, 0]);
-}
+// V7: the upholstered benches at the foot of the beds were removed (they blocked the walking paths; owner request).
 
 /** arched full-length mirror leaning on a wall (frame: wall face z=0, facing +z) */
 function archMirror(E, G, f, x, w, h) {
@@ -157,67 +153,14 @@ function archMirror(E, G, f, x, w, h) {
   L.box('wood', [w, 0.02, 0.05], [x, 0.03, 0.02], OAK, { r: 0.006 });
 }
 
-// ------------------------------------------------------------------ TV
-function tvTexture() {
-  const c = document.createElement('canvas'); c.width = 512; c.height = 288;
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-  const slides = [
-    { t: '3351 Eakin Rd — אחרי שיפוץ', s: 'Columbus, Ohio 43204', c: ['#1f3a5f', '#3b6e8f'] },
-    { t: '4 חדרי שינה · 2 חדרי רחצה', s: 'Cape Cod 1956 — שיפוץ יוקרה מלא', c: ['#34483c', '#7b8f6a'] },
-    { t: 'מטבח ירוק עמוק ושיש קלקטה', s: 'פליז מוברש · מקרר משולב · כיריים מקצועיות', c: ['#283a30', '#a08a5a'] },
-    { t: 'מרתף בילוי', s: 'ביליארד · בר · כביסה', c: ['#4a3324', '#a45a3c'] },
-  ];
-  let last = -1;
-  const draw = (time) => {
-    const g = c.getContext('2d'), i = Math.floor(time / 6) % slides.length, sl = slides[i];
-    const sec = Math.floor(time);
-    if (sec === last) return false; last = sec;
-    const grd = g.createLinearGradient(0, 0, 512, 288); grd.addColorStop(0, sl.c[0]); grd.addColorStop(1, sl.c[1]);
-    g.fillStyle = grd; g.fillRect(0, 0, 512, 288);
-    g.globalAlpha = 0.12; g.fillStyle = '#ffffff';
-    for (let k = 0; k < 5; k++) { g.beginPath(); g.arc((k * 130 + time * 12) % 600 - 40, 60 + k * 45, 30 + k * 8, 0, PI * 2); g.fill(); }
-    g.globalAlpha = 1;
-    g.strokeStyle = '#ffffff'; g.lineWidth = 4; g.beginPath(); g.moveTo(256 - 38, 92); g.lineTo(256, 58); g.lineTo(256 + 38, 92); g.stroke();
-    g.strokeRect(256 - 28, 92, 56, 40); g.fillStyle = '#ffffff'; g.fillRect(250, 112, 12, 20);
-    g.direction = 'rtl'; g.textAlign = 'center'; g.fillStyle = '#ffffff';
-    g.font = 'bold 30px "Segoe UI", Arial, sans-serif'; g.fillText(sl.t, 256, 180);
-    g.font = '19px "Segoe UI", Arial, sans-serif'; g.fillStyle = 'rgba(255,255,255,0.85)'; g.fillText(sl.s, 256, 212);
-    const d = new Date(); const hh = String(d.getHours()).padStart(2, '0'), mm = String(d.getMinutes()).padStart(2, '0'), ss = String(d.getSeconds()).padStart(2, '0');
-    g.direction = 'ltr'; g.textAlign = 'left'; g.font = 'bold 18px monospace'; g.fillStyle = 'rgba(255,255,255,0.9)'; g.fillText(`${hh}:${mm}:${ss}`, 16, 30);
-    g.textAlign = 'right'; g.font = '14px sans-serif'; g.fillText('LIVE TOUR', 496, 30);
-    g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(16, 262, 480, 4); g.fillStyle = '#ffffff'; g.fillRect(16, 262, 480 * ((time % 6) / 6), 4);
-    for (let k = 0; k < slides.length; k++) { g.beginPath(); g.arc(256 - 30 + k * 20, 245, 4, 0, PI * 2); g.fillStyle = k === i ? '#fff' : 'rgba(255,255,255,0.4)'; g.fill(); }
-    return true;
-  };
-  return { tex, draw };
-}
-
-function buildTV(E, G, f) {
-  const W = 1.12, Hh = 0.65;
-  f.box('matte', [W, Hh, 0.026], [0, 1.25, 0.045], 0x101112, { r: 0.004 });
-  f.box('brass', [W, 0.006, 0.02], [0, 1.25 - Hh / 2 - 0.003, 0.05], BRASS, { r: 0.002 });
-  f.box('matte', [0.3, 0.3, 0.03], [0, 1.25, 0.015], 0x222222, { r: 0.004 });
-  const { tex, draw } = tvTexture();
-  const onM = new THREE.MeshBasicMaterial({ map: tex, toneMapped: false });
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.016, Hh - 0.016), E.M.screenOff);
-  f.place(screen, [0, 1.25, 0.0585]); G.add(screen);
-  const st = { on: false, t: 0 };
-  E.interact(screen, () => (st.on ? 'כבה טלוויזיה' : 'הדלק טלוויזיה'), () => {
-    st.on = !st.on; E.snd.click(screen, 0.6);
-    if (st.on) { st.t = 0; draw(0); tex.needsUpdate = true; screen.material = onM; E.snd.tone(screen, { freq: 15600, dur: 0.4, vol: 0.01 }); E.snd.tone(screen, { freq: 523, dur: 0.25, vol: 0.06, delay: 0.1 }); E.snd.tone(screen, { freq: 784, dur: 0.35, vol: 0.06, delay: 0.3 }); }
-    else screen.material = E.M.screenOff;
-  });
-  E.anim.tick((dt) => { if (!st.on) return; st.t += dt; if (draw(st.t)) tex.needsUpdate = true; });
-}
-
 // ------------------------------------------------------------------ bedrooms (main floor)
 export function buildBedroomsMain(E, G0) {
   const F0 = E.plan.mainFloor;
   // ---------- BED 1 (front-left): sage velvet headboard, walnut, linen drapes on both windows
   {
     const G = roomGroup(G0, 'bed1'), B = new Batch(), root = B.root;
-    bed(E, root.sub(1.75, F0, 3.413, 0), { w: 1.52, l: 2.03, headH: 1.4, headC: LX.sage, duvetC: LX.ivory, throwC: LX.oat, accentC: LX.rust, euroC: 0xe4dccd });
-    for (const [x, pt] of [[0.7, true], [2.8, false]]) {
+    bed(E, root.sub(1.74, F0, 3.413, 0), { w: 1.52, l: 2.03, headH: 1.4, headC: LX.sage, duvetC: LX.ivory, throwC: LX.oat, accentC: LX.rust, euroC: 0xe4dccd });
+    for (const [x, pt] of [[0.69, true], [2.79, false]]) { // V7: 0.8 m strip west of the bed
       const ns = root.sub(x, F0, 3.413, 0);
       const h = nightstand(E, G, ns, { seed: x * 10 | 0 });
       tableLampLux(E, G, ns.sub(-0.04, h, 0.2), { room: 'bed1', floor: 'main', point: pt, intensity: 14, kind: 'gourd', baseC: 0xe9e3d8 });
@@ -227,9 +170,9 @@ export function buildBedroomsMain(E, G0) {
     vase(dtop, 0.28, 0, 0.24, 'amphora', 0xe9e3d8, 1.0); branches(dtop, 0.28, 0.3, 0.24, 0.45, rng(31), 5);
     bookStack(dtop, -0.2, 0, 0.24, 3, rng(32), { w: 0.26, d: 0.2 }); candle(dtop, -0.2, 0.08, 0.24, 0.1, 0.03);
     artLux(root.sub(0.64, F0, 7.19, PI), 3, 0, 1.52, 0, 0.6, 0.75, { key: 'wood', fc: OAK });
-    closet(E, G, root.sub(3.598, F0, 6.2, -PI / 2), { w: 1.6, h: 2.1, d: 0.62, seed: 13 });
-    rugLux(root, 2.6, 2.3, [1.75, F0, 5.0], 0xcfc6b6);
-    bench(E, root.sub(1.75, F0, 5.86, 0), 1.2, 0.4);
+    // V7: closet 1.6 → 0.9 m wide, 0.56 deep, pushed into the SE corner: 0.8 m from the bed's foot corner (was a 0.39 m slot)
+    closet(E, G, root.sub(3.598, F0, 6.71, -PI / 2), { w: 0.9, h: 2.1, d: 0.56, seed: 13 });
+    rugLux(root, 2.6, 2.3, [1.74, F0, 5.0], 0xcfc6b6);
     plant(root, 'fiddle', [3.3, F0, 3.75], rng(33), 0.95);
     archMirror(E, G, root.sub(0.125, F0, 6.35, PI / 2), 0, 0.56, 1.75);
     // drapes: front (S) and side (W) windows
@@ -241,24 +184,25 @@ export function buildBedroomsMain(E, G0) {
   // ---------- BED 2 (back-left): ink-blue headboard, painted greige, oak
   {
     const G = roomGroup(G0, 'bed2'), B = new Batch(), root = B.root;
-    bed(E, root.sub(1.5, F0, 3.293, PI), { w: 1.37, l: 1.91, headH: 1.25, headC: LX.ink, duvetC: LX.ivory, throwC: 0xc28d5f, accentC: 0xd9b26a, euroC: 0xd9d2c4 });
-    for (const x of [0.53, 2.47]) {
+    bed(E, root.sub(1.67, F0, 3.293, PI), { w: 1.37, l: 1.91, headH: 1.25, headC: LX.ink, duvetC: LX.ivory, throwC: 0xc28d5f, accentC: 0xd9b26a, euroC: 0xd9d2c4 });
+    for (const [x, w] of [[0.70, 0.46], [2.62, 0.42]]) { // V7: bed 17 cm east → 0.8 m west strip; right stand clears the door leaf
       const ns = root.sub(x, F0, 3.293, PI);
-      const h = nightstand(E, G, ns, { w: 0.46, key: 'wood', c: OAK, seed: x * 10 | 0 });
+      const h = nightstand(E, G, ns, { w, key: 'wood', c: OAK, seed: x * 10 | 0 });
       tableLampLux(E, G, ns.sub(0, h, 0.2), { room: 'bed2', floor: 'main', point: false, kind: 'sphere', baseC: 0x34483c });
     }
-    closet(E, G, root.sub(3.024, F0, 0.125, 0), { w: 1.148, h: 2.1, d: 0.62, seed: 17 });
-    dresser(E, G, root.sub(0.125, F0, 0.7, PI / 2), { w: 0.9, h: 0.82, d: 0.46, c: 0x8d9a8a, topC: OAK, cols: 2, rows: 3 });
-    const d2 = root.sub(0.125, F0 + 0.82, 0.7, PI / 2);
-    vase(d2, 0.25, 0, 0.22, 'bottle', 0x2f3a33, 0.9); bookStack(d2, -0.2, 0, 0.22, 3, rng(41), { w: 0.24, d: 0.18 });
+    // V7: closet 1.15 → 0.65 m wide / 0.5 deep in the NE corner (0.8 m from the bed's foot corner; was 0.46 m);
+    // slim dresser moved from the NW corner (it sealed the west strip) to the east wall between closet and door
+    closet(E, G, root.sub(3.273, F0, 0.125, 0), { w: 0.65, h: 2.1, d: 0.5, seed: 17 });
+    dresser(E, G, root.sub(3.598, F0, 1.75, -PI / 2), { w: 0.8, h: 0.82, d: 0.4, c: 0x8d9a8a, topC: OAK, cols: 2, rows: 3 });
+    const d2 = root.sub(3.598, F0 + 0.82, 1.75, -PI / 2);
+    vase(d2, 0.25, 0, 0.2, 'bottle', 0x2f3a33, 0.9); bookStack(d2, -0.2, 0, 0.2, 3, rng(41), { w: 0.24, d: 0.18 });
     // round brass mirror above the dresser
-    const MW = root.sub(0.125, F0, 0.7, PI / 2);
-    MW.torus('brass', 0.34, 0.012, [0, 1.48, 0.025], BRASS, { ts: 64, rs: 10 });
-    try { mirrorDisc(E, G, MW, [0, 1.48, 0.024], 0.335, { noReflector: true }); } catch (e) { }
-    rugLux(root, 2.2, 2.0, [1.5, F0, 1.95], 0xb9ad99);
-    bench(E, root.sub(1.5, F0, 0.95, PI), 1.1, 0.36);
-    artLux(root.sub(1.5, F0, 3.293, PI), 5, 0, 1.75, 0, 0.9, 0.5, { key: 'brass', fc: BRASS, fw: 0.015, fd: 0.035 });
-    plant(root, 'snake', [0.85, F0, 0.6], rng(43), 0.9);
+    const MW = root.sub(3.598, F0, 1.75, -PI / 2);
+    MW.torus('brass', 0.27, 0.012, [0, 1.5, 0.025], BRASS, { ts: 64, rs: 10 });
+    try { mirrorDisc(E, G, MW, [0, 1.5, 0.024], 0.265, { noReflector: true }); } catch (e) { }
+    rugLux(root, 2.2, 2.0, [1.67, F0, 1.95], 0xb9ad99);
+    artLux(root.sub(1.67, F0, 3.293, PI), 5, 0, 1.75, 0, 0.9, 0.5, { key: 'brass', fc: BRASS, fw: 0.015, fd: 0.035 });
+    plant(root, 'snake', [0.4, F0, 0.45], rng(43), 0.9);
     curtains(E, G, root.sub(1.83, F0, 0.125, 0), root.sub(1.83, F0, 0.125, 0), { w: 1.1, top: 2.2, ext: 0.12, z: 0.11, sides: ['L'], endPad: 0.02, color: LX.linen });
     curtains(E, G, root.sub(0.125, F0, 1.7, PI / 2), root.sub(0.125, F0, 1.7, PI / 2), { w: 0.9, top: 2.2, ext: 0.12, z: 0.11, sides: ['L'], endPad: 0.02, color: LX.linen });
     E.switchAt(G, root.sub(3.598, F0, 2.2, -PI / 2), 'bed2', [0, 1.2, 0]);
@@ -269,23 +213,20 @@ export function buildBedroomsMain(E, G0) {
 // ------------------------------------------------------------------ bedrooms (upper floor, sloped ceilings)
 export function buildBedroomsUpper(E, G0) {
   const P = E.plan, F2 = P.upperFloor;
-  // ---------- BED 3 (west, queen) — head against the south knee wall
+  // ---------- BED 3 (west) — V7: the bed's foot used to stop 0.2–0.3 m short of the bath2 wall (bench in between), which
+  // sealed the dresser / window half of the room. Now a full bed with a low headboard against the west gable (under
+  // the window sill), leaving a 0.8 m corridor from the door along the bath2 wall to the dresser + window.
   {
     const G = roomGroup(G0, 'bed3'), B = new Batch(), root = B.root;
-    bed(E, root.sub(1.4, F2, 5.77, PI), { w: 1.52, l: 2.03, headH: 1.1, headC: 0xc9b9a4, headKey: 'boucle', duvetC: LX.ivory, throwC: 0x7a2e2a, accentC: 0x7a8b6a, euroC: 0xd9d2c4 });
-    for (const x of [0.38, 2.42]) {
-      const ns = root.sub(x, F2, 5.77, PI);
-      const h = nightstand(E, G, ns, { w: 0.45, h: 0.55, seed: x * 10 | 0 });
-      tableLampLux(E, G, ns.sub(0, h, 0.2), { room: 'bed3', floor: 'upper', point: false, h: 0.46, sr: 0.15, kind: 'column' });
-    }
+    bed(E, root.sub(0.125, F2, 4.795, PI / 2), { w: 1.37, l: 1.91, headH: 0.78, headC: 0xc9b9a4, headKey: 'boucle', duvetC: LX.ivory, throwC: 0x7a2e2a, accentC: 0x7a8b6a, euro: false });
     dresser(E, G, root.sub(0.125, F2, 2.5, PI / 2), { w: 0.9, h: 0.78, d: 0.45, c: LX.cream, topC: OAK, cols: 2, rows: 2 });
     const d3 = root.sub(0.125, F2 + 0.78, 2.5, PI / 2);
-    vase(d3, 0.25, 0, 0.22, 'globe', 0xb48a5a, 0.8, 'clay'); bookStack(d3, -0.2, 0, 0.22, 2, rng(43), { w: 0.22, d: 0.17 });
+    vase(d3, 0.25, 0, 0.22, 'globe', 0xb48a5a, 0.8, 'clay'); bookStack(d3, 0.02, 0, 0.24, 2, rng(43), { w: 0.2, d: 0.16 });
+    tableLampLux(E, G, d3.sub(-0.31, 0, 0.22), { room: 'bed3', floor: 'upper', point: false, h: 0.4, sr: 0.13, kind: 'column' }); // V7: bedside lamp → dresser
     artLux(root.sub(0.125, F2, 2.5, PI / 2), 2, 0, 1.2, 0, 0.55, 0.36, { key: 'wood', fc: OAK, fw: 0.02 });
     closet(E, G, root.sub(3.902, F2, 4.85, -PI / 2), { w: 0.8, h: 1.5, d: 0.58, seed: 29 });
-    rugLux(root, 2.4, 1.8, [1.4, F2, 4.4], 0xd6cdbb);
-    bench(E, root.sub(1.4, F2, 3.37, 0), 0.95, 0.32);
-    plant(root, 'fiddle', [0.42, F2, 4.78], rng(51), 0.8);
+    rugLux(root, 2.3, 1.9, [1.3, F2, 4.7], 0xd6cdbb);
+    plant(root, 'fiddle', [3.62, F2, 5.5], rng(51), 0.7);
     curtains(E, G, root.sub(0.125, F2, 3.66, PI / 2), root.sub(0.125, F2, 3.66, PI / 2), { w: 0.95, top: 2.08, ext: 0.12, z: 0.11, color: LX.linen, floor: 'upper' });
     E.switchAt(G, root.sub(3.902, F2, 4.33, -PI / 2), 'bed3', [0, 1.2, 0]);
     B.build(G, E.M, { name: 'bed3' });
@@ -293,8 +234,9 @@ export function buildBedroomsUpper(E, G0) {
   // ---------- BED 4 (east, twin + study)
   {
     const G = roomGroup(G0, 'bed4'), B = new Batch(), root = B.root;
-    bed(E, root.sub(8.0, F2, 5.77, PI), { w: 0.99, l: 1.91, headH: 1.05, headC: 0x6f7d6a, duvetC: LX.ivory, throwC: 0xd8b26e, accentC: LX.rust, euro: false });
-    { const ns = root.sub(8.75, F2, 5.77, PI); const h = nightstand(E, G, ns, { w: 0.45, h: 0.55, key: 'wood', c: OAK, seed: 87 });
+    bed(E, root.sub(7.7, F2, 5.77, PI), { // V7: 0.3 m west → 0.77 m strip to the east window wall (was 0.47)
+      w: 0.99, l: 1.91, headH: 1.05, headC: 0x6f7d6a, duvetC: LX.ivory, throwC: 0xd8b26e, accentC: LX.rust, euro: false });
+    { const ns = root.sub(8.47, F2, 5.77, PI); const h = nightstand(E, G, ns, { w: 0.45, h: 0.55, key: 'wood', c: OAK, seed: 87 });
       tableLampLux(E, G, ns.sub(0, h, 0.2), { room: 'bed4', floor: 'upper', point: false, h: 0.44, sr: 0.14, kind: 'gourd', baseC: 0x2f3a45 }); }
     // walnut writing desk under the north knee wall with brass details
     const D = root.sub(7.0, F2, 1.524, 0), dw = 1.4, dd = 0.6, dh = 0.75;
@@ -325,7 +267,7 @@ export function buildBedroomsUpper(E, G0) {
     plant(root.sub(9.019, F2 + 0.78, 2.45, -PI / 2), 'bushy', [0.25, 0, 0.22], rng(63), 0.55);
     artLux(root.sub(9.019, F2, 2.45, -PI / 2), 6, 0, 1.15, 0, 0.5, 0.36, { key: 'brass', fc: BRASS, fw: 0.012, fd: 0.03 });
     rugLux(root, 2.0, 1.6, [7.4, F2, 3.7], 0x9aa48f);
-    plant(root, 'fiddle', [6.62, F2, 5.4], rng(67), 0.7);
+    plant(root, 'fiddle', [5.85, F2, 5.45], rng(67), 0.65);
     curtains(E, G, root.sub(9.019, F2, 3.66, -PI / 2), root.sub(9.019, F2, 3.66, -PI / 2), { w: 0.95, top: 2.08, ext: 0.12, z: 0.11, color: LX.linen, floor: 'upper' });
     E.switchAt(G, root.sub(5.546, F2, 3.95, PI / 2), 'bed4', [0, 1.2, 0]);
     B.build(G, E.M, { name: 'bed4' });
@@ -366,7 +308,8 @@ export function buildLiving(E, G, top, buildRadio) {
   for (let i = 0; i < 4; i++) C.box('linen', [0.04, 0.3, 0.26], [0.32 + i * 0.05, 0.3, 0.2], [0x3f2a1f, 0xd9cdb8, 0x2e4a62, 0x8a6a48][i], { r: 0.004 });
   C.solid(E, [cw, ch, cd], [0, ch / 2, cd / 2]);
   { const r = rng(76); vase(C, -0.56, ch, 0.24, 'amphora', 0xe9e3d8, 0.9); branches(C, -0.56, ch + 0.26, 0.24, 0.4, r, 5); vase(C, 0.55, ch, 0.22, 'globe', 0x2f3a33, 0.7); candle(C, 0.42, ch, 0.28, 0.12, 0.03); }
-  buildTV(E, G, root.sub(5.546, F0, 5.32, PI / 2));
+  let tv = null;
+  try { tv = buildTV(E, G, root.sub(5.546, F0, 5.32, PI / 2)); } catch (e) { console.warn('[interior] tv failed', e); }
   // curved bouclé sofa floated off the east wall (window drapes behind), facing west
   curvedSofa(E, root.sub(8.85, F0, 5.6, -PI / 2), { len: 1.8, d: 1.0, R: 2.5, c: 0xf0ebe1, throwC: LX.oat,
     pillows: [[-0.6, LX.rust, 'velvet', 0.15], [0.62, 0x6f7d6a, 'velvet', -0.15], [0.35, 0xe2d8c6, 'linen', -0.1]] });
@@ -383,6 +326,8 @@ export function buildLiving(E, G, top, buildRadio) {
     vase(CT, -0.3, th, 0.0, 'bowl', BRASS, 1.0, 'brass');
     vase(CT, -0.08, th, -0.05, 'globe', 0xe9e3d8, 0.7); branches(CT, -0.08, th + 0.15, -0.05, 0.3, r, 4);
     candle(CT, 0.0, th, 0.12, 0.08, 0.035);
+    // V7: black TV remote on the travertine (sofa side) — tap = channel panel
+    try { buildRemote(E, G, CT.sub(0.2, th, 0.215, 0.15), tv); } catch (e) { console.warn('[interior] tv remote failed', e); }
     CT.solid(E, [tl, th, tw], [0, th / 2, 0]);
   }
   rugLux(root, 2.6, 3.0, [7.35, F0, 5.5], 0xd9d1c2);

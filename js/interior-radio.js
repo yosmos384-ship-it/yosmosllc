@@ -1,9 +1,10 @@
-// interior-radio.js — 1950s American tabletop radio (3D model + interactions). V6: a remote for the shared one-station
-// radio in radio-engine.js (WNCI 97.9 FM Columbus, also driven by the UI chip / panel): the dial is printed with an FM and
-// an AM scale and one red mark at 97.9; the needle + dial / grille glow follow the engine; tapping the set = play / stop
-// (power knob = play / stop, tuning knob = tune in to 97.9, dial window = radio panel). Backup synth (CSP) shows here too.
+// interior-radio.js — 1950s American tabletop radio (3D model + interactions). V7: a remote for the shared HITS radio in
+// radio-engine.js (WNCI 97.9 FM Columbus first, then other US Top-40 stations; also driven by the UI chip / panel): the
+// dial is printed with an FM and an AM scale and a mark per hits station (WNCI in red); the needle + dial / grille glow
+// follow the engine; tapping the set = play / stop (power knob = play / stop, tuning knob = next hits station, dial
+// window = radio panel with the station list). Backup synth (CSP) shows here too.
 import { THREE, PI, V3, Batch } from './interior-lib.js';
-import { WNCI, FMIN, FMAX, dialUnits, getRadio, createRadio } from './radio-engine.js';
+import { WNCI, HITS, FMIN, FMAX, dialUnits, getRadio, createRadio } from './radio-engine.js';
 
 
 function dialTexture() {
@@ -25,11 +26,13 @@ function dialTexture() {
   g.font = 'bold 20px Georgia, serif';
   [550, 700, 900, 1100, 1300, 1600].forEach((f) => g.fillText(String(f / 10), amX(f), 150));
   g.font = 'italic bold 14px Georgia, serif'; g.textAlign = 'left'; g.fillText('FM', 4, 58); g.fillText('AM', 4, 124);
-  // one red mark: WNCI 97.9 (under the FM scale)
+  // a small mark per hits station, WNCI 97.9 (the default) in red with its call sign (under the FM scale)
+  g.fillStyle = '#7a4a22';
+  for (const h of HITS) if (h !== WNCI && h.band === 'FM') { g.beginPath(); g.arc(X(dialUnits(h)), 62, 2.6, 0, PI * 2); g.fill(); }
   const wx = X(dialUnits(WNCI));
   g.fillStyle = '#b5321f'; g.beginPath(); g.arc(wx, 64, 6, 0, PI * 2); g.fill();
   g.font = 'bold 13px Georgia, serif'; g.textAlign = 'center'; g.fillText('WNCI', wx, 84);
-  g.font = '15px Georgia, serif'; g.fillStyle = '#5b3a1a'; g.fillText('WNCI 97.9  ·  COLUMBUS, OHIO', 256, 180);
+  g.font = '15px Georgia, serif'; g.fillStyle = '#5b3a1a'; g.fillText('HITS · TOP 40  ·  WNCI 97.9 COLUMBUS', 256, 180);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   return { t, X };
 }
@@ -90,14 +93,14 @@ export function buildRadio(E, G, F) {
   setNeedle();
   const power = (o) => { snd.click(o || kPower, 0.9); R.toggle(); };
   const label = () => (R.on ? 'עצור רדיו · ' + stationName() : 'הפעל רדיו · WNCI 97.9');
-  // tap on the set = play / stop WNCI 97.9
+  // tap on the set = play / stop (starts at WNCI 97.9)
   E.interact(hitBody, label, () => power(hitBody));
   E.interact(kPower.parent, () => (R.on ? 'כבה רדיו' : 'הדלק רדיו'), () => power(kPower));
   // the dial window opens the UI radio panel
   const hitDial = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.075, 0.012), new THREE.MeshBasicMaterial({ visible: false }));
   F.place(hitDial, [0.1, 0.165, D + 0.016]); G.add(hitDial);
-  E.interact(hitDial, () => 'רדיו WNCI 97.9', () => { snd.click(hitDial, 0.5); if (R.openPanel) R.openPanel('radio'); });
-  E.interact(kTune.parent, () => (R.tuning ? 'מכוון…' : 'כוון ל-WNCI 97.9'), () => { if (!R.tuning) { snd.click(kTune, 0.5); R.retune(); } });
+  E.interact(hitDial, () => 'תחנות להיטים', () => { snd.click(hitDial, 0.5); if (R.openPanel) R.openPanel('live'); });
+  E.interact(kTune.parent, () => (R.tuning ? 'מכוון…' : R.on ? 'תחנה הבאה' : 'כוון ל-WNCI 97.9'), () => { if (!R.tuning) { snd.click(kTune, 0.5); R.retune(); } });
   // ---- per-frame: follow the engine (UI panel changes show up here too)
   E.anim.tick((dt) => {
     setNeedle();

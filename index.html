@@ -9,14 +9,15 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-    "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-    "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.7.8/build/index.module.js",
-    "three-gpu-pathtracer": "https://cdn.jsdelivr.net/npm/three-gpu-pathtracer@0.0.23/build/index.module.js"
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/examples/jsm/",
+    "three/examples/jsm/": "./vendor/three/examples/jsm/",
+    "three-mesh-bvh": "./vendor/three-mesh-bvh/index.module.js",
+    "three-gpu-pathtracer": "./vendor/three-gpu-pathtracer/index.module.js"
   }
 }
 </script>
+<link rel="modulepreload" href="./vendor/three/build/three.module.js">
 <style>
 :root{
   --bg:#0b0f16;
@@ -59,6 +60,17 @@ body.loading .ui{opacity:0;pointer-events:none}
 .mode .ico{font-size:16px;line-height:1}
 .mode:hover{background:rgba(255,255,255,.07);color:var(--text)}
 .mode.on{background:linear-gradient(180deg,rgba(67,224,255,.95),rgba(42,190,230,.95));color:var(--accent-ink);box-shadow:0 4px 16px rgba(67,224,255,.35)}
+
+/* ---------- V7 language switcher ---------- */
+.lang-sw{display:flex;gap:3px;padding:4px;direction:ltr}
+.lang-sw button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 2px;border-radius:9px;font-size:11px;font-weight:600;color:var(--muted);min-height:44px;justify-content:center}
+.lang-sw button .fl{font-size:17px;line-height:1}
+.lang-sw button:hover{background:rgba(255,255,255,.08);color:var(--text)}
+.lang-sw button.on{background:rgba(67,224,255,.18);color:var(--text);box-shadow:0 0 0 1px rgba(67,224,255,.55) inset}
+#loader .lang-sw{margin-top:14px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px}
+#loader .lang-sw button{flex-direction:row;gap:6px;font-size:13px}
+#loader .lang-sw button .fl{font-size:18px}
+body.ltr .tbtn,body.ltr .sp-it,body.ltr .rp-st{text-align:left}
 
 /* ---------- tools column ---------- */
 #tools{top:calc(var(--gut) + env(safe-area-inset-top,0px));right:calc(var(--gut) + env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:8px;align-items:stretch;width:150px}
@@ -106,6 +118,7 @@ body.mode-dollhouse #roomHud, body.mode-plan #roomHud{max-width:none;min-width:1
 #radioChip .rc-eq i:nth-child(2){animation-delay:-.35s}#radioChip .rc-eq i:nth-child(3){animation-delay:-.6s}
 #radioChip.tuning .rc-eq i{animation-duration:.25s;background:#ffd68c}
 @keyframes eq{0%{transform:scaleY(.25)}100%{transform:scaleY(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 /* ---------- sheets / popovers (radio, style) ---------- */
 /* V6: every sheet = fixed header (title + ✕ ≥ 44 px, never scrolls away) + a body that scrolls inside the sheet */
@@ -145,6 +158,23 @@ body.mode-dollhouse #roomHud, body.mode-plan #roomHud{max-width:none;min-width:1
 .rp-err{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 6px 6px 10px;padding-inline-start:12px;border-radius:12px;background:rgba(255,107,107,.14);border:1px solid rgba(255,107,107,.45);font-size:13px;font-weight:700;color:#ffd0d0}
 .rp-retry{min-height:44px;padding:0 16px;border-radius:999px;background:rgba(255,255,255,.14);font-weight:700;color:var(--text);white-space:nowrap}
 .rp-retry:hover{background:rgba(255,255,255,.22)}
+.rp-sec{display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:12px;background:rgba(255,214,140,.07);border:1px solid rgba(255,214,140,.25)}
+.rp-h{font-weight:700;font-size:13px;color:#ffe2b0;line-height:1.35}
+.rp-how{font-weight:400;font-size:11px;color:var(--muted)}
+.rp-lvlist{display:flex;flex-direction:column;gap:4px}
+.rp-row{display:flex;align-items:stretch;gap:4px}
+.rp-lvb{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:9px;background:rgba(255,255,255,.05);min-height:48px;text-align:start;color:var(--text);border:1px solid transparent}
+.rp-lvb:hover{background:rgba(255,255,255,.1)}
+.rp-lvb .rp-t{flex:1}
+.rp-lvb .rp-t b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rp-lvb.on{background:rgba(255,214,140,.16);border-color:rgba(255,214,140,.75)}
+.rp-lvs{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(180deg,rgba(255,214,140,.95),rgba(232,176,92,.95));color:#2a1a04;font-weight:800;font-size:14px}
+.rp-lvb.busy .rp-lvs{background:transparent;border:3px solid rgba(255,214,140,.3);border-top-color:#ffd68c;animation:spin .8s linear infinite}
+.rp-best{color:#ffd68c;font-weight:700}
+#radioPanel.rp-blocked .rp-lvb{opacity:.42;filter:grayscale(1);cursor:default}
+#radioPanel.rp-blocked .rp-lvs{background:rgba(255,255,255,.25)}
+#radioChip.live .rc-txt small{color:#ffd68c}
+#radioChip.live .rc-eq i{background:#ffd68c}
 .rp-note{font-size:12px;font-weight:700;color:#2a1a04;background:rgba(255,214,140,.88);border-radius:8px;padding:5px 9px;align-self:stretch;direction:rtl}
 #radioChip.unav .rc-txt small{color:#ffb3b3}
 #radioChip.live .rc-txt small{color:#ffd68c}
@@ -385,10 +415,10 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
 
 <!-- Top: modes -->
 <nav id="topbar" class="ui glass" aria-label="מצבי תצוגה">
-  <button class="mode" data-mode="walk" title="הליכה בגוף ראשון (1)"><span class="ico">🚶</span><span>הליכה<span class="lbl-long"> 3D</span></span></button>
+  <button class="mode" data-mode="walk" title="הליכה בגוף ראשון (1)"><span class="ico">🚶</span><span><span data-i18n="mode.walk">הליכה</span><span class="lbl-long" data-i18n="mode.walk.long"> 3D</span></span></button>
   <button class="mode" data-mode="pano" title="סיור פנורמי 360° (2)"><span class="ico">◎</span><span>סיור 360°</span></button>
-  <button class="mode" data-mode="dollhouse" title="סריקה / דולהאוס (3)"><span class="ico">⬡</span><span><span class="lbl-long">סריקה / </span>דולהאוס</span></button>
-  <button class="mode" data-mode="plan" title="תוכנית קומה (4)"><span class="ico">▦</span><span>תוכנית<span class="lbl-long"> קומה</span></span></button>
+  <button class="mode" data-mode="dollhouse" title="סריקה / דולהאוס (3)"><span class="ico">⬡</span><span><span class="lbl-long" data-i18n="mode.doll.long">סריקה / </span><span data-i18n="mode.doll">דולהאוס</span></span></button>
+  <button class="mode" data-mode="plan" title="תוכנית קומה (4)"><span class="ico">▦</span><span><span data-i18n="mode.plan">תוכנית</span><span class="lbl-long" data-i18n="mode.plan.long"> קומה</span></span></button>
 </nav>
 
 <!-- Tools -->
@@ -408,6 +438,7 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
   <button id="btnStyle" class="tbtn glass" title="סגנון השיפוץ — אפשרויות חומרים וצבעים" aria-haspopup="dialog"><span class="ico">🎨</span><span class="lbl">סגנון שיפוץ</span></button>
   <button id="btnDpad" class="tbtn glass" title="חצי תנועה על המסך"><span class="ico">✥</span><span class="lbl">חצי תנועה</span></button>
   <button id="btnHelp" class="tbtn glass" title="עזרה"><span class="ico">?</span><span class="lbl">עזרה</span></button>
+  <button id="btnRestart" class="tbtn glass" title="התחלה מחדש — חזרה למצב ההתחלתי"><span class="ico">⟲</span><span class="lbl">התחלה מחדש</span></button>
   </div>
 </aside>
 
@@ -478,7 +509,7 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
     </ul>
     <h3>הליכה 3D — טלפון</h3>
     <ul>
-      <li>חצים בפינה השמאלית התחתונה: ▲ קדימה, ▼ אחורה, ◀ ▶ סיבוב. לחיצה ממושכת = תנועה רציפה שמאיצה, הקשה = צעד קצר.</li>
+      <li>חצים בפינה השמאלית התחתונה: ▲ קדימה, ▼ אחורה, ◀ ▶ סיבוב. לחיצה ממושכת = תנועה רציפה שמאיצה בעדינות, הקשה = צעד קצר.</li>
       <li>גרירה על המסך להסתכלות, צביטה בשתי אצבעות לזום, הקשה כפולה על הרצפה = הליכה לשם.</li>
       <li>הקישו על אובייקט, או לחצו על הכפתור "פעולה". הכפתור ⋯ פותח את הכלים.</li>
     </ul>
@@ -486,14 +517,18 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
     <ul>
       <li><b>סיור 360°</b> — עמידה בנקודות קבועות, גרירה להסתכלות, טבעות על הרצפה למעבר בין נקודות, הורדת תמונה פנורמית.</li>
       <li><b>✨ הדמיה מציאותית</b> (במצב 360°) — רינדור במעקב קרניים של כל הסביבה; אפשר להסתכל מסביב בתוצאה ולהוריד PNG. <b>📷 הדמיה של המבט הנוכחי</b> — תמונה אחת ברזולוציה גבוהה.</li>
+      <li><b>🖼 הדמיות</b> — הדמיות 360° מוכנות של כל סגנונות השיפוץ.</li>
       <li><b>סריקה / דולהאוס</b> — מבט "בית בובות" מסתובב; סינון לפי קומה; לחיצה כפולה על רצפה נכנסת לשם.</li>
       <li><b>תוכנית קומה</b> — מבט מלמעלה; גרירה להזזה, גלגלת לזום, הקשה על חדר נכנסת אליו.</li>
     </ul>
     <h3>כלים</h3>
     <ul>
+      <li><b>🇮🇱 / 🇺🇸 / 🇲🇽 שפה</b> — עברית, אנגלית או ספרדית.</li>
       <li><b>יום / ערב / לילה</b> — בלילה האורות בבית נדלקים אוטומטית; מתגי הקיר עדיין עובדים.</li>
-      <li><b>📻 רדיו WNCI 97.9</b> — בהקשה הראשונה באתר מתחיל שידור חי של WNCI 97.9 FM מקולומבוס, אוהיו (להיטים). הקישו על השבב 📻 להפעלה / עצירה ולעוצמה. הקשה על הרדיו הישן בסלון = הפעלה / עצירה. אם השידור לא עונה, מנסים שוב אוטומטית; אחרי זה יופיע "השידור לא זמין כרגע" עם כפתור "נסו שוב".</li>
+      <li><b>📻 רדיו להיטים</b> — בהקשה הראשונה באתר מתחיל שידור חי של WNCI 97.9 FM מקולומבוס, אוהיו. הקישו על השבב 📻 להפעלה / עצירה, לעוצמה ולרשימת תחנות הלהיטים מארה״ב (Top 40). תחנה שלא עונה — עוברים אוטומטית לתחנת הלהיטים הבאה.</li>
+      <li><b>📺 טלוויזיה</b> — הקישו על השלט שעל שולחן הסלון או על המסך לערוצים חיים מארה״ב.</li>
       <li><b>🎨 סגנון שיפוץ</b> — החלפת אפשרויות השיפוץ (חומרים וצבעים) בזמן אמת.</li>
+      <li><b>⟲ התחלה מחדש</b> — חזרה להתחלה ממש (גם רענון הדף עושה את אותו הדבר).</li>
       <li><b>המפה הקטנה</b> — הקישו עליה כדי להגדיל לרגע.</li>
       <li><b>📏 מדידה</b> — סמנו שתי נקודות כדי לקבל מרחק במטרים וברגל-אינץ׳. <kbd>Esc</kbd> מנקה.</li>
       <li>קיצורים: <kbd>1</kbd> הליכה · <kbd>2</kbd> 360° · <kbd>3</kbd> דולהאוס · <kbd>4</kbd> תוכנית · <kbd>M</kbd> מדידה.</li>
@@ -528,7 +563,17 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
 <noscript><div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0b0f16;color:#fff;font-family:sans-serif">יש להפעיל JavaScript כדי לצפות בסיור.</div></noscript>
 
 <script type="module">
+  // V7: languages first (Hebrew / English / Spanish; DOM translator + switchers), then the 3D core
+  import { initI18n, mountSwitcher, tr } from './js/i18n.js';
+  try {
+    initI18n();
+    const card = document.querySelector('#loader .card'); if (card) mountSwitcher(card, { className: 'lang-loader' });
+    const ti = document.getElementById('toolsInner'); if (ti) mountSwitcher(ti, { className: 'lang-tools glass', prepend: true });
+  } catch (e) { console.warn('[i18n]', e); }
+  // V7: a refresh / back-forward restore always starts from the very beginning
+  window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const fatal = (msg, err) => {
+    msg = tr(msg);
     console.error(msg, err);
     const step = document.getElementById('loaderStep');
     if (step) { step.textContent = msg; step.style.color = '#ff8a8a'; }
@@ -549,6 +594,6 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
     .then((m) => m.boot())
     .catch((e) => fatal('טעינת מנוע התלת-ממד נכשלה (three.js / core.js) — בדקו חיבור לאינטרנט ורעננו', e));
 </script>
-<div id="ver-tag" style="position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));z-index:50;font:600 11px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.75);background:rgba(20,24,30,.45);padding:2px 8px;border-radius:9px;pointer-events:none">גרסה 6</div>
+<div id="ver-tag" style="position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));z-index:50;font:600 11px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.75);background:rgba(20,24,30,.45);padding:2px 8px;border-radius:9px;pointer-events:none">גרסה 7</div>
 </body>
 </html>

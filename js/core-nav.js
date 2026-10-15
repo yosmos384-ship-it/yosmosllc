@@ -11,6 +11,7 @@ import { buildNavGraph } from './navgraph.js';
 export const NAV_FLOOR_HE = { upper: 'קומה עליונה', main: 'קומת כניסה', basement: 'מרתף', outside: 'חוץ' };
 const FLOOR_RANK = { basement: 0, main: 1, outside: 1, upper: 2 };
 const EYE = 1.6;
+export const GLIDE_V = 1.0; // V7: glide speed along nav paths, m/s (V2–V6: 1.6)
 const UPV = new THREE.Vector3(0, 1, 0);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const angDiff = (a, b) => { let d = a - b; d = Math.atan2(Math.sin(d), Math.cos(d)); return Math.abs(d); };
@@ -488,7 +489,7 @@ export function createNav(env) {
     const suffix = new Array(route.length).fill(0);
     for (let i = route.length - 2; i >= 0; i--) suffix[i] = suffix[i + 1] + Math.hypot(route[i + 1].x - route[i].x, route[i + 1].z - route[i].z);
     const s = player.state;
-    glide = { pts: route, suffix, i: 1, t: 0, chkT: 0, chkX: s.x, chkZ: s.z, stuck: 0, wait: false, manualT: 0, checked: {}, limit: 6 + suffix[0] * 2.2, label: opts.label || '', keepYaw: !!opts.keepYaw, frame: !!opts.frame };
+    glide = { pts: route, suffix, i: 1, t: 0, chkT: 0, chkX: s.x, chkZ: s.z, stuck: 0, wait: false, manualT: 0, checked: {}, limit: 6 + suffix[0] * 3.2, label: opts.label || '', keepYaw: !!opts.keepYaw, frame: !!opts.frame };
     settle = null;
     const end = route[route.length - 1];
     cursor.show(new THREE.Vector3(end.x, groundY(end.x, end.z, end.y), end.z), UPV, 'target');
@@ -560,10 +561,10 @@ export function createNav(env) {
       dx = dx * (1 - w) + nx * w; dz = dz * (1 - w) + nz * w; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
     }
     const remaining = d + glide.suffix[glide.i];
-    const vmax = 1.6 * (inp.run ? 1.7 : 1);
-    const v = Math.min(vmax, 0.28 + remaining * 1.6);
+    const vmax = GLIDE_V * (inp.run ? 1.5 : 1); // V7: ~1.0 m/s (was 1.6, Shift ×1.7)
+    const v = Math.min(vmax, 0.22 + remaining * 1.0);
     inp.moveX = dx * v; inp.moveZ = dz * v;
-    if (glide.manualT <= 0 && !glide.keepYaw) { inp.yawTo = Math.atan2(-dx, -dz); inp.yawRate = 3.2; }
+    if (glide.manualT <= 0 && !glide.keepYaw) { inp.yawTo = Math.atan2(-dx, -dz); inp.yawRate = 2.4; }
     // progress / stuck detection
     glide.chkT += dt;
     if (glide.chkT > 0.7) {

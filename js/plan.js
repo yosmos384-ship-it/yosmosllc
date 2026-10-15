@@ -26,21 +26,21 @@ const plan = {
   // ---------- MAIN FLOOR rooms: [x0, z0, x1, z1] ----------
   rooms: {
     main: {
-      bed2:    { he: 'חדר שינה 2', r: [0,      0,      f(12), f(11)] },
-      bed1:    { he: 'חדר שינה 1', r: [0,      f(11),  f(12), f(24)] },
-      bath1:   { he: 'חדר רחצה 1', r: [f(12),  0,      f(18), f(7)]  },
-      hall:    { he: 'מסדרון',     r: [f(12),  f(7),   f(18), f(24)] },
-      kitchen: { he: 'מטבח',       r: [f(18),  0,      f(30), f(10)] },
-      living:  { he: 'סלון',       r: [f(18),  f(10),  f(30), f(24)] },
+      bed2:    { he: 'חדר שינה 2', en: 'Bedroom 2', es: 'Recámara 2', r: [0,      0,      f(12), f(11)] },
+      bed1:    { he: 'חדר שינה 1', en: 'Bedroom 1', es: 'Recámara 1', r: [0,      f(11),  f(12), f(24)] },
+      bath1:   { he: 'חדר רחצה 1', en: 'Bathroom 1', es: 'Baño 1', r: [f(12),  0,      f(18), f(7)]  },
+      hall:    { he: 'מסדרון', en: 'Hallway', es: 'Pasillo',     r: [f(12),  f(7),   f(18), f(24)] },
+      kitchen: { he: 'מטבח', en: 'Kitchen', es: 'Cocina',       r: [f(18),  0,      f(30), f(10)] },
+      living:  { he: 'סלון', en: 'Living room', es: 'Sala',       r: [f(18),  f(10),  f(30), f(24)] },
     },
     upper: {
-      bed3:    { he: 'חדר שינה 3', r: [0,      f(5),   f(13), f(19)] },
-      bath2:   { he: 'חדר רחצה 2', r: [1.90,   f(5),   f(13), 3.20]  }, // carved from bed3's NE corner. Plan shower 3.5'x4' sits in its NE corner (x 2.896..3.962, z 1.524..2.743); toilet + vanity west of it
-      landing: { he: 'מבואה',      r: [f(13),  f(5),   f(18), f(19)] },
-      bed4:    { he: 'חדר שינה 4', r: [f(18),  f(5),   f(30), f(19)] },
+      bed3:    { he: 'חדר שינה 3', en: 'Bedroom 3', es: 'Recámara 3', r: [0,      f(5),   f(13), f(19)] },
+      bath2:   { he: 'חדר רחצה 2', en: 'Bathroom 2', es: 'Baño 2', r: [1.90,   f(5),   f(13), 3.20]  }, // carved from bed3's NE corner. Plan shower 3.5'x4' sits in its NE corner (x 2.896..3.962, z 1.524..2.743); toilet + vanity west of it
+      landing: { he: 'מבואה', en: 'Landing', es: 'Descanso',      r: [f(13),  f(5),   f(18), f(19)] },
+      bed4:    { he: 'חדר שינה 4', en: 'Bedroom 4', es: 'Recámara 4', r: [f(18),  f(5),   f(30), f(19)] },
     },
     basement: {
-      basement:{ he: 'מרתף',       r: [0, 0, f(30), f(24)] },
+      basement:{ he: 'מרתף', en: 'Basement', es: 'Sótano',       r: [0, 0, f(30), f(24)] },
     },
   },
 
@@ -65,17 +65,17 @@ const plan = {
   // ---------- openings: wall id or 'ext_N|ext_S|ext_E|ext_W' (+ floor), center along wall axis, width, sill, head ----------
   // 'along' = coordinate along the wall (x for N/S walls, z for E/W walls)
   doors: [
-    { id: 'front',    wall: 'ext_S', floor: 'main', along: 6.05, w: 0.92, h: 2.05, exterior: true, he: 'דלת כניסה' },
-    { id: 'back',     wall: 'ext_E', floor: 'main', along: 1.35, w: 0.86, h: 2.05, exterior: true, he: 'דלת אחורית' },
-    { id: 'bath1',    wall: 'w_bath_hall', floor: 'main', along: 4.20, w: 0.76, h: 2.03, he: 'דלת חדר רחצה' },
-    { id: 'bed2',     wall: 'w_bed_hall',  floor: 'main', along: 2.75, w: 0.81, h: 2.03, he: 'דלת חדר שינה 2' },
-    { id: 'bed1',     wall: 'w_bed_hall',  floor: 'main', along: 4.65, w: 0.81, h: 2.03, he: 'דלת חדר שינה 1' },
-    { id: 'basement', wall: 'basement_head', floor: 'main', along: 5.03, w: 0.80, h: 2.00, he: 'דלת למרתף' }, // in a short wall at z=3.90 spanning x 4.572..5.486 under the stair top
+    { id: 'front',    wall: 'ext_S', floor: 'main', along: 6.05, w: 0.92, h: 2.05, exterior: true, he: 'דלת כניסה', en: 'Front door', es: 'Puerta principal' },
+    { id: 'back',     wall: 'ext_E', floor: 'main', along: 1.35, w: 0.86, h: 2.05, exterior: true, he: 'דלת אחורית', en: 'Back door', es: 'Puerta trasera' },
+    { id: 'bath1',    wall: 'w_bath_hall', floor: 'main', along: 4.20, w: 0.76, h: 2.03, he: 'דלת חדר רחצה', en: 'Bathroom door', es: 'Puerta del baño' },
+    { id: 'bed2',     wall: 'w_bed_hall',  floor: 'main', along: 2.75, w: 0.81, h: 2.03, he: 'דלת חדר שינה 2', en: 'Bedroom 2 door', es: 'Puerta de la recámara 2' },
+    { id: 'bed1',     wall: 'w_bed_hall',  floor: 'main', along: 4.65, w: 0.81, h: 2.03, he: 'דלת חדר שינה 1', en: 'Bedroom 1 door', es: 'Puerta de la recámara 1' },
+    { id: 'basement', wall: 'basement_head', floor: 'main', along: 5.03, w: 0.80, h: 2.00, he: 'דלת למרתף', en: 'Basement door', es: 'Puerta del sótano' }, // in a short wall at z=3.90 spanning x 4.572..5.486 under the stair top
     // bed3/bed4 'along' updated to the positions house.js actually builds (its DOOR_OVERRIDE keeps 1.98 m doors under the
     // sloped ceiling): bed3 z 3.34..4.10, bed4 z 3.02..3.78 (was 4.85 / 2.75 — integration pass)
-    { id: 'bed3',     wall: 'u_bed3_landing', floor: 'upper', along: 3.72, w: 0.76, h: 1.98, he: 'דלת חדר שינה 3' },
-    { id: 'bed4',     wall: 'u_landing_bed4', floor: 'upper', along: 3.40, w: 0.76, h: 1.98, he: 'דלת חדר שינה 4' },
-    { id: 'bath2',    wall: 'u_bath2_s',      floor: 'upper', along: 2.45, w: 0.70, h: 1.98, he: 'דלת חדר רחצה 2', sliding: true },
+    { id: 'bed3',     wall: 'u_bed3_landing', floor: 'upper', along: 3.72, w: 0.76, h: 1.98, he: 'דלת חדר שינה 3', en: 'Bedroom 3 door', es: 'Puerta de la recámara 3' },
+    { id: 'bed4',     wall: 'u_landing_bed4', floor: 'upper', along: 3.40, w: 0.76, h: 1.98, he: 'דלת חדר שינה 4', en: 'Bedroom 4 door', es: 'Puerta de la recámara 4' },
+    { id: 'bath2',    wall: 'u_bath2_s',      floor: 'upper', along: 2.45, w: 0.70, h: 1.98, he: 'דלת חדר רחצה 2', en: 'Bathroom 2 door', es: 'Puerta del baño 2', sliding: true },
   ],
   openings: [ // cased openings without doors
     { id: 'kit_living',  wall: 'w_kit_living', floor: 'main', along: 7.05, w: 1.50, h: 2.10 },
@@ -123,21 +123,21 @@ const plan = {
   // yaw π looks north (-z, toward the house from the street). core converts with camera.rotation.y = yaw + π.
   // Interior spots were re-checked against interior.js furniture + open door leaves (≥0.3 m clearance, integration pass).
   panos: [
-    { id: 'street',   he: 'רחוב',        p: [4.0, 1.6, 21.0], yaw: Math.PI },
+    { id: 'street',   he: 'רחוב', en: 'Street', es: 'Calle',        p: [4.0, 1.6, 21.0], yaw: Math.PI },
     { id: 'frontyard',he: 'חצר קדמית',  p: [6.0, 1.6, 12.0], yaw: Math.PI },
-    { id: 'porch',    he: 'מרפסת כניסה', p: [6.05, 2.05, 8.3], yaw: Math.PI },
-    { id: 'living',   he: 'סלון',        p: [6.6, 2.2, 4.0],  yaw: 0.55 },  // toward sofa + picture window (SE)
-    { id: 'kitchen',  he: 'מטבח',        p: [7.4, 2.2, 2.3],  yaw: -2.55 }, // toward sink window + range wall (NW)
-    { id: 'hall',     he: 'מסדרון',      p: [4.3, 2.2, 3.1],  yaw: 0 },     // down the hall toward the front
-    { id: 'bath1',    he: 'חדר רחצה 1',  p: [4.3, 2.2, 1.6],  yaw: Math.PI }, // toward tub + window (N)
-    { id: 'bed1',     he: 'חדר שינה 1',  p: [2.95, 2.2, 4.95], yaw: -0.85 }, // from the door side toward bed + windows (SW)
-    { id: 'bed2',     he: 'חדר שינה 2',  p: [3.05, 2.2, 2.0],  yaw: -2.0 },  // toward bed + windows (NW)
-    { id: 'landing',  he: 'מבואה',       p: [4.6, 4.89, 2.6], yaw: 0 },
-    { id: 'bed3',     he: 'חדר שינה 3',  p: [2.75, 4.89, 4.4], yaw: -1.95 }, // toward bed + west gable window
-    { id: 'bath2',    he: 'חדר רחצה 2',  p: [2.75, 4.89, 2.8], yaw: 3.0 },  // toward shower + toilet (N)
-    { id: 'bed4',     he: 'חדר שינה 4',  p: [6.6, 4.89, 3.0], yaw: 1.2 },   // toward bed + east gable window
-    { id: 'basement', he: 'מרתף',        p: [5.6, -0.10, 2.2], yaw: 0.75 }, // toward the pool table (SE)
-    { id: 'backyard', he: 'חצר אחורית', p: [5.0, 1.6, -9.0], yaw: 0 },
+    { id: 'porch',    he: 'מרפסת כניסה', en: 'Front porch', es: 'Porche de entrada', p: [6.05, 2.05, 8.3], yaw: Math.PI },
+    { id: 'living',   he: 'סלון', en: 'Living room', es: 'Sala',        p: [6.6, 2.2, 4.0],  yaw: 0.55 },  // toward sofa + picture window (SE)
+    { id: 'kitchen',  he: 'מטבח', en: 'Kitchen', es: 'Cocina',        p: [7.4, 2.2, 2.3],  yaw: -2.55 }, // toward sink window + range wall (NW)
+    { id: 'hall',     he: 'מסדרון', en: 'Hallway', es: 'Pasillo',      p: [4.3, 2.2, 3.1],  yaw: 0 },     // down the hall toward the front
+    { id: 'bath1',    he: 'חדר רחצה 1', en: 'Bathroom 1', es: 'Baño 1',  p: [4.3, 2.2, 1.6],  yaw: Math.PI }, // toward tub + window (N)
+    { id: 'bed1',     he: 'חדר שינה 1', en: 'Bedroom 1', es: 'Recámara 1',  p: [2.95, 2.2, 4.95], yaw: -0.85 }, // from the door side toward bed + windows (SW)
+    { id: 'bed2',     he: 'חדר שינה 2', en: 'Bedroom 2', es: 'Recámara 2',  p: [3.05, 2.2, 2.0],  yaw: -2.0 },  // toward bed + windows (NW)
+    { id: 'landing',  he: 'מבואה', en: 'Landing', es: 'Descanso',       p: [4.6, 4.89, 2.6], yaw: 0 },
+    { id: 'bed3',     he: 'חדר שינה 3', en: 'Bedroom 3', es: 'Recámara 3',  p: [2.75, 4.89, 4.4], yaw: -1.95 }, // toward bed + west gable window
+    { id: 'bath2',    he: 'חדר רחצה 2', en: 'Bathroom 2', es: 'Baño 2',  p: [2.75, 4.89, 2.8], yaw: 3.0 },  // toward shower + toilet (N)
+    { id: 'bed4',     he: 'חדר שינה 4', en: 'Bedroom 4', es: 'Recámara 4',  p: [6.6, 4.89, 3.0], yaw: 1.2 },   // toward bed + east gable window
+    { id: 'basement', he: 'מרתף', en: 'Basement', es: 'Sótano',        p: [5.6, -0.10, 2.2], yaw: 0.75 }, // toward the pool table (SE)
+    { id: 'backyard', he: 'חצר אחורית', en: 'Backyard', es: 'Patio trasero', p: [5.0, 1.6, -9.0], yaw: 0 },
   ],
   address: '3351 Eakin Rd, Columbus, OH 43204',
 };

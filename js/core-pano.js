@@ -3,6 +3,7 @@
 // Owner: CORE. No side effects on import.
 import * as THREE from 'three';
 import { createArrowSet, createFloorCursor } from './core-nav.js';
+import { tr, getLang } from './i18n.js'; // V7: legacy ring labels are canvas text
 
 const FLOOR_HE = { upper: 'קומה עליונה', main: 'קומת כניסה', basement: 'מרתף', outside: 'חוץ' };
 
@@ -15,7 +16,7 @@ function labelTexture(text, sub) {
   g.beginPath(); g.moveTo(r, 8); g.lineTo(512 - r, 8); g.arc(512 - r, 64, 56, -Math.PI / 2, Math.PI / 2); g.lineTo(r, 120); g.arc(r, 64, 56, Math.PI / 2, -Math.PI / 2); g.closePath(); g.fill();
   g.strokeStyle = 'rgba(80,230,255,0.9)'; g.lineWidth = 4; g.stroke();
   g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.direction = 'rtl';
+  g.direction = getLang() === 'he' ? 'rtl' : 'ltr'; text = tr(text); sub = sub && tr(sub);
   g.font = '600 46px system-ui, -apple-system, "Segoe UI", Arial, sans-serif';
   g.fillText(text, 256, sub ? 52 : 66);
   if (sub) { g.font = '400 26px system-ui, Arial, sans-serif'; g.fillStyle = 'rgba(200,240,255,0.9)'; g.fillText(sub, 256, 96); }
@@ -252,7 +253,8 @@ export function createPano(env) {
     for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
     const total = cum[cum.length - 1] || 1e-6;
     const dist = from.distanceTo(to);
-    const dur = route ? Math.min(2.4, Math.max(0.7, 0.5 + total * 0.1)) : Math.min(1.3, 0.55 + dist * 0.06);
+    // V7 owner: slower, calmer flights between 360 nodes (V2–V6: 0.7–2.4 s along a path, 0.55–1.3 s straight)
+    const dur = route ? Math.min(3.2, Math.max(1.6, 1.2 + total * 0.12)) : Math.min(2.0, 1.6 + dist * 0.04);
     // look toward target while gliding (keep current yaw if mostly vertical move); with a path: the last leg's heading
     let dx = to.x - from.x, dz = to.z - from.z;
     if (route) for (let i = pts.length - 1; i > 0; i--) { const ax = pts[i].x - pts[i - 1].x, az = pts[i].z - pts[i - 1].z; if (Math.hypot(ax, az) > 0.5) { dx = ax; dz = az; break; } }
@@ -281,7 +283,7 @@ export function createPano(env) {
       };
       requestAnimationFrame(step);
     });
-    env.fade(0, 300);
+    env.fade(0, 450);
     st.node = node; st.vyaw = 0;
     camera.position.copy(node.p);
     buildHotspots(); markList();
