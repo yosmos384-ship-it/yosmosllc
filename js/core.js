@@ -14,6 +14,7 @@ import { createRadio } from './radio-engine.js'; // V3 UI: shared 6-station radi
 import { createRender } from './core-render.js'; // V2: postFX, window lights, room reflection probes, mirrors
 import { createPathTrace } from './core-pathtrace.js'; // V2: "הדמיה מציאותית" (path-traced 360 / view, raster fallback)
 import { createStyles } from './styles.js'; // V3 STYLE: 3 renovation options (window.__tour.styles / ctx.styles)
+import { initTexCache, startTexUpgrades, texCacheStats } from './tex-cache.js'; // V6 PERF: IndexedDB texture cache + progressive textures
 
 const $ = (id) => document.getElementById(id);
 const FLOOR_IDX = { basement: 0, main: 1, upper: 2, roof: 3 };
@@ -30,6 +31,11 @@ const MODULES = [
 function store(k, v) { try { if (v === undefined) return localStorage.getItem('eakin_' + k); localStorage.setItem('eakin_' + k, v); } catch (_) { return null; } return null; }
 
 export async function boot() {
+  // V6 PERF: per-phase timings (window.__tourPerf.marks, ms since navigation start) + '[perf]' console lines
+  const PERF = (window.__tourPerf = window.__tourPerf || { marks: {} });
+  // loading-screen hook for the UI: window.addEventListener('tour:phase', (e) => e.detail.phase / e.detail.t)
+  const perfMark = (k) => { const t = Math.round(performance.now()); PERF.marks[k] = t; try { console.info('[perf]', k, t + 'ms'); window.dispatchEvent(new CustomEvent('tour:phase', { detail: { phase: k, t } })); } catch (_) {} return t; };
+  perfMark('boot');
   /* ================================================================ platform / quality */
   const isTouch = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || (('ontouchstart' in window) && navigator.maxTouchPoints > 0);
   const isPhone = isTouch && Math.min(screen.width || 1000, screen.height || 1000) < 820;
@@ -1211,6 +1217,7 @@ export async function boot() {
   let lastShadow = 0;
   let lastHud = 0, lastMap = 0, lastLamps = 0, lastRoomName = '', lastFloor = '', wasInside = false;
   const _sp = new THREE.Vector3();
+  let loadingNoRender = true; // V6 PERF: see frame()
   function frame() {
     if (!running) return;
     requestAnimationFrame(frame);
@@ -1312,6 +1319,9 @@ export async function boot() {
     if (mode === 'plan' || pendingMode === 'plan') updatePlanLabels();
     measure.update(activeCam, window.innerWidth, window.innerHeight);
 
+    // V6 PERF: the opaque loader covers the canvas while modules build — rendering the half-built scene there only cost
+    // synchronous shader compiles + shadow passes between build steps (compileAsync at the end prepares the programs)
+    if (loadingNoRender) return;
     try { render.renderFrame(activeCam, dt); } catch (e) { if (!frame._err) { frame._err = true; reportError('רינדור', e); } }
     if (mode === 'pano' && pano.renderOverlay) pano.renderOverlay(activeCam); // V2 nav: arrows over the path-traced 360
   }
@@ -1369,6 +1379,7 @@ export async function boot() {
     ctx, setMode, teleport, player, world, pano, scanner, setTOD, get mode() { return mode; }, panoNodes, lamps, render, pathtrace, nav,
     // photoreal 360 flag, unified: reads pathtrace.viewing (via pano.photoreal); setting it is a manual override for tests
     get pathtraceActive() { return pano.photoreal; }, set pathtraceActive(v) { pano.photoreal = v; },
+    perf: PERF, texCache: texCacheStats, // V6 PERF
   };
   document.body.classList.add('loading');
   setBodyMode('intro');
@@ -1387,12 +1398,18 @@ export async function boot() {
   const setProg = (p) => { progress = p; if (barEl) barEl.style.transform = `scaleX(${Math.max(0.02, Math.min(1, p))})`; };
   setProg(0.06);
   const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+  // V6 PERF: fetch/parse all three module graphs in parallel (they used to be imported one after another) while the
+  // texture cache decodes this device's stored textures; the builds still run in the original order.
+  const modP = MODULES.map((m) => import(m.file).then((mod) => { perfMark('imported:' + m.id); return mod; }));
+  modP.forEach((p) => p.catch(() => {})); // rejections are reported by the build loop below
+  try { await initTexCache(quality); } catch (_) {}
+  perfMark('texcache'); PERF.texCache = texCacheStats;
   for (let i = 0; i < MODULES.length; i++) {
     const m = MODULES[i];
     const base = 0.08 + (i / MODULES.length) * 0.82, span = 0.82 / MODULES.length;
     try {
       setRow(m.id, 'loading', 'טוען…'); stepEl && (stepEl.textContent = 'טוען ' + m.he);
-      const mod = await import(m.file);
+      const mod = await modP[i];
       setProg(base + span * 0.3);
       const build = mod.build || (mod.default && mod.default.build) || (typeof mod.default === 'function' ? mod.default : null);
       if (!build) throw new Error('המודול לא מייצא build(ctx)');
@@ -1404,7 +1421,7 @@ export async function boot() {
         new Promise((_, rej) => { to = setTimeout(() => rej(new Error('תם הזמן (90 ש׳)')), 90000); }),
       ]);
       clearTimeout(to);
-      setRow(m.id, 'done', '✓ מוכן');
+      setRow(m.id, 'done', '✓ מוכן'); perfMark('built:' + m.id);
     } catch (e) {
       setRow(m.id, 'failed', '✗ נכשל');
       reportError(`${m.he} (${m.file.replace('./', 'js/')})`, e);
@@ -1413,17 +1430,19 @@ export async function boot() {
     await nextFrame();
   }
   stepEl && (stepEl.textContent = 'מכין תאורה, צללים וסריקה…');
-  await nextFrame();
+  await nextFrame(); perfMark('modules');
   try { world.refreshWalkables(); } catch (e) { reportError('משטחי הליכה', e); }
+  perfMark('walkables');
   try { if (nav) { world.updateDynamic(); nav.build(); } } catch (e) { reportError('ניווט (גרף)', e); } // V2: nav graph
+  perfMark('navgraph');
   // V3 UI: re-aim every indoor 360 node at the view that shows the most of its room (authored yaw = mild preference)
   try { for (const n of panoNodes) { const y = panoFrameYaw(n, n.camYaw, 0.12); if (isFinite(y) && y !== n.camYaw) { n.camYaw = y; n.yaw = y - Math.PI; } } } catch (e) { reportError('מסגור 360', e); }
-  try { trimShadowCasters(); } catch (e) { reportError('צללים', e); }
+  perfMark('panoframe'); try { trimShadowCasters(); } catch (e) { reportError('צללים', e); } perfMark('shadowtrim');
   try { await styles.init(); } catch (e) { reportError('סגנונות שיפוץ', e); } // V3 STYLE: tag materials + apply saved style (before probes)
   renderer.shadowMap.needsUpdate = true;
   try { applyEnvK(todCur.envK, true); } catch (_) {}
   stepEl && (stepEl.textContent = 'מכין השתקפויות ותאורת חלונות…');
-  try { await render.afterBuild(); } catch (e) { reportError('רינדור V2', e); }
+  perfMark('styles'); try { await render.afterBuild(); } catch (e) { reportError('רינדור V2', e); } perfMark('afterBuild');
   for (const L of lamps) if (!L.optFloor) L.floor = null; // re-derive from final world positions
   try { manageLamps(); } catch (e) { reportError('תאורה', e); }
   try { scanner.prepare(quality === 'high' ? 14000 : 6000); } catch (_) {}
@@ -1433,10 +1452,14 @@ export async function boot() {
     if (renderer.compileAsync) await Promise.race([renderer.compileAsync(scene, camera), new Promise((r) => setTimeout(r, 8000))]);
     else renderer.compile(scene, camera);
   } catch (e) { try { renderer.compile(scene, camera); } catch (_) {} }
-  setProg(1);
-  await new Promise((r) => setTimeout(r, 250));
+  perfMark('compiled'); setProg(1);
+  await new Promise((r) => setTimeout(r, 60)); // V6 PERF: was 250 ms (just lets the bar reach 100 %)
+  loadingNoRender = false;
   document.body.classList.remove('loading');
-  $('loader') && $('loader').classList.add('done');
+  $('loader') && $('loader').classList.add('done'); perfMark('interactive');
+  // V6 PERF: full-size versions of the quarter-size first-visit textures + IndexedDB writes, in idle slices after the
+  // intro flight (window.__tour.texCache shows progress). Second visits hit the cache and have nothing to do here.
+  startTexUpgrades(scene, { delay: 3600 }).then(() => perfMark('textures-final')).catch(() => {});
   if (errors.length && $('errors')) showErrors();
   mode = 'intro';
   await setMode('dollhouse', { intro: true, force: true });

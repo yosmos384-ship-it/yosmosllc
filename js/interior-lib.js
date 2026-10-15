@@ -24,7 +24,7 @@ function mkCanvas(w, h) {
 }
 export function canvasTex(w, h, draw, { srgb = true, wrap = true, aniso = 4 } = {}) {
   const c = mkCanvas(w, h);
-  const g = c.getContext('2d');
+  const g = c.getContext('2d', { willReadFrequently: true }); // V6 PERF: CPU-backed (read back by style averages / normalisation)
   try { draw(g, w, h, c); } catch (e) { console.warn('[interior] texture draw failed', e); }
   const t = new THREE.CanvasTexture(c);
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;

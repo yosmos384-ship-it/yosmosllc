@@ -22,10 +22,13 @@ export function createPathTrace(env) {
   const phone = !!env.isPhone;
   const ui = { b360: $('btnPT'), bView: $('btnPTView'), bStop: $('btnPTStop'), bDl: $('btnPTDl'), bBack: $('btnPTBack'), prog: $('ptProg'), txt: $('ptTxt'), bar: $('ptBar'), overlay: $('ptOverlay') };
 
+  // V6: phones get a much smaller job (float targets ≈ 16 B/px ×3, the texture array is W×H×4 B per texture, and the
+  // BVH is built synchronously on the main thread) — and a 360 at 1024×512 with 64 progressive samples.
   const CFG = phone
-    ? { samples: 120, renderScale: 0.5, tiles: 3, bounces: 4, texSize: 512, eqW: 2048, eqH: 1024, viewScale: 1, rasterEqW: 2048, rasterCube: 1024, budget: 1 }
-    : { samples: 300, renderScale: 1, tiles: 2, bounces: 7, texSize: 1024, eqW: 2048, eqH: 1024, viewScale: Math.min(window.devicePixelRatio || 1, 2), rasterEqW: 4096, rasterCube: 2048, budget: 3 };
-  const RADIUS = 26;
+    ? { samples: 64, renderScale: 1, tiles: 3, bounces: 3, texSize: 256, eqW: 1024, eqH: 512, viewScale: 0.75, rasterEqW: 2048, rasterCube: 1024, budget: 1, radius: 12, maxTris: 600000 }
+    : { samples: 300, renderScale: 1, tiles: 2, bounces: 7, texSize: 512, eqW: 2048, eqH: 1024, viewScale: Math.min(window.devicePixelRatio || 1, 2), rasterEqW: 4096, rasterCube: 2048, budget: 3, radius: 26, maxTris: 4000000 };
+  const RADIUS = CFG.radius;
+  const LOG = '[photoreal]';
 
   const st = { job: null, view: null, lib: undefined, libP: null, r2: null, pt: null, blit: null, cache: new Map(), lastErr: null };
 
@@ -49,7 +52,7 @@ export function createPathTrace(env) {
       st.libP = Promise.race([
         import('three-gpu-pathtracer'),
         new Promise((_, rej) => setTimeout(() => rej(new Error('timeout loading three-gpu-pathtracer')), 25000)),
-      ]).then((m) => { st.lib = m; return m; }, (e) => { st.lib = null; st.lastErr = e; console.warn('[pathtrace] library unavailable', e); return null; });
+      ]).then((m) => { st.lib = m; return m; }, (e) => { st.lib = null; st.lastErr = e; console.warn(LOG, 'library unavailable', e); return null; });
     }
     return st.libP;
   }
@@ -61,11 +64,36 @@ export function createPathTrace(env) {
     r2.outputColorSpace = THREE.SRGBColorSpace;
     r2.toneMapping = THREE.ACESFilmicToneMapping;
     r2.toneMappingExposure = 1;
+    cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); st.lost = true; console.error(LOG, 'offscreen WebGL context lost (GPU memory / watchdog)'); }, false);
     st.r2 = r2;
     return r2;
   }
+  // three-gpu-pathtracer 0.0.23 reads scene.backgroundRotation / scene.environmentRotation (three r162 / r163) inside
+  // updateEnvironment() — which already runs in the WebGLPathTracer CONSTRUCTOR (setScene(new Scene())). On r160 those
+  // are undefined → "Cannot read properties of undefined (reading 'x')" → V2–V5 always fell back to the raster render.
+  // Polyfill them on the shared Scene prototype (per-instance Euler, never read by the r160 renderer).
+  function polyfillScene() {
+    const P = THREE.Scene.prototype;
+    for (const k of ['backgroundRotation', 'environmentRotation']) {
+      if (k in P || k in new THREE.Scene()) continue;
+      const slot = '__pt_' + k;
+      Object.defineProperty(P, k, { configurable: true, get() { return this[slot] || (this[slot] = new THREE.Euler()); }, set(v) { this[slot] = v; } });
+    }
+  }
+  // capability check of the offscreen context (float render targets are mandatory for the accumulation buffers)
+  function caps(r2) {
+    const gl = r2.getContext();
+    const isGL2 = typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext;
+    const ext = (n) => { try { return !!gl.getExtension(n); } catch (_) { return false; } };
+    return { webgl2: isGL2, floatRT: ext('EXT_color_buffer_float'), floatBlend: ext('EXT_float_blend'), parallel: ext('KHR_parallel_shader_compile'), maxTex: gl.getParameter(gl.MAX_TEXTURE_SIZE), maxLayers: isGL2 ? gl.getParameter(gl.MAX_ARRAY_TEXTURE_LAYERS) : 0 };
+  }
+  const unsupported = (msg) => Object.assign(new Error(msg), { unsupported: true });
   function makeTracer(lib, r2) {
     if (!lib || typeof lib.WebGLPathTracer !== 'function') throw new Error('three-gpu-pathtracer: WebGLPathTracer not exported');
+    const c = caps(r2); st.caps = c;
+    if (!c.webgl2) throw unsupported('WebGL2 is not available in the offscreen context');
+    if (!c.floatRT) throw unsupported('EXT_color_buffer_float is not supported (float render targets)');
+    polyfillScene();
     const pt = new lib.WebGLPathTracer(r2);
     const set = (k, v) => { try { if (k in pt) pt[k] = v; } catch (_) {} };
     set('rasterizeScene', false); set('renderDelay', 0); set('minSamples', 0); set('fadeDuration', 0); set('dynamicLowRes', false);
@@ -99,8 +127,9 @@ export function createPathTrace(env) {
     return true;
   }
   function dropTracer() {
-    try { st.pt && st.pt.dispose && st.pt.dispose(); } catch (_) {}
+    try { st.pt && st.pt.dispose && st.pt.dispose(); } catch (_) {} // 0.0.23 dispose() touches an undefined _renderQuad
     st.pt = null;
+    if (st.lost && st.r2) { try { st.r2.dispose(); } catch (_) {} st.r2 = null; st.lost = false; st.blit = null; }
   }
 
   /* ================================================================ scene subset */
@@ -132,7 +161,8 @@ export function createPathTrace(env) {
     const out = new THREE.Scene();
     scene.updateMatrixWorld(true);
     const counts = { meshes: 0, instances: 0, lights: 0, skipped: 0 };
-    let instBudget = 2500;
+    let instBudget = phone ? 600 : 2500, triBudget = CFG.maxTris;
+    const triOf = (g) => (g.index ? g.index.count : g.attributes.position.count) / 3;
     const camLayers = camera.layers;
     const visit = (o) => {
       const ud = o.userData || {};
@@ -150,16 +180,17 @@ export function createPathTrace(env) {
                 o.getMatrixAt(i, _m4); _m4.premultiply(o.matrixWorld);
                 _sp.copy(g.boundingSphere).applyMatrix4(_m4);
                 if (_sp.center.distanceTo(center) - _sp.radius > RADIUS) continue;
+                if (triBudget <= 0) break;
                 const p = new THREE.Mesh(g, pmat); p.matrixAutoUpdate = false; p.matrix.copy(_m4); out.add(p);
-                counts.instances++; instBudget--;
+                counts.instances++; instBudget--; triBudget -= triOf(g);
               }
             } else counts.skipped++;
           } else {
             if (!g.boundingBox) g.computeBoundingBox();
             _bb.copy(g.boundingBox).applyMatrix4(o.matrixWorld);
-            if (_bb.distanceToPoint(center) <= RADIUS) {
+            if (_bb.distanceToPoint(center) <= RADIUS && triBudget > 0) {
               const p = new THREE.Mesh(g, pmat); p.matrixAutoUpdate = false; p.matrix.copy(o.matrixWorld); out.add(p);
-              counts.meshes++;
+              counts.meshes++; triBudget -= triOf(g);
             } else counts.skipped++;
           }
         } else if (o.isMesh) counts.skipped++;
@@ -187,6 +218,7 @@ export function createPathTrace(env) {
       l.position.copy(_v); out.add(l); counts.lights++;
     });
     out.updateMatrixWorld(true);
+    counts.tris = Math.round(CFG.maxTris - triBudget);
     return { scene: out, counts };
   }
 
@@ -392,6 +424,7 @@ export function createPathTrace(env) {
       let n = 1, last = performance.now(), ownBlit = null, calls = 0, lastS = -1, lastProgressT = performance.now();
       const tick = () => {
         if (job.cancel) return resolve('cancel');
+        if (st.lost) return reject(unsupported('WebGL context lost while path tracing'));
         const now = performance.now(), dtf = now - last; last = now;
         if (dtf < 34 && n < CFG.budget * 4) n++; else if (dtf > 70 && n > 1) n--;
         try {
@@ -401,7 +434,7 @@ export function createPathTrace(env) {
         } catch (e) { return reject(e); }
         const s = Math.floor(typeof pt.samples === 'number' && isFinite(pt.samples) ? pt.samples : calls / (CFG.tiles * CFG.tiles));
         if (s !== lastS) { lastS = s; lastProgressT = now; }
-        else if (now - lastProgressT > 90000) return reject(new Error('path tracer made no progress for 90 s'));
+        else if (now - lastProgressT > (phone ? 45000 : 90000)) return reject(unsupported('path tracer made no progress for ' + (phone ? 45 : 90) + ' s (shader compile / GPU too slow)'));
         try { onTick(s); } catch (e) { return reject(e); }
         if (s >= target) resolve('done'); else requestAnimationFrame(tick);
       };
@@ -452,15 +485,38 @@ export function createPathTrace(env) {
     sub.scene.environment = skyTexture();
     sub.scene.background = sub.scene.environment;
     sub.scene.add(cam); cam.updateMatrixWorld(true);
+    progress('בונה סצנה למעקב קרניים (BVH)…', 0.06);
+    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))); // let the progress text paint before the sync build
     const pt = st.pt;
-    if (pt.setSceneAsync) await pt.setSceneAsync(sub.scene, cam);
-    else pt.setScene(sub.scene, cam);
+    // V6: setSceneAsync() in 0.0.23 needs setBVHWorker() first (it throws "setBVHWorker must be called before
+    // generateAsync" otherwise) — the BVH worker cannot be created cross-origin under an import map, so build the BVH
+    // synchronously. The subset is bounded (radius + triangle budget) to keep that main-thread stall short.
+    const tb = performance.now();
+    await pt.setScene(sub.scene, cam);
+    if (st.lost) throw unsupported('WebGL context lost while uploading the scene');
+    console.info(LOG, 'scene ready', Object.assign({ ms: Math.round(performance.now() - tb) }, sub.counts));
     if (job.cancel) return null;
     try { pt.reset && pt.reset(); } catch (_) {}
     progress('מכין שיידרים… (עשוי לקחת כמה שניות)', 0.08);
     await new Promise((r) => setTimeout(r, 30));
     console.info('[pathtrace] subset', sub.counts);
     return { lib, r2, pt, sub };
+  }
+
+  /* ================================================================ failure reporting (V6: honest, logged) */
+  function explainFailure(kind, e) {
+    const msg = String((e && e.message) || e || '');
+    st.lastErr = e;
+    (st.lib === null ? console.warn : console.error)(LOG, kind + ' path tracing failed → high-quality raster render instead.', msg, e && e.stack ? '\n' + e.stack : '', st.caps || '');
+    if (st.lib === null) {
+      toast('לא ניתן לטעון את מנוע ההדמיה המציאותית (בדקו חיבור לרשת) — מוצג רינדור באיכות גבוהה (AO, דגימת-יתר)', 5200);
+    } else if (phone) {
+      toast('ההדמיה המציאותית (מעקב קרניים) כבדה מדי לטלפון ודורשת מחשב — מוצג במקומה רינדור באיכות גבוהה. לחוויה המלאה פתחו את הסיור במחשב.', 7000);
+    } else if ((e && e.unsupported) || /context lost|EXT_color_buffer_float|WebGL2|out of memory|no progress/i.test(msg)) {
+      toast('כרטיס המסך / הדפדפן כאן אינו תומך בהדמיה המציאותית — מוצג רינדור באיכות גבוהה (פרטים בקונסול)', 5600);
+    } else {
+      toast('ההדמיה המציאותית נכשלה (פרטים בקונסול) — מוצג רינדור באיכות גבוהה (AO, דגימת-יתר)', 5200);
+    }
   }
 
   /* ================================================================ jobs */
@@ -515,10 +571,9 @@ export function createPathTrace(env) {
       res = { canvas: disp, T, kind: '360', source: 'pt', nodeId: job.node.id, samples: Math.floor(pt.samples || 0), complete: out === 'done' };
       if (out === 'done') toast('ההדמיה המציאותית הושלמה ✓ — גררו כדי להסתכל מסביב', 3200);
     } catch (e) {
-      console.warn('[pathtrace] 360 failed → raster fallback', e);
       if (job.cancel) { end(job); return; }
       dropTracer();
-      toast('מנוע ההדמיה המציאותית אינו זמין כאן — מוצג רינדור 360 באיכות גבוהה', 4200);
+      explainFailure('360', e);
       progress('מרנדר 360 באיכות גבוהה…', 0.5);
       await new Promise((r) => setTimeout(r, 40));
       try {
@@ -565,10 +620,9 @@ export function createPathTrace(env) {
       res = { canvas: disp, kind: 'view', source: 'pt', nodeId: job.node.id, samples: Math.floor(pt.samples || 0) };
       if (out === 'done') toast('ההדמיה של המבט הושלמה ✓', 2600);
     } catch (e) {
-      console.warn('[pathtrace] view failed → raster fallback', e);
       if (job.cancel) { end(job); return; }
       dropTracer();
-      toast('מנוע ההדמיה המציאותית אינו זמין כאן — מוצג רינדור באיכות גבוהה (AO, דגימת-יתר)', 4200);
+      explainFailure('view', e);
       try {
         const cv = R.captureView(camera, phone ? 1.5 : 2);
         res = { canvas: cv, kind: 'view', source: 'raster', nodeId: job.node.id };
@@ -636,6 +690,7 @@ export function createPathTrace(env) {
     get running() { return !!st.job; },
     get viewing() { return st.view ? { kind: st.view.kind, source: st.view.source, nodeId: st.view.nodeId, T: st.view.T } : null; },
     get libState() { return st.lib === undefined ? 'not-loaded' : st.lib ? 'loaded' : 'failed'; },
+    get lastError() { const e = st.lastErr; return e ? String((e && e.message) || e) : null; }, get caps() { return st.caps || null; },
     cache: st.cache, config: CFG,
     _rasterEquirect: rasterEquirect, _calibrate: calibrate,
   };

@@ -1,5 +1,6 @@
 // exterior-tex.js — procedural CanvasTextures + materials for the exterior.
 import * as THREE from 'three';
+import { cached, cachedCanvas } from './tex-cache.js'; // V6 PERF: IndexedDB texture cache
 import { makeCanvas, canvasTex, wrapDraw, noisePixels, rgb, mulberry32, clamp, ctx2dOf, normalFromHeight, fbm } from './exterior-util.js';
 
 // every exterior canvas may be read back (noise passes, Sobel normal maps) → ask for a readback-friendly context
@@ -539,34 +540,49 @@ function paintTreeline(w = 1024, h = 256) {
 export function makeMaterials(W) {
   const hi = W.hi;
   const T = (c, rep, srgb = true) => { const t = canvasTex(c, { srgb }); if (t && rep) t.repeat.set(rep, rep); return t; };
-  const TN = (c, rep, strength) => T(normalFromHeight(c, strength), rep, false);  // normal map from a height canvas
+  // V6 PERF: every painted canvas (and the Sobel normal derived from it) is cached per device. Painters whose cost scales
+  // with pixel count may start at quarter size on a first visit (prog) and are re-painted at full size in idle time.
+  const KEY = new WeakMap();
+  const P = (k, size, fn, prog = false) => {
+    const r = cached('e:' + k + ':' + size, size, fn, { progressive: prog });
+    if (r && r.getContext) KEY.set(r, { k: 'e:' + k + ':' + size, part: '_', size, prog });
+    else if (r) for (const part of Object.keys(r)) if (r[part]) KEY.set(r[part], { k: 'e:' + k + ':' + size, part, size, prog });
+    return r;
+  };
+  const NH = (c, strength) => {
+    const o = c && KEY.get(c);
+    if (!o) return normalFromHeight(c, strength);
+    // the source canvas may have been upgraded to full size by the time the full-size normal is generated
+    return cached(o.k + ':' + o.part + ':n' + strength, o.size, () => normalFromHeight(cachedCanvas(o.k, o.part) || c, strength), { progressive: o.prog });
+  };
+  const TN = (c, rep, strength) => T(NH(c, strength), rep, false);  // normal map from a height canvas
   const N2 = (x, y) => new THREE.Vector2(x, y);
   const S = (o) => { for (const k of Object.keys(o)) if (o[k] === undefined || o[k] === null && /Map$|^map$/.test(k)) delete o[k]; return new THREE.MeshStandardMaterial(o); };
   const m = {};
   // lawn: hi-res grass texture + Sobel normal map (tile 2.5 m)
-  const grassC = paintGrass(hi ? 1024 : 512);
+  const grassC = P('grass', hi ? 1024 : 512, (z) => paintGrass(z), true);
   m.ground = S({ map: T(grassC, 1 / 2.5), normalMap: TN(grassC, 1 / 2.5, 2.2), normalScale: N2(0.9, 0.9), vertexColors: true, roughness: 0.97, metalness: 0 });
-  const gravC = paintGravel(512);
+  const gravC = P('gravel', 512, (z) => paintGravel(z));
   m.gravel = S({ map: T(gravC, 1 / 2), normalMap: TN(gravC, 1 / 2, 3), vertexColors: true, roughness: 0.93 });
-  const asC = paintAsphalt(hi ? 1024 : 512);
+  const asC = P('asphalt', hi ? 1024 : 512, (z) => paintAsphalt(z));
   m.asphalt = S({ map: T(asC, 1 / 8), normalMap: TN(asC, 1 / 8, 1.6), normalScale: N2(0.7, 0.7), roughness: 0.86, vertexColors: true });
-  const coC = paintConcrete(512);
+  const coC = P('concrete', 512, (z) => paintConcrete(z));
   m.concrete = S({ map: T(coC, 1 / 2), normalMap: TN(coC, 1 / 2, 1.2), normalScale: N2(0.5, 0.5), roughness: 0.82, vertexColors: true });
-  const muC = paintMulch(256);
+  const muC = P('mulch', 256, (z) => paintMulch(z));
   m.mulch = S({ map: T(muC, 1 / 1.5), normalMap: TN(muC, 1 / 1.5, 2.5), vertexColors: true, roughness: 0.97 });
   // bark: furrowed texture + strong normal map (hero trees and instanced mid trees)
-  const barkC = paintBark(hi ? 512 : 256, 61);
+  const barkC = P('bark61', hi ? 512 : 256, (z) => paintBark(z, 61));
   m.bark = S({ map: T(barkC, 1), normalMap: TN(barkC, 1, 4.5), normalScale: N2(1.2, 1.2), roughness: 0.96, vertexColors: true });
-  m.leafTex = T(paintLeaves(512), 1);
+  m.leafTex = T(P('leaves71', 512, (z) => paintLeaves(z)), 1);
   m.foliage = S({ map: m.leafTex, vertexColors: true, roughness: 0.85 });
-  m.canopy = S({ map: T(paintLeaves(256, 77), 1), vertexColors: true, roughness: 0.9 });
-  m.evergreen = S({ map: T(paintLeaves(256, 79), 1), vertexColors: true, roughness: 0.9, color: 0x9fb39a });
+  m.canopy = S({ map: T(P('leaves77', 256, (z) => paintLeaves(z, 77)), 1), vertexColors: true, roughness: 0.9 });
+  m.evergreen = S({ map: T(P('leaves79', 256, (z) => paintLeaves(z, 79)), 1), vertexColors: true, roughness: 0.9, color: 0x9fb39a });
   // alpha leaf-cluster cards (individual leaves) — shared by hero trees and the instanced mid trees
-  const lc = canvasTex(paintLeafCard(hi ? 512 : 256), { repeat: false });
+  const lc = canvasTex(P('leafcard', hi ? 512 : 256, (z) => paintLeafCard(z)), { repeat: false });
   m.leafCard = S({ map: lc, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.72, metalness: 0, vertexColors: true });
   m.leafCardDepth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: lc, alphaTest: 0.45 });
-  m.trunk = S({ map: T(paintBark(128, 63), 1), vertexColors: false, roughness: 0.95, color: 0x8a8079 });
-  const ch = canvasTex(paintChainLink(128));
+  m.trunk = S({ map: T(P('bark63', 128, (z) => paintBark(z, 63)), 1), vertexColors: false, roughness: 0.95, color: 0x8a8079 });
+  const ch = canvasTex(P('chain', 128, (z) => paintChainLink(z)));
   if (ch) { ch.repeat.set(1 / 0.3, 1 / 0.3); }
   m.chain = S({ map: ch, alphaTest: 0.4, side: THREE.DoubleSide, metalness: 0.6, roughness: 0.45, color: 0xd8dadc });
   m.galv = S({ color: 0xb4b8bb, metalness: 0.75, roughness: 0.38, vertexColors: true });
@@ -575,19 +591,19 @@ export function makeMaterials(W) {
   m.fan = S({ color: 0x222222, metalness: 0.4, roughness: 0.5 });
   m.grass = S({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.88 });
   // houses
-  m.siding = S({ map: T(paintSiding(256), 1 / 1.2), vertexColors: true, roughness: 0.75 });
-  const brC = paintBrick(hi ? 512 : 256);
+  m.siding = S({ map: T(P('siding', 256, (z) => paintSiding(z)), 1 / 1.2), vertexColors: true, roughness: 0.75 });
+  const brC = P('brick', hi ? 512 : 256, (z) => paintBrick(z));
   m.brick = S({ map: T(brC, 1 / 1.6), normalMap: TN(brC, 1 / 1.6, 2.5), normalScale: N2(0.8, 0.8), vertexColors: true, roughness: 0.92 });
-  const shC = paintShingles(512);
+  const shC = P('shingles', 512, (z) => paintShingles(z));
   m.roof = S({ map: T(shC, 1 / 2), normalMap: TN(shC, 1 / 2, 3.5), normalScale: N2(1, 1), vertexColors: true, roughness: 0.9 });
   m.paint = S({ vertexColors: true, roughness: 0.55, metalness: 0 });
   m.glassDark = S({ color: 0x1d2328, roughness: 0.08, metalness: 0.2, envMapIntensity: 1.2, emissive: 0xffc27a, emissiveIntensity: 0 });
   m.glassLit = S({ color: 0x232a30, roughness: 0.08, metalness: 0.2, envMapIntensity: 1.2, emissive: 0xffb866, emissiveIntensity: 0 });
-  m.wood = S({ map: T(paintBark(128, 65), 1), color: 0x8a7462, roughness: 0.9, vertexColors: true });
+  m.wood = S({ map: T(P('bark65', 128, (z) => paintBark(z, 65)), 1), color: 0x8a7462, roughness: 0.9, vertexColors: true });
   m.darkMetal = S({ color: 0xffffff, metalness: 0.55, roughness: 0.45, vertexColors: true });
   m.lens = S({ color: 0xdedcd0, emissive: 0xffd9a0, emissiveIntensity: 0, roughness: 0.3 });
   m.wire = S({ color: 0x1a1a1a, roughness: 0.6 });
-  m.signs = S({ map: canvasTex(paintAtlas(), { repeat: false }), roughness: 0.4, metalness: 0.25, side: THREE.FrontSide });
+  m.signs = S({ map: canvasTex(P('signs', 1, () => paintAtlas()), { repeat: false }), roughness: 0.4, metalness: 0.25, side: THREE.FrontSide });
   // vehicles
   m.carPaint = new THREE.MeshPhysicalMaterial({ vertexColors: true, metalness: 0.45, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.06 });
   m.carGlass = new THREE.MeshPhysicalMaterial({ color: 0x141b20, metalness: 0.1, roughness: 0.04, clearcoat: 1, clearcoatRoughness: 0.02 });
@@ -595,20 +611,20 @@ export function makeMaterials(W) {
   m.chrome = S({ color: 0xd0d3d6, metalness: 1, roughness: 0.22, vertexColors: true });
   m.carLights = S({ vertexColors: true, roughness: 0.2, metalness: 0.1, emissive: 0x000000 });
   m.plastic = S({ vertexColors: true, roughness: 0.55 });
-  m.ac = S({ map: T(paintLouver(256), 1 / 0.4), roughness: 0.5, metalness: 0.3 });
-  m.grille = S({ map: canvasTex(paintGrille(256), { repeat: false }), roughness: 0.6, metalness: 0.4 });
+  m.ac = S({ map: T(P('louver', 256, (z) => paintLouver(z)), 1 / 0.4), roughness: 0.5, metalness: 0.3 });
+  m.grille = S({ map: canvasTex(P('grille', 256, (z) => paintGrille(z)), { repeat: false }), roughness: 0.6, metalness: 0.4 });
   // ---- V2 luxury landscape
-  const pv = paintPavers(512);
+  const pv = P('pavers', 512, (z) => paintPavers(z));
   m.pavers = S({ map: T(pv.col, 1 / 1.2), normalMap: TN(pv.hgt, 1 / 1.2, 3), normalScale: N2(1, 1), roughness: 0.78, vertexColors: true });
-  const bs = paintBluestone(hi ? 512 : 256);
+  const bs = P('bluestone', hi ? 512 : 256, (z) => paintBluestone(z));
   m.stone = S({ map: T(bs.col, 1), normalMap: TN(bs.hgt, 1, 2.2), normalScale: N2(0.8, 0.8), roughness: 0.74, vertexColors: true });
-  const ce = paintCedar(512);
+  const ce = P('cedar', 512, (z) => paintCedar(z));
   m.cedar = S({ map: T(ce.col, 1), normalMap: TN(ce.hgt, 1, 3), normalScale: N2(1, 1), roughness: 0.82, vertexColors: true });
-  const bxC = paintBoxwood(256);
+  const bxC = P('boxwood', 256, (z) => paintBoxwood(z));
   m.hedge = S({ map: T(bxC, 1 / 0.5), normalMap: TN(bxC, 1 / 0.5, 3.5), normalScale: N2(1.2, 1.2), roughness: 0.86, vertexColors: true });
-  m.florets = S({ map: T(paintFlorets(256), 1), roughness: 0.75, vertexColors: true });
+  m.florets = S({ map: T(P('florets', 256, (z) => paintFlorets(z)), 1), roughness: 0.75, vertexColors: true });
   m.ornGrass = S({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.8 });
-  m.treeline = new THREE.MeshBasicMaterial({ map: canvasTex(paintTreeline(1024, 256), { repeat: true }), alphaTest: 0.5, side: THREE.DoubleSide, vertexColors: true, fog: true });
+  m.treeline = new THREE.MeshBasicMaterial({ map: canvasTex(P('treeline', 1024, () => paintTreeline(1024, 256)), { repeat: true }), alphaTest: 0.5, side: THREE.DoubleSide, vertexColors: true, fog: true });
   m.horizonGround = S({ color: 0x5f7046, roughness: 1, metalness: 0, vertexColors: true });
   return m;
 }

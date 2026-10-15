@@ -254,121 +254,83 @@ function makePanel(el, trigger) {
 export function closePanels() { for (const p of [...openPanels]) hidePanel(p); }
 
 /* ============================================================================================ radio chip + panel */
-// V5: one panel for both sources. Top: shared controls (act on whatever plays). "📡 real American stations": on a
-// normal web host (radio.live.avail === 'yes') each row is a one-tap play button (spinner while connecting, toast +
-// auto-skip on failure); where external media is blocked (claude.ai artifact CSP) rows are new-tab links + a badge.
-// Below: the 6 synthesized "radio in the house" stations (autoplay / random / 3D radio sync).
+// V6: ONE station — WNCI 97.9 FM Columbus (להיטים). Chip "📻 WNCI 97.9 · להיטים · ● LIVE". Panel (sticky header with ✕):
+// now playing, ▶/⏹ + volume, and — after a failed retry — "השידור לא זמין כרגע" with a "נסו שוב" button. No station list,
+// no prev / next / random / favourite. CSP-blocked page (claude.ai artifact): the synth plays as "רדיו גיבוי" + a note.
 export function createRadioUI({ radio, chip, panel, toast }) {
   if (!radio || !chip || !panel) return null;
   chip.innerHTML = '<span class="rc-ico" aria-hidden="true">📻</span><span class="rc-eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="rc-txt"><b></b><small></small></span>';
   chip.setAttribute('aria-haspopup', 'dialog');
-  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const LIVE = radio.liveStations || [];
+  const NOTE = 'השידור החי עובד באתר yosmosllc.com', BACKUP = 'רדיו גיבוי', UNAV = 'השידור לא זמין כרגע', ST = 'WNCI 97.9 · להיטים';
   panel.innerHTML = `
-    <div class="sh-head"><b>📻 רדיו <span class="sh-dim">Eakin ’56</span></b><button class="sh-x" data-act="close" aria-label="סגור">×</button></div>
-    <div class="rp-now"><div class="rp-name"></div><div class="rp-sub"></div></div>
-    <div class="rp-ctrl" dir="ltr">
-      <button data-act="prev" aria-label="התחנה הקודמת" title="התחנה הקודמת">⏮</button>
-      <button data-act="toggle" class="rp-play" aria-label="הפעלה / עצירה"></button>
-      <button data-act="next" aria-label="התחנה הבאה" title="התחנה הבאה">⏭</button>
-      <label class="rp-vol" title="עוצמה"><span aria-hidden="true">🔉</span><input type="range" min="0" max="100" step="1" aria-label="עוצמת הרדיו"></label>
-    </div>
-    <section class="rp-sec" id="rpLive"><div class="rp-h">📡 תחנות אמיתיות מאמריקה — שידור חי <span class="rp-how"></span></div>
-      <div class="rp-badge"></div>
-      <div class="rp-lvlist"></div>
-      <div class="rp-foot rp-csp"></div></section>
-    <div class="rp-h" id="rpHome">🏠 רדיו בתוך הבית</div>
-    <div class="rp-list" role="listbox" aria-label="תחנות"></div>
-    <div class="rp-foot">המוזיקה נשמעת בכל הבית בעוצמת רקע, וחזק יותר ליד הרדיו הישן בסלון.</div>`;
-  const list = panel.querySelector('.rp-list'), lvlist = panel.querySelector('.rp-lvlist');
-  radio.stations.forEach((s, i) => {
-    const b = document.createElement('button');
-    b.className = 'rp-st'; b.dataset.i = String(i); b.setAttribute('role', 'option');
-    b.innerHTML = '<span class="rp-f"></span><span class="rp-t"><b></b><small></small></span>';
-    b.querySelector('.rp-f').textContent = s.f;
-    b.querySelector('b').textContent = s.he;
-    b.querySelector('small').textContent = s.call + ' · ' + s.sub;
-    list.appendChild(b);
-  });
-  const info = (s) => `<span class="rp-t"><b><bdi dir="ltr">${esc(s.call)}</bdi> · <bdi dir="ltr">${esc(s.freq)}</bdi></b><small><bdi dir="ltr">${esc(s.city)}</bdi> · ${esc(s.he)}</small></span>`;
-  let builtFor = '';
-  function buildLive(avail) {
-    const inPage = avail === 'yes';
-    if (builtFor === (inPage ? 'in' : 'link')) return;
-    builtFor = inPage ? 'in' : 'link';
-    lvlist.innerHTML = LIVE.map((s, i) => inPage
-      ? `<button class="rp-lv rp-lvb" data-live="${i}">${info(s)}<span class="rp-lvs" aria-hidden="true">▶</span></button>`
-      : `<div class="rp-lv">${info(s)}<a class="rp-live" href="${esc(s.url)}" target="_blank" rel="noopener">▶ האזן בשידור חי</a></div>`).join('');
-    panel.querySelector('.rp-how').textContent = inPage ? '(הקשה = ניגון כאן)' : '(נפתח בלשונית חדשה)';
-    const badge = panel.querySelector('.rp-badge');
-    badge.textContent = inPage ? '' : 'בגרסה המתארחת בדומיין שלך זה מתנגן כאן ישירות';
-    badge.style.display = inPage ? 'none' : '';
-    panel.querySelector('.rp-csp').textContent = inPage
-      ? 'שידור חי מאמריקה בתוך הסיור · חלק מהתחנות עשויות להיות חסומות מחוץ לארה״ב — אז עוברים אוטומטית לתחנה הבאה'
-      : 'שידור חי אמיתי לא יכול לרוץ בתוך הסיור עצמו בגלל הגבלות אבטחה של הדף';
-  }
+    <div class="sh-head"><b>📻 WNCI 97.9 FM <span class="sh-dim">Columbus, Ohio</span></b><button class="sh-x" data-act="close" aria-label="סגור">×</button></div>
+    <div class="sh-body">
+      <div class="rp-now"><div class="rp-name"></div><div class="rp-sub"></div></div>
+      <div class="rp-ctrl" dir="ltr">
+        <button data-act="toggle" class="rp-play" aria-label="הפעלה / עצירה"></button>
+        <label class="rp-vol" title="עוצמה"><span aria-hidden="true">🔉</span><input type="range" min="0" max="100" step="1" aria-label="עוצמת הרדיו"></label>
+      </div>
+      <div class="rp-err" role="status"><span>${UNAV}</span><button data-act="retry" class="rp-retry">↻ נסו שוב</button></div>
+      <div class="rp-note"></div>
+      <div class="rp-foot"></div>
+    </div>`;
   const P = makePanel(panel, chip);
-  const vol = panel.querySelector('input[type=range]');
+  const vol = panel.querySelector('input[type=range]'), note = panel.querySelector('.rp-note'), err = panel.querySelector('.rp-err');
   function render(s) {
     s = s || radio.state;
-    const L = s.live || radio.live || { avail: 'no', on: false };
-    buildLive(L.avail);
-    const stn = s.station || radio.stations[s.idx];
-    const live = L.on && L.station, conn = live && L.status === 'connecting';
+    const L = s.live || radio.live || { avail: 'no', on: false, status: 'idle' };
+    const backup = !!s.synthOn, syn = s.station || {}, blocked = L.avail === 'no';
+    const conn = L.on && L.status === 'connecting', retrying = L.on && L.status === 'retrying', unav = !L.on && L.status === 'unavailable' && !backup;
     chip.classList.toggle('on', !!s.on);
-    chip.classList.toggle('live', !!live);
-    chip.classList.toggle('tuning', !!(s.on && (s.tuning || conn)));
-    chip.querySelector('b').textContent = live ? L.station.call + ' · ' + L.station.he : (s.on ? stn.he : 'רדיו');
-    chip.querySelector('small').textContent = live ? (conn ? 'מתחבר…' : '● LIVE ' + L.station.freq) : (s.on ? (s.tuning ? 'מכוון…' : stn.call + ' ' + stn.f) : 'כבוי');
-    chip.setAttribute('aria-label', live ? 'שידור חי: ' + L.station.call + ' ' + L.station.he : (s.on ? 'רדיו מנגן: ' + stn.he : 'רדיו כבוי — פתח בחירת תחנות'));
-    panel.querySelector('.rp-name').textContent = live ? '📡 ' + L.station.call + ' ' + L.station.freq + ' — ' + L.station.he : (s.on ? stn.call + ' ' + stn.f + ' — ' + stn.he : 'הרדיו כבוי');
-    panel.querySelector('.rp-sub').textContent = live ? (conn ? 'מתחבר לשידור…' : 'שידור חי · ' + L.station.city) : (s.on ? (s.tuning ? 'מכוון… (רעש בין תחנות)' : stn.sub) : 'בחרו תחנה או לחצו ▶');
-    const pb = panel.querySelector('.rp-play'); pb.textContent = s.on ? '⏹' : '▶'; pb.classList.toggle('on', !!s.on);
-    for (const b of list.children) { const on = !!s.synthOn && +b.dataset.i === s.idx; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); }
-    for (const b of lvlist.querySelectorAll('[data-live]')) {
-      const me = L.on && +b.dataset.live === L.idx;
-      b.classList.toggle('on', me && L.status === 'playing'); b.classList.toggle('busy', me && L.status === 'connecting');
-      const st = b.querySelector('.rp-lvs'); if (st) st.textContent = me ? (L.status === 'connecting' ? '' : L.status === 'playing' ? '■' : '⚠') : '▶';
+    chip.classList.toggle('live', !!L.on);
+    chip.classList.toggle('backup', backup);
+    chip.classList.toggle('unav', unav);
+    chip.classList.toggle('tuning', !!(s.on && (s.tuning || conn || retrying)));
+    let b, sm, name, sub;
+    if (L.on) {
+      b = ST; sm = conn ? 'מתחבר…' : retrying ? 'מנסה שוב…' : '● LIVE';
+      name = '📡 WNCI 97.9 FM · להיטים';
+      sub = conn ? 'מתחבר לשידור…' : retrying ? 'השידור לא ענה — מנסים שוב בעוד רגע…' : 'שידור חי מקולומבוס, אוהיו';
+    } else if (backup) {
+      b = BACKUP; sm = s.tuning ? 'מכוון…' : syn.he || ''; name = '📻 ' + BACKUP + ' · ' + (syn.he || ''); sub = NOTE;
+    } else if (unav) {
+      b = 'WNCI 97.9'; sm = UNAV; name = '📡 WNCI 97.9 FM'; sub = 'השידור לא ענה גם בניסיון החוזר';
+    } else {
+      b = ST; sm = 'כבוי'; name = 'הרדיו כבוי'; sub = blocked ? NOTE : 'לחצו ▶ כדי לנגן את WNCI 97.9';
     }
+    chip.querySelector('b').textContent = b;
+    chip.querySelector('small').textContent = sm;
+    chip.setAttribute('aria-label', '📻 ' + b + ' · ' + sm);
+    panel.querySelector('.rp-name').textContent = name;
+    panel.querySelector('.rp-sub').textContent = sub;
+    const pb = panel.querySelector('.rp-play'); pb.textContent = s.on ? '⏹' : '▶'; pb.classList.toggle('on', !!s.on);
+    err.style.display = unav ? '' : 'none';
+    panel.classList.toggle('rp-blocked', blocked);
+    note.textContent = blocked ? NOTE : ''; note.style.display = blocked ? '' : 'none';
+    panel.querySelector('.rp-foot').textContent = blocked
+      ? 'כאן אין גישה לשידור חי, לכן מתנגן ' + BACKUP + '.'
+      : 'הרדיו מתחיל לנגן בהקשה הראשונה באתר · 🔊 בסרגל הכלים משתיק הכול.';
     if (document.activeElement !== vol) vol.value = String(Math.round(s.vol * 100));
   }
   chip.addEventListener('click', (e) => { e.stopPropagation(); render(); P.toggle(); });
   panel.addEventListener('click', (e) => {
-    const a = e.target.closest('a.rp-live');
-    if (a) { // V4 fallback: the real stream opens in a new tab (default anchor action) — silence the in-house radio
-      e.stopPropagation();
-      try { radio.stop(); } catch (_) {}
-      if (toast) setTimeout(() => toast('השידור נפתח בלשונית חדשה — הרדיו בבית הושתק', 3200), 0);
-      return;
-    }
-    const b = e.target.closest('button'); if (!b) return;
+    const b = e.target.closest('button'); if (!b || b.disabled) return;
     e.stopPropagation();
     const act = b.dataset.act;
     if (act === 'close') P.hide();
-    else if (act === 'prev') radio.prev();
-    else if (act === 'next') radio.next();
     else if (act === 'toggle') radio.toggle();
-    else if (b.dataset.live != null) { const L = radio.live; if (L.on && L.idx === +b.dataset.live && L.status === 'playing') radio.stop(); else radio.playLive(+b.dataset.live); }
-    else if (b.dataset.i != null) radio.tune(+b.dataset.i);
+    else if (act === 'retry') radio.retry();
   });
   vol.addEventListener('input', () => radio.setVolume(+vol.value / 100));
-  // V4: open requests (3D radio "תחנות אמיתיות") → show the panel scrolled to that section
-  const openAt = (section) => {
-    render(); P.show();
-    const el = panel.querySelector(section === 'live' ? '#rpLive' : '#rpHome');
-    requestAnimationFrame(() => { try { el && el.scrollIntoView({ block: 'start' }); } catch (_) {} });
-  };
+  const openAt = () => { render(); P.show(); };
   if (radio.onPanelRequest) radio.onPanelRequest(openAt);
   if (radio.onNotice) radio.onNotice((msg) => toast && toast(msg, 3400));
   let lastKey = '';
   radio.onChange((s) => {
     render(s);
     const L = s.live || {};
-    const key = L.on && L.status === 'playing' ? 'L' + L.idx : (s.synthOn && s.cur >= 0 ? 'S' + s.cur : '');
-    if (key && key !== lastKey && !P.open && toast) {
-      if (key[0] === 'L') toast('📡 בשידור חי: ' + L.station.call + ' ' + L.station.freq + ' — ' + L.station.he, 2800);
-      else toast('📻 מנגן: ' + radio.stations[s.cur].he + ' · ' + radio.stations[s.cur].call + ' ' + radio.stations[s.cur].f, 2600);
-    }
+    const key = L.on && L.status === 'playing' ? 'L' : (s.synthOn && s.cur >= 0 ? 'B' : '');
+    if (key && key !== lastKey && !P.open && toast) toast(key === 'L' ? '📻 WNCI 97.9 · להיטים — שידור חי' : '📻 ' + BACKUP + ' — ' + NOTE, key === 'L' ? 2800 : 3400);
     lastKey = key;
   });
   render();
@@ -396,7 +358,7 @@ export function createStyleUI({ btn, panel, toast, getStyles }) {
     const id = s.id != null ? s.id : (s.key != null ? s.key : i);
     return { id, name: s.he || s.name || s.label || s.title || String(id), blurb: s.blurb || s.heBlurb || s.desc || s.description || s.sub || '', sw: Array.isArray(s.swatch) ? s.swatch : (Array.isArray(s.colors) ? s.colors : null) };
   };
-  panel.innerHTML = '<div class="sh-head"><b>🎨 סגנון השיפוץ</b><button class="sh-x" data-act="close" aria-label="סגור">×</button></div><div class="sp-list" role="listbox" aria-label="סגנונות"></div>';
+  panel.innerHTML = '<div class="sh-head"><b>🎨 סגנון השיפוץ</b><button class="sh-x" data-act="close" aria-label="סגור">×</button></div><div class="sh-body"><div class="sp-list" role="listbox" aria-label="סגנונות"></div></div>';
   const list = panel.querySelector('.sp-list');
   const P = makePanel(panel, btn);
   function render() {
@@ -445,6 +407,34 @@ export function setupCompactUI({ tools, btnMore, btnPanoMore }) {
     if (b.id === 'btnStyle') return;
     if (window.matchMedia && matchMedia('(max-width: 900px)').matches) setTimeout(() => body.classList.remove('tools-open'), 260);
   });
+  setupDialogs();
+}
+
+/* ============================================================================================ V6: dialogs */
+// Help ("איך מסיירים בבית"): the header (title + ✕) stays fixed while the body scrolls inside the panel; it closes on ✕,
+// a tap outside the panel (the dimmed backdrop) or Escape. Escape also closes the radio / style sheets, the phone tools
+// column and the 360 "⋯" actions. (core.js still toggles #help from the ? button and ✕.)
+export function setupDialogs() {
+  if (setupDialogs.done || typeof document === 'undefined') return; setupDialogs.done = true;
+  const body = document.body, help = document.getElementById('help');
+  const closeHelp = () => { if (help) help.classList.remove('show'); };
+  if (help) {
+    help.addEventListener('click', (e) => { if (e.target === help) { e.stopPropagation(); closeHelp(); } });
+    const x = document.getElementById('helpClose'), sc = help.querySelector('.ph-body');
+    let was = help.classList.contains('show');
+    new MutationObserver(() => {
+      const on = help.classList.contains('show'); if (on === was) return; was = on;
+      if (on) { if (sc) sc.scrollTop = 0; try { x && x.focus({ preventScroll: true }); } catch (_) {} }
+      else if (document.activeElement && help.contains(document.activeElement)) { try { document.activeElement.blur(); } catch (_) {} }
+    }).observe(help, { attributes: true, attributeFilter: ['class'] });
+  }
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    closeHelp(); closePanels();
+    body.classList.remove('tools-open', 'pano-more');
+    const m = document.getElementById('btnMore'); if (m) m.setAttribute('aria-expanded', 'false');
+    const pm = document.getElementById('btnPanoMore'); if (pm) pm.classList.remove('on');
+  }, true);
 }
 
 /* ============================================================================================ guards */

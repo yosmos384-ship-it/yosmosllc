@@ -425,7 +425,7 @@ function setupGrassMaterial(W) {
 }
 export function buildGrassV2(W) {
   setupGrassMaterial(W);
-  const count = W.hi ? 44000 : 9000;
+  const count = W.hi ? 44000 : 6500; // V6 PERF: phones / low quality 9000 → 6500 tufts (the far fade hides the difference)
   const lot = W.plan.lot, cx = W.plan.W / 2, cz = W.plan.D / 2;
   const r = mulberry32(4242);
   const inEx = (x, z) => { for (const e of W.excl) if (x > e[0] && x < e[2] && z > e[1] && z < e[3]) return true; return false; };

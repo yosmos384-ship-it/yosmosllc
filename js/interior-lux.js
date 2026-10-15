@@ -5,6 +5,7 @@
 //    pendants, sconces, round mirrors (ctx.makeMirror when available), art, olive tree, styling props.
 import { THREE, PI, V3, Batch, UVS, KEY_ALIAS, hinged, clamp, rng } from './interior-lib.js';
 import * as TX from './interior-tex.js';
+import { cached } from './tex-cache.js'; // V6 PERF: IndexedDB texture cache + progressive first visit
 
 const TAU = PI * 2;
 export const C = {
@@ -21,23 +22,25 @@ export function upgradeMaterials(M, quality) {
   let T;
   try {
     const neutralOak = (u, v, o) => { TX.oakFn(u, v, o); const l = o.r * 0.3 + o.g * 0.59 + o.b * 0.11, k = 0.5 + 0.62 * l; o.r = k * 1.02; o.g = k * 0.94; o.b = k * 0.8; };
+    // V6 PERF: cached synth — same textures, generated once per device (quarter size first on the first visit)
+    const SY = (k, w, h, fn, opt) => cached('i:' + k + ':' + w + 'x' + h + ':' + JSON.stringify(opt), w, (z) => TX.synth(z, Math.max(1, Math.round(h * z / w)), fn, opt), { minSize: 256 });
     T = {
-      marble: TX.synth(S(512), S(512), TX.marbleFn, { ns: 1.2 }),
-      brass: TX.synth(S(256), S(256), TX.brushedFn, { ns: 0.5 }),
-      oak: TX.synth(S(512), S(512), neutralOak, { ns: 2.2 }),
-      walnut: TX.synth(S(512), S(512), TX.walnutFn, { ns: 2.2 }),
-      trav: TX.synth(S(512), S(512), TX.travertineFn, { ns: 3 }),
-      boucle: TX.synth(S(256), S(256), TX.boucleFn, { ns: 4 }),
-      linen: TX.synth(S(256), S(256), TX.linenFn, { ns: 3 }),
-      leather: TX.synth(S(256), S(256), TX.leatherFn, { ns: 2.5 }),
-      velvet: TX.synth(128, 128, TX.velvetFn, { ns: 1.5 }),
-      ceramic: TX.synth(S(256), S(256), TX.ceramicFn, { ns: 1 }),
-      clay: TX.synth(128, 128, TX.clayFn, { ns: 2 }),
-      terry: TX.synth(128, 128, TX.terryFn, { ns: 3 }),
-      knit: TX.synth(S(256), S(256), TX.knitFn, { ns: 4 }),
-      rug: TX.synth(S(512), S(512), TX.rugFn, { ns: 2, wrap: false }),
-      felt: TX.synth(128, 128, TX.feltFn, { ns: 1 }),
-      plaster: TX.synth(128, 128, TX.plasterFn, { ns: 1.5 }),
+      marble: SY('marble', S(512), S(512), TX.marbleFn, { ns: 1.2 }),
+      brass: SY('brass', S(256), S(256), TX.brushedFn, { ns: 0.5 }),
+      oak: SY('oak', S(512), S(512), neutralOak, { ns: 2.2 }),
+      walnut: SY('walnut', S(512), S(512), TX.walnutFn, { ns: 2.2 }),
+      trav: SY('trav', S(512), S(512), TX.travertineFn, { ns: 3 }),
+      boucle: SY('boucle', S(256), S(256), TX.boucleFn, { ns: 4 }),
+      linen: SY('linen', S(256), S(256), TX.linenFn, { ns: 3 }),
+      leather: SY('leather', S(256), S(256), TX.leatherFn, { ns: 2.5 }),
+      velvet: SY('velvet', 128, 128, TX.velvetFn, { ns: 1.5 }),
+      ceramic: SY('ceramic', S(256), S(256), TX.ceramicFn, { ns: 1 }),
+      clay: SY('clay', 128, 128, TX.clayFn, { ns: 2 }),
+      terry: SY('terry', 128, 128, TX.terryFn, { ns: 3 }),
+      knit: SY('knit', S(256), S(256), TX.knitFn, { ns: 4 }),
+      rug: SY('rug', S(512), S(512), TX.rugFn, { ns: 2, wrap: false }),
+      felt: SY('felt', 128, 128, TX.feltFn, { ns: 1 }),
+      plaster: SY('plaster', 128, 128, TX.plasterFn, { ns: 1.5 }),
     };
   } catch (e) { console.warn('[interior] lux textures failed', e); return M; }
   const V2 = (a) => new THREE.Vector2(a, a);
@@ -75,7 +78,7 @@ export function upgradeMaterials(M, quality) {
   M.amber = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.08, metalness: 0, transparent: true, opacity: 0.78, depthWrite: false });
   M.opal = std({ ...vc, color: 0xffffff, roughness: 0.3, metalness: 0, emissive: 0xffe2bf, emissiveIntensity: 0.0 });
   try {
-    const art = TX.paintingAtlas(lo);
+    const art = cached('i:art:' + (lo ? 'lo' : 'hi'), lo ? 512 : 1024, () => TX.paintingAtlas(lo), { progressive: false });
     if (M.art) { M.art.map = art.map; if (art.normal) { M.art.normalMap = art.normal; M.art.normalScale = V2(0.6); } M.art.needsUpdate = true; }
   } catch (e) { console.warn('[interior] art atlas', e); }
   Object.assign(KEY_ALIAS, { paint: 0, plastic: 0, matte: 3, satin: 5, rubber: 6, amber: 'glassC' });

@@ -55,7 +55,7 @@ export function makeNoise(seed = 1) {
 function canvasOf(w, h, data) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   try {
-    const g = c.getContext('2d');
+    const g = c.getContext('2d', { willReadFrequently: true }); // V6 PERF: CPU-backed (read back by style averages / normalisation)
     const img = g.createImageData(w, h);
     if (img && img.data && img.data.set) { img.data.set(data); g.putImageData(img, 0, 0); }
   } catch (e) { /* headless fallback: blank canvas */ }
@@ -324,7 +324,7 @@ export function plasterFn(u, v, o) {
 export function paintingAtlas(small) {
   const W = small ? 512 : 1024, Hh = W / 2, C = W / 4;
   const c = document.createElement('canvas'); c.width = W; c.height = Hh;
-  const g = c.getContext('2d');
+  const g = c.getContext('2d', { willReadFrequently: true }); // V6 PERF: CPU-backed (read back by style averages / normalisation)
   const R = makeNoise(31).rnd;
   const pals = [
     ['#efe8dc', '#c9a27e', '#7d6b5d', '#e3d3bf', '#2f2b28'],

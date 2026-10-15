@@ -360,8 +360,12 @@ export function createStyles(ctx) {
     try {
       const img = tex && tex.image;
       if (img && img.getContext && img.width > 0) {
-        const g = img.getContext('2d', { willReadFrequently: true });
-        const d = g && g.getImageData ? g.getImageData(0, 0, img.width, img.height) : null;
+        // V6 PERF: average a 64×64 downscale instead of reading the whole canvas back (a full getImageData of every
+        // texture canvas forced GPU→CPU readbacks and cost >1 s of the load on phones)
+        if (!texAvg.sc) { texAvg.sc = document.createElement('canvas'); texAvg.sc.width = texAvg.sc.height = 64; }
+        const g = texAvg.sc.getContext('2d', { willReadFrequently: true });
+        if (g) { g.clearRect(0, 0, 64, 64); g.imageSmoothingEnabled = true; g.drawImage(img, 0, 0, 64, 64); }
+        const d = g && g.getImageData ? g.getImageData(0, 0, 64, 64) : null;
         if (d && d.data && d.data.length >= 4) {
           let r = 0, gg = 0, b = 0, k = 0; const st = Math.max(4, ((d.data.length / 4 / 4096) | 0) * 4);
           for (let i = 0; i < d.data.length; i += st) { r += s2l(d.data[i] / 255); gg += s2l(d.data[i + 1] / 255); b += s2l(d.data[i + 2] / 255); k++; }

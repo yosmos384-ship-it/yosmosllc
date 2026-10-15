@@ -1,40 +1,72 @@
-// radio-engine.js — shared procedural WebAudio radio: 6 AM "stations" (all music / voices synthesized, no samples),
-// static between stations, background (non-positional) mix + louder panned mix near the vintage radio.
-// Used by core (UI chip / panel, autostart on first gesture) and interior-radio.js (the 3D radio in the living room).
+// radio-engine.js — V6: ONE station inside the tour — WNCI 97.9 FM Columbus, Ohio (להיטים). No station list.
+// Stream URLs = radio-browser.info lookup restricted to WNCI (name / call sign WNCI, state Ohio; 24 h cache) + any
+// verified candidate URLs in WNCI_KNOWN. Playback = ONE <audio> element (no crossOrigin, preload none), started on the
+// first gesture in the site. A failure (lookup or stream) is retried once after 5 s, then the chip / panel say
+// "השידור לא זמין כרגע" with a retry button. The procedural WebAudio radio (synthesized programmes) is kept ONLY for a
+// network blocked by CSP (the claude.ai artifact), labelled "רדיו גיבוי".
 // Singleton: createRadio(audio) once (idempotent), getRadio() anywhere. No imports, no side effects on import.
-// CPU: notes are scheduled ahead on the AudioContext clock (lookahead ~0.45 s, pumped by frames + a 100 ms timer);
-// filters / formant banks / noise buffer are created once per station and reused; only oscillators + their envelope
-// gains are created per note (WebAudio sources are one-shot by design).
+// Synth CPU notes: notes are scheduled ahead on the AudioContext clock (lookahead ~0.45 s, pumped by frames + a 100 ms
+// timer); filters / formant banks / noise buffer are created once per programme and reused.
 
-export const FMIN = 540, FMAX = 1600;
+export const FMIN = 540, FMAX = 1600; // dial units (AM kHz scale; FM is mapped onto the same needle travel)
+// synthesized backup programmes (never listed in the UI; CSP-blocked page only)
 export const STATIONS = [
-  { id: 'swing', f: 640, call: 'WOSU', he: 'סווינג ג׳אז', sub: 'ביג-בנד, ויברפון וקונטרבס' },
-  { id: 'doowop', f: 820, call: 'WBNS', he: 'דו-וופ ורוקנרול', sub: 'הרמוניות, פסנתר ושלישונים וסקסופון' },
-  { id: 'country', f: 1010, call: 'WCKX', he: 'קאנטרי ובלוגראס', sub: 'בנג׳ו, כינור ובס בום-צ׳יק' },
-  { id: 'blues', f: 1180, call: 'WCOL', he: 'בלוז', sub: 'שאפל איטי, 12 תיבות, אורגן וגיטרה' },
-  { id: 'strings', f: 1370, call: 'WGRV', he: 'קלאסי ולאונג׳', sub: 'מיתרים, צ׳לו ונבל' },
-  { id: 'scanner', f: 1560, call: 'CPD', he: 'סורק משטרה', sub: 'קשר משטרתי אמריקאי (מדומה, בלי מילים)' },
+  { id: 'swing', f: 640, call: 'BKUP', he: 'סווינג ג׳אז', sub: 'ביג-בנד, ויברפון וקונטרבס' },
+  { id: 'doowop', f: 820, call: 'BKUP', he: 'דו-וופ ורוקנרול', sub: 'הרמוניות, פסנתר וסקסופון' },
+  { id: 'country', f: 1010, call: 'BKUP', he: 'קאנטרי ובלוגראס', sub: 'בנג׳ו, כינור ובס בום-צ׳יק' },
+  { id: 'blues', f: 1180, call: 'BKUP', he: 'בלוז', sub: 'שאפל איטי, 12 תיבות, אורגן וגיטרה' },
+  { id: 'strings', f: 1370, call: 'BKUP', he: 'קלאסי ולאונג׳', sub: 'מיתרים, צ׳לו ונבל' },
+  { id: 'scanner', f: 1560, call: 'BKUP', he: 'קשר (מדומה)', sub: 'קשר מדומה, בלי מילים' },
 ];
-// V4/V5: real American stations. On a normal web host they play INSIDE the page through an <audio> element (no
-// crossOrigin → no CORS needed; the element is not routed into WebAudio). Inside the claude.ai artifact the page CSP
-// blocks external media + fetch: probe() then reports 'no' and the UI falls back to new-tab links + the in-house synth.
-// streams = known direct streams (tried first); rb = radio-browser lookups (url_resolved, cached), pref = state/city.
-export const LIVE_STATIONS = [
-  { id: 'wosu', call: 'WOSU', freq: '89.7 FM', city: 'Columbus', he: 'חדשות NPR', url: 'https://www.wosu.org/listen-live', rb: [{ name: 'WOSU' }], pref: ['ohio', 'columbus'] },
-  { id: 'wcol', call: 'WCOL', freq: '92.3 FM', city: 'Columbus', he: 'קאנטרי', url: 'https://wcol.iheart.com/', rb: [{ name: 'WCOL' }], pref: ['ohio', 'columbus'] },
-  { id: 'wnci', call: 'WNCI', freq: '97.9 FM', city: 'Columbus', he: 'להיטים', url: 'https://wnci.iheart.com/', rb: [{ name: 'WNCI' }], pref: ['ohio', 'columbus'] },
-  { id: 'qfm96', call: 'QFM96', freq: 'WLVQ 96.3', city: 'Columbus', he: 'רוק קלאסי', url: 'https://qfm96.com/', rb: [{ name: 'QFM96' }, { name: 'WLVQ' }], pref: ['ohio', 'columbus'] },
-  { id: 'wwoz', call: 'WWOZ', freq: '90.7 FM', city: 'New Orleans', he: 'ג׳אז ובלוז', url: 'https://www.wwoz.org/', streams: ['https://wwoz-sc.streamguys1.com/wwoz-hi.mp3'], rb: [{ name: 'WWOZ' }], pref: ['louisiana'] },
-  { id: 'kexp', call: 'KEXP', freq: '90.3 FM', city: 'Seattle', he: 'אינדי / אלטרנטיבי', url: 'https://www.kexp.org/listen', streams: ['https://kexp.streamguys1.com/kexp160.aac', 'https://kexp-mp3-128.streamguys1.com/kexp128.mp3'], rb: [{ name: 'KEXP' }], pref: ['washington'] },
-  { id: 'wbgo', call: 'WBGO', freq: '88.3 FM', city: 'Newark', he: 'ג׳אז', url: 'https://www.wbgo.org/', rb: [{ name: 'WBGO' }], pref: ['new jersey'] },
-  { id: 'wqxr', call: 'WQXR', freq: '105.9 FM', city: 'New York', he: 'מוזיקה קלאסית', url: 'https://www.wqxr.org/', rb: [{ name: 'WQXR' }], pref: ['new york'] },
-  { id: 'wcbsfm', call: 'WCBS-FM', freq: '101.1 FM', city: 'New York', he: 'אולדיז — שנות ה-50/60/70', url: 'https://www.wcbsfm.com/', rb: [{ name: 'WCBS-FM' }, { name: 'WCBS FM' }], pref: ['new york'] },
-  { id: 'wtop', call: 'WTOP', freq: '103.5 FM', city: 'Washington D.C.', he: 'חדשות', url: 'https://wtop.com/', rb: [{ name: 'WTOP' }], pref: ['district of columbia', 'washington', 'virginia', 'maryland'] },
-  { id: 'scanner', call: 'סורק משטרה אמיתי', freq: 'Broadcastify', city: 'Franklin County / Columbus', he: 'קשר משטרה וכיבוי בשידור חי', url: 'https://www.broadcastify.com/listen/ctid/2064/publicsafety', rb: [{ tag: 'scanner', name: 'police' }, { tag: 'scanner' }, { name: 'police scanner' }], pref: ['ohio', 'columbus', 'franklin'], scanner: true },
-];
-export const RB_MIRRORS = ['https://de1.api.radio-browser.info', 'https://nl1.api.radio-browser.info', 'https://at1.api.radio-browser.info'];
-// dial positions for the 3D radio needle (AM dial 540–1600, spread between the synth stations' marks)
-const liveDial = (i) => 565 + (i * (1575 - 565)) / (LIVE_STATIONS.length - 1);
+const MUSIC = [0, 1, 2, 3, 4]; // backup never plays the synthesized scanner
+export const BACKUP_HE = 'רדיו גיבוי';
+export const LIVE_NOTE = 'השידור החי עובד באתר yosmosllc.com';
+export const UNAVAIL_HE = 'השידור לא זמין כרגע';
+
+// ---- the one station
+export const WNCI = { key: 'WNCI', call: 'WNCI', band: 'FM', fr: 97.9, name: '97.9 WNCI', he: 'להיטים', city: 'Columbus, Ohio', brand: /\b97[.,]9\s*wnci\b/i };
+export const COLUMBUS = [WNCI]; // (V5 name kept for the 3D dial marks)
+// Verified direct WNCI stream URLs (https), tried after the radio-browser results. Empty by default: only add a URL
+// that has been checked to play WNCI 97.9 (an unverified guess could play another station).
+export const WNCI_KNOWN = [];
+export const RB_MIRRORS = ['https://de1.api.radio-browser.info', 'https://nl1.api.radio-browser.info', 'https://at1.api.radio-browser.info', 'https://all.api.radio-browser.info'];
+export const RB_QUERY = '/json/stations/search?name=WNCI&state=Ohio&countrycode=US&hidebroken=true&order=clickcount&reverse=true&limit=50';
+const CACHE_KEY = 'rbWNCI6', CACHE_MS = 24 * 3600e3, RB_TIMEOUT = 4000, PLAY_TIMEOUT = 7000, RETRY_MS = 5000;
+
+// dial position 0..1 (FM 88–108 and AM 540–1600 share the needle travel) → engine dial units (FMIN..FMAX)
+export function dialPos(s) {
+  if (!s || !isFinite(s.fr)) return 0.5;
+  const p = s.band === 'AM' ? (s.fr - 540) / (1600 - 540) : (s.fr - 88) / (108 - 88);
+  return p < 0 ? 0 : p > 1 ? 1 : p;
+}
+export const dialUnits = (s) => FMIN + dialPos(s) * (FMAX - FMIN);
+export const freqText = (s) => (s && isFinite(s.fr) ? (s.band === 'AM' ? String(Math.round(s.fr)) + ' AM' : s.fr.toFixed(1)) : '');
+
+// ---- pure stream picker (exported for tests): radio-browser JSON → WNCI stream URLs (https first, then clicks + votes, bitrate)
+const CALL_RE = /\b([WK][A-Z]{2,3})(?:-(?:FM|AM|LP|HD\d?))?\b/g;
+function callsOf(x) {
+  const out = new Set();
+  for (const m of String(x.name || '').toUpperCase().matchAll(CALL_RE)) out.add(m[1]);
+  try { for (const p of new URL(x.homepage || '').hostname.toUpperCase().split('.')) if (/^[WK][A-Z]{2,3}$/.test(p)) out.add(p); } catch (_) { /* no homepage */ }
+  return out;
+}
+export function pickWNCI(list, opts = {}) {
+  const https = !!opts.https, seen = new Map();
+  for (const x of Array.isArray(list) ? list : []) {
+    if (!x || typeof x !== 'object') continue;
+    if (!/\bohio\b|^\s*oh\s*$/i.test(x.state || '') || String(x.countrycode || 'US').toUpperCase() !== 'US') continue;
+    const name = String(x.name || '');
+    if (/scanner|police|sheriff|fire\s*(dept|department|dispatch)/i.test(name + ' ' + (x.tags || ''))) continue;
+    if (!(callsOf(x).has('WNCI') || WNCI.brand.test(name))) continue;
+    const url = String(x.url_resolved || x.url || '').trim();
+    if (!/^https?:\/\//i.test(url) || (https && !/^https:/i.test(url))) continue; // mixed content is blocked on https
+    const c = { url, https: /^https:/i.test(url), br: +x.bitrate || 0, pop: (+x.clickcount || 0) + (+x.votes || 0) };
+    const o = seen.get(url); if (!o || c.pop > o.pop) seen.set(url, c);
+  }
+  return [...seen.values()].sort((a, b) => (b.https - a.https) || (b.pop - a.pop) || (b.br - a.br)).slice(0, 4).map((c) => c.url);
+}
+const isClaudeHost = () => { try { return /(^|\.)claude\.ai$|(^|\.)claudeusercontent\.com$|(^|\.)claude\.site$/i.test(globalThis.location.hostname || ''); } catch (_) { return false; } };
+
 const BASE = 0.3, NEAR = 0.8, LOOK = 0.45, TUNE_W = 18;
 const mf = (m) => 440 * Math.pow(2, (m - 69) / 12);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -49,7 +81,7 @@ export function getRadio() { return SINGLETON; }
 export function createRadio(audio, opts = {}) {
   if (SINGLETON) { if (audio && !SINGLETON._audio) SINGLETON._audio = audio; return SINGLETON; }
   const savedVol = parseFloat(lsGet('radioVol'));
-  const st = { on: false, idx: 0, f: STATIONS[0].f, vol: isFinite(savedVol) ? clamp(savedVol, 0, 1) : 0.7, cur: -1, tune: null, autoDone: false, notes: 0, events: 0, hidden: false, base: 0, near: 0 };
+  const st = { on: false, idx: 0, f: dialUnits(WNCI), vol: isFinite(savedVol) ? clamp(savedVol, 0, 1) : 0.7, cur: -1, tune: null, autoDone: false, notes: 0, events: 0, hidden: false, base: 0, near: 0 };
   const A = { ac: null, out: null, base: null, near: null, pan: null, bus: null, stat: null, statSrc: null, sg: [], kits: [], clocks: [], S: [], noise: null, iv: null };
   const subs = new Set(), panelSubs = new Set();
   let srcFn = null, lisFn = null;
@@ -375,10 +407,26 @@ export function createRadio(audio, opts = {}) {
     }
   } catch (_) { /* no DOM (tests) */ }
 
-  /* ------------------------------------------------------------------ V5 live streams (<audio>) */
-  const L = { avail: 'unknown', on: false, idx: -1, status: 'idle', el: null, token: 0, unlocked: false, skips: 0, probeP: null, cache: {}, lastMode: 'synth', autoLive: false, userPicked: false, failed: {} };
+
+  /* ------------------------------------------------------------------ V6 WNCI live stream (<audio>) */
+  // avail: 'unknown' (lookup pending) | 'yes' (stream URLs known) | 'down' (lookup failed, not blocked) | 'no' (CSP-blocked → backup)
+  // status: 'idle' | 'connecting' | 'playing' | 'retrying' (one retry after 5 s) | 'unavailable' ("השידור לא זמין כרגע")
+  const L = { avail: 'unknown', loaded: false, urls: [], on: false, status: 'idle', el: null, token: 0, unlocked: false, loadP: null, source: '', retried: false, retryT: 0, csp: false, gestureBlocked: false };
   const noticeSubs = new Set();
   const notice = (msg, kind) => { for (const f of noticeSubs) { try { f(msg, kind || 'info'); } catch (_) {} } };
+  const canLive = () => typeof fetch === 'function' && typeof Audio === 'function' && typeof document !== 'undefined' && typeof document.addEventListener === 'function';
+  const pageHttps = () => { try { return globalThis.location && globalThis.location.protocol === 'https:'; } catch (_) { return false; } };
+  if (!canLive()) L.avail = 'no';
+  // CSP (claude.ai artifact): a blocked connect-src / media-src request fires securitypolicyviolation
+  try {
+    if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('securitypolicyviolation', (e) => {
+      const d = String(e.effectiveDirective || e.violatedDirective || '');
+      if (/connect-src|media-src|default-src/.test(d) && !/^(data|blob):/.test(String(e.blockedURI || ''))) L.csp = true;
+    });
+  } catch (_) { /* no DOM */ }
+  const blockedNow = () => L.csp || isClaudeHost();
+  const tick = (ms) => new Promise((r) => setTimeout(r, ms));
+
   // 0.1 s silent WAV, played synchronously inside the first gesture so iOS lets this element play later (async)
   function silentWav() {
     const n = 800, b = new Uint8Array(44 + n), v = new DataView(b.buffer), w = (o, t) => { for (let i = 0; i < t.length; i++) b[o + i] = t.charCodeAt(i); };
@@ -389,15 +437,20 @@ export function createRadio(audio, opts = {}) {
     return 'data:audio/wav;base64,' + btoa(bin);
   }
   function liveEl() {
-    if (L.el || typeof document === 'undefined' || typeof Audio === 'undefined') return L.el;
-    const el = new Audio(); // crossOrigin deliberately NOT set (no CORS needed; not routed into WebAudio)
-    el.preload = 'none'; el.setAttribute('playsinline', ''); el.setAttribute('webkit-playsinline', '');
-    el.addEventListener('error', () => { if (L.on && L.status === 'playing') { L.status = 'error'; notice('השידור נקטע — עובר לתחנה הבאה', 'error'); setTimeout(() => { if (L.on && L.status === 'error') skipLive(); }, 400); } });
+    if (L.el || !canLive()) return L.el;
+    const el = new Audio(); // crossOrigin deliberately NOT set (no CORS needed; the element is not routed into WebAudio)
+    el.preload = 'none';
+    try { el.setAttribute('playsinline', ''); el.setAttribute('webkit-playsinline', ''); } catch (_) {}
+    const broke = () => { // mid-stream drop → the same "retry once after 5 s" path
+      if (!L.on || L.status !== 'playing') return;
+      L.retried = false; fail(L.token);
+    };
+    el.addEventListener('error', broke); el.addEventListener('ended', broke);
     L.el = el;
     return el;
   }
   function unlockLive() {
-    if (L.unlocked || L.avail !== 'yes') return;
+    if (L.unlocked || L.avail === 'no') return;
     const el = liveEl(); if (!el) return;
     L.unlocked = true;
     try { el.src = silentWav(); const p = el.play(); if (p && p.catch) p.catch(() => {}); } catch (_) {}
@@ -409,105 +462,102 @@ export function createRadio(audio, opts = {}) {
   const withTimeout = (ms) => { const c = typeof AbortController !== 'undefined' ? new AbortController() : null; const t = setTimeout(() => c && c.abort(), ms); return { signal: c ? c.signal : undefined, done: () => clearTimeout(t) }; };
   async function getJSON(url, ms) {
     const T = withTimeout(ms);
-    try { const r = await fetch(url, { signal: T.signal, cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status); return await r.json(); } finally { T.done(); }
+    try { const r = await fetch(url, { signal: T.signal }); if (!r.ok) throw new Error('HTTP ' + r.status); return await r.json(); } finally { T.done(); }
   }
-  // can this page load external media / fetch? (blocked under the claude.ai artifact CSP)
-  function probe() {
-    if (L.probeP) return L.probeP;
-    if (typeof fetch !== 'function') { L.avail = 'no'; emit(); return (L.probeP = Promise.resolve(false)); }
-    L.probeP = (async () => {
-      let ok = false;
-      for (const m of RB_MIRRORS.slice(0, 2)) { try { await getJSON(m + '/json/stats', 3000); ok = true; break; } catch (_) { /* next mirror */ } }
-      L.avail = ok ? 'yes' : 'no'; emit();
-      if (ok) {
-        // a synth station that was auto-started before the probe finished → switch to a random real one (keeps the synth until it plays)
-        if (L.autoLive && !L.userPicked && !L.on) playLive(randomLive(), { auto: true });
-        prefetch();
+  function readCache(maxAge) {
+    try { const c = JSON.parse(lsGet(CACHE_KEY) || 'null'); if (c && Array.isArray(c.urls) && c.urls.length && Date.now() - c.t < maxAge && c.https === pageHttps()) return c.urls; } catch (_) {}
+    return null;
+  }
+  const withKnown = (urls) => { const out = (urls || []).slice(); for (const u of WNCI_KNOWN) if (!out.includes(u) && (!pageHttps() || /^https:/i.test(u))) out.push(u); return out; };
+  // WNCI stream URLs: localStorage (24 h) → radio-browser mirrors (4 s each) → stale cache (30 days) → known URLs.
+  // Every mirror failing on a CSP-blocked page (artifact) → avail 'no' (backup synth); otherwise → 'down' (retry path).
+  function load() {
+    if (L.loadP) return L.loadP;
+    if (!canLive()) { L.avail = 'no'; L.loaded = true; emit(); return (L.loadP = Promise.resolve(false)); }
+    L.loadP = (async () => {
+      let urls = readCache(CACHE_MS); L.source = urls ? 'cache' : '';
+      if (!urls) {
+        for (const m of RB_MIRRORS) {
+          if (L.csp) break;
+          try { const raw = await getJSON(m + RB_QUERY, RB_TIMEOUT); urls = pickWNCI(raw, { https: pageHttps() }); L.source = m; if (urls.length) break; } catch (_) { urls = null; }
+        }
+        if (urls && urls.length) lsSet(CACHE_KEY, JSON.stringify({ t: Date.now(), https: pageHttps(), urls }));
+        if (!urls || !urls.length) { const stale = readCache(30 * CACHE_MS); if (stale) { urls = stale; L.source = 'stale-cache'; } }
       }
-      return ok;
+      urls = withKnown(urls);
+      if (!urls.length) await tick(40); // let a pending securitypolicyviolation event arrive
+      L.loaded = true; L.urls = urls;
+      L.avail = urls.length ? 'yes' : blockedNow() ? 'no' : 'down';
+      emit();
+      return L.avail === 'yes';
     })();
-    return L.probeP;
+    return L.loadP;
   }
-  async function prefetch() { for (const S of LIVE_STATIONS) if (!(S.streams && S.streams.length)) { try { await rbLookup(S); } catch (_) {} } }
-  async function rbLookup(S) {
-    if (L.cache[S.id]) return L.cache[S.id];
-    try { const c = JSON.parse(lsGet('rb_' + S.id) || 'null'); if (c && Date.now() - c.t < 3 * 864e5 && Array.isArray(c.urls) && c.urls.length) { L.cache[S.id] = c.urls; return c.urls; } } catch (_) {}
-    const found = [];
-    for (const q of S.rb || []) {
-      const qs = new URLSearchParams(); if (q.name) qs.set('name', q.name); if (q.tag) qs.set('tag', q.tag);
-      qs.set('countrycode', 'US'); qs.set('hidebroken', 'true'); qs.set('order', 'clickcount'); qs.set('reverse', 'true'); qs.set('limit', S.scanner ? '20' : '5');
-      let list = null;
-      for (const m of RB_MIRRORS) { try { list = await getJSON(m + '/json/stations/search?' + qs.toString(), 5000); break; } catch (_) { list = null; } }
-      if (!Array.isArray(list)) continue;
-      const callRe = !S.scanner && q.name ? new RegExp(q.name.replace(/[-\s]/g, '[-\\s]?'), 'i') : null;
-      const score = (x) => { const loc = ((x.state || '') + ' ' + (x.name || '') + ' ' + (x.tags || '')).toLowerCase(); let sc = 0; (S.pref || []).forEach((p, i) => { if (loc.includes(p)) sc += 10 - i; }); if (/^https:/.test(x.url_resolved || '')) sc += 3; return sc; };
-      list.filter((x) => x && x.url_resolved && (!callRe || callRe.test(x.name || ''))).sort((a, b) => score(b) - score(a))
-        .forEach((x) => { if (!found.includes(x.url_resolved)) found.push(x.url_resolved); });
-      if (found.length >= 3) break;
-    }
-    const urls = found.slice(0, 5);
-    L.cache[S.id] = urls;
-    if (urls.length) lsSet('rb_' + S.id, JSON.stringify({ t: Date.now(), urls }));
-    return urls;
-  }
-  function attempt(url, tok) {
+  // one URL: resolves true when it plays, false on error / reject / time budget
+  function attempt(url, tok, ms) {
     return new Promise((res) => {
-      const el = liveEl(); if (!el || tok !== L.token) return res(false);
+      const el = liveEl(); if (!el || tok !== L.token || ms <= 0) return res(false);
       let done = false, to = 0;
-      const fin = (ok) => { if (done) return; done = true; clearTimeout(to); el.removeEventListener('playing', onP); el.removeEventListener('error', onE); res(ok); };
+      const fin = (ok) => { if (done) return; done = true; clearTimeout(to); el.removeEventListener('playing', onP); el.removeEventListener('error', onE); res(ok && tok === L.token); };
       const onP = () => { if (el.src === url || el.currentSrc === url) fin(true); };
       const onE = () => fin(false);
       el.addEventListener('playing', onP); el.addEventListener('error', onE);
-      to = setTimeout(() => fin(false), 6000);
-      try { el.src = url; applyLiveVol(); const p = el.play(); if (p && p.catch) p.catch(() => fin(false)); } catch (_) { fin(false); }
+      to = setTimeout(() => fin(false), ms);
+      try {
+        el.src = url; applyLiveVol();
+        const p = el.play();
+        if (p && p.then) p.then(() => { if (el.src === url) fin(true); }, (e) => { if (e && e.name === 'NotAllowedError') L.gestureBlocked = true; fin(false); });
+      } catch (_) { fin(false); }
     });
   }
-  const randomLive = () => { const pool = LIVE_STATIONS.map((_, i) => i).filter((i) => !LIVE_STATIONS[i].scanner && !L.failed[LIVE_STATIONS[i].id]); return pool.length ? pool[Math.floor(Math.random() * pool.length)] : 0; };
-  // play real station i. o.auto: keep the synth playing until the stream actually plays (auto switch / autostart)
-  async function playLive(i, o = {}) {
-    const n = LIVE_STATIONS.length; i = ((Math.round(i) % n) + n) % n;
-    const S = LIVE_STATIONS[i];
-    if (L.avail === 'no') { notice('שידור חי לא זמין בגרסה הזו — נפתח בלשונית חדשה', 'error'); return false; }
-    if (!o.auto && !o.skip) { L.userPicked = true; L.skips = 0; }
-    unlockLive();
+  function toBackup() {
+    L.token++; clearTimeout(L.retryT); L.on = false; L.status = 'idle'; L.avail = 'no'; stopEl();
+    notice(BACKUP_HE + ' · ' + LIVE_NOTE, 'info');
+    backupPlay();
+  }
+  // start WNCI. o.retry = the automatic retry after a failure
+  async function start(o = {}) {
+    if (L.avail === 'no') { if (!st.on) backupPlay(); return false; }
+    unlockLive(); // synchronous, inside the gesture when called from one
+    clearTimeout(L.retryT);
+    if (!o.retry) L.retried = false;
     const tok = ++L.token;
-    L.on = true; L.idx = i; L.status = 'connecting'; L.lastMode = 'live';
-    if (!o.auto) { st.on = false; pump(); }
-    sweep(liveDial(i));
-    startTimer(); emit();
+    if (st.on) { st.on = false; pump(); }
+    L.on = true; L.status = o.retry ? 'retrying' : 'connecting';
+    sweep(dialUnits(WNCI)); startTimer(); emit();
+    if (L.loaded && !L.urls.length) L.loadP = null; // the lookup failed last time → look up again
+    await load();
+    if (tok !== L.token) return false;
+    if (L.avail === 'no') { toBackup(); return false; }
+    const end = Date.now() + PLAY_TIMEOUT; L.gestureBlocked = false;
     let ok = false;
-    const tried = new Set();
-    const tryList = async (urls) => { for (const u of urls) { if (tok !== L.token) return false; if (tried.has(u)) continue; tried.add(u); if (await attempt(u, tok)) return true; } return false; };
-    ok = await tryList(S.streams || []);
-    if (!ok && tok === L.token && S.rb) { let urls = []; try { urls = await rbLookup(S); } catch (_) { urls = []; } ok = await tryList(urls); }
-    if (tok !== L.token) return false; // superseded
-    if (ok) {
-      L.status = 'playing'; L.skips = 0; delete L.failed[S.id];
-      if (st.on) { st.on = false; pump(); }
-      emit(); return true;
+    for (const u of L.urls) { if (tok !== L.token) return false; if (await attempt(u, tok, end - Date.now())) { ok = true; break; } }
+    if (tok !== L.token) return false; // superseded by stop / another start
+    if (ok) { L.status = 'playing'; L.retried = false; emit(); return true; }
+    if (L.gestureBlocked) { // autoplay refused (no usable gesture yet, e.g. iOS): wait for a tap, not a failure
+      L.gestureBlocked = false; L.unlocked = false; L.on = false; L.status = 'idle'; stopEl(); emit();
+      notice('הקישו על 📻 כדי להפעיל את הרדיו', 'info'); return false;
     }
-    L.failed[S.id] = true;
-    stopEl();
-    if (o.auto) { L.on = false; L.status = 'idle'; L.lastMode = 'synth'; emit(); return false; }
-    if (S.scanner) { notice('לא נמצא סורק משטרה חי — מנגן את הסורק המדומה', 'error'); L.on = false; L.status = 'idle'; L.lastMode = 'synth'; tune(5); return false; }
-    L.status = 'error'; emit();
-    notice('התחנה ' + S.call + ' לא זמינה כרגע — עובר לתחנה הבאה', 'error');
-    skipLive();
+    if (L.urls.length) await tick(40);
+    if (tok !== L.token) return false;
+    if (L.csp) { toBackup(); return false; } // media-src blocked by CSP
+    fail(tok);
     return false;
   }
-  function skipLive() {
-    L.skips++;
-    if (L.skips >= LIVE_STATIONS.length) { // nothing plays (geo-block / offline): back to the in-house radio
-      L.skips = 0; L.on = false; L.status = 'idle'; L.lastMode = 'synth'; stopEl();
-      notice('שידור חי לא זמין כרגע — הרדיו בבית מנגן', 'error');
-      tune(Math.floor(Math.random() * STATIONS.length));
+  // failure: retry once after 5 s, then "השידור לא זמין כרגע" (+ retry button in the panel)
+  function fail(tok) {
+    if (tok !== L.token) return;
+    stopEl();
+    if (!L.retried) {
+      L.retried = true; L.on = true; L.status = 'retrying'; emit();
+      L.retryT = setTimeout(() => { if (tok === L.token && L.on && L.status === 'retrying') start({ retry: true }); }, RETRY_MS);
       return;
     }
-    let j = L.idx;
-    for (let k = 0; k < LIVE_STATIONS.length; k++) { j = (j + 1) % LIVE_STATIONS.length; if (!LIVE_STATIONS[j].scanner && !L.failed[LIVE_STATIONS[j].id]) break; }
-    playLive(j, { skip: true });
+    L.token++; L.on = false; L.status = 'unavailable'; emit();
+    notice(UNAVAIL_HE, 'error');
   }
   function stopLive(quiet) {
+    clearTimeout(L.retryT);
     if (!L.on && L.status === 'idle') return;
     L.token++; L.on = false; L.status = 'idle'; stopEl(); if (!quiet) emit();
   }
@@ -517,12 +567,12 @@ export function createRadio(audio, opts = {}) {
     try { const s = srcFn && srcFn(), l = lisFn && lisFn(); if (s && l) { const d = Math.hypot(s.x - l.x, (s.y || 0) - (l.y || 0), s.z - l.z); att = 1 / (1 + (d * d) / (2.4 * 2.4)); } } catch (_) { att = 0; }
     try { el.volume = clamp(st.vol * (0.6 + 0.4 * att), 0, 1); } catch (_) { /* iOS: read-only */ }
     let muted = false; try { muted = !!(api._audio && api._audio.muted); } catch (_) {}
-    el.muted = muted;
+    if (el.muted !== muted) el.muted = muted; // core mute (🔊 button) silences the stream too
   }
   // needle-only sweep (no synth audio)
-  function sweep(b) { const [dom, v] = clockNow(); const a = st.f; st.tune = Math.abs(b - a) < 0.5 ? null : { a, b, k: 0, dur: clamp(Math.abs(b - a) / 650, 0.45, 1.3), dom, last: v }; if (!st.tune) st.f = b; }
+  function sweep(b, from) { const [dom, v] = clockNow(); const a = from != null ? clamp(from, FMIN, FMAX) : st.f; st.tune = Math.abs(b - a) < 0.5 ? null : { a, b, k: 0, dur: clamp(Math.abs(b - a) / 650, 0.45, 1.3), dom, last: v }; st.f = st.tune ? a : b; }
 
-  /* ------------------------------------------------------------------ public API */
+  /* ------------------------------------------------------------------ synth backup (CSP-blocked page only) */
   function tune(idx, o = {}) {
     idx = ((Math.round(idx) % STATIONS.length) + STATIONS.length) % STATIONS.length;
     st.idx = idx;
@@ -533,50 +583,60 @@ export function createRadio(audio, opts = {}) {
     pump(); emit();
     return api;
   }
+  function backupPlay(idx) {
+    stopLive(true);
+    if (idx == null) idx = MUSIC[Math.floor(Math.random() * MUSIC.length)];
+    const b = STATIONS[idx].f, from = clamp(b + (Math.random() < 0.5 ? -1 : 1) * (45 + Math.random() * 50), FMIN, FMAX);
+    return tune(idx, { from });
+  }
+
+  /* ------------------------------------------------------------------ public API */
+  const isBackup = () => L.avail === 'no';
+  const liveView = () => ({ avail: L.avail, loaded: L.loaded, on: L.on, key: WNCI.key, status: L.status, station: WNCI, urls: L.urls.slice(), source: L.source, retried: L.retried, csp: L.csp,
+    src: L.el ? L.el.src : '', muted: L.el ? !!L.el.muted : null, volume: L.el ? L.el.volume : null });
   const api = {
     _audio: audio || null,
-    stations: STATIONS,
-    get state() { return { on: st.on || L.on, synthOn: st.on, idx: st.idx, f: st.f, vol: st.vol, cur: st.cur, tuning: !!st.tune, station: STATIONS[st.idx], playing: (st.on && st.cur >= 0) || (L.on && L.status === 'playing'), live: api.live }; },
-    get on() { return st.on || L.on; }, get idx() { return st.idx; }, get f() { return st.f; }, get cur() { return st.cur; },
-    get volume() { return st.vol; }, get tuning() { return !!st.tune; }, get autoDone() { return st.autoDone; },
-    play(idx) { if (idx != null) return api.tune(idx); stopLive(true); L.lastMode = 'synth'; if (!st.on) { st.on = true; startTimer(); if (!st.tune && Math.abs(st.f - STATIONS[st.idx].f) > 0.5) tune(st.idx); pump(); emit(); } return api; },
-    stop() { if (!st.on && !L.on) return api; const wasLive = L.on; st.on = false; stopLive(true); pump(); stopTimer(); if (wasLive) L.lastMode = 'live'; emit(); return api; },
-    toggle() { if (st.on || L.on) return api.stop(); if (L.lastMode === 'live' && L.idx >= 0 && L.avail === 'yes') { playLive(L.idx); return api; } return api.play(); },
-    tune(i, o) { stopLive(true); L.lastMode = 'synth'; return tune(i, o); },
-    next() { if (L.on) { playLive(L.idx + 1); return api; } return api.tune((st.on ? st.idx : st.idx - 1) + 1); },
-    prev() { if (L.on) { playLive(L.idx - 1); return api; } return api.tune(st.idx - 1); },
-    // V5 live
-    probe, playLive(i) { playLive(i); return api; }, stopLive() { stopLive(); return api; },
-    onNotice(fn) { if (typeof fn === 'function') noticeSubs.add(fn); return () => noticeSubs.delete(fn); },
-    get live() { const S = LIVE_STATIONS[L.idx]; return { avail: L.avail, on: L.on, idx: L.idx, status: L.status, station: S || null, src: L.el ? L.el.src : '', muted: L.el ? !!L.el.muted : null, volume: L.el ? L.el.volume : null, cache: Object.assign({}, L.cache) }; },
-    nowName() { if (L.on && LIVE_STATIONS[L.idx]) { const S = LIVE_STATIONS[L.idx]; return S.call + ' ' + S.freq + ' — ' + S.he; } const s = STATIONS[st.cur >= 0 ? st.cur : st.idx]; return s ? s.call + ' ' + s.f + ' — ' + s.he : ''; },
-    liveDial,
-    setVolume(v) { st.vol = clamp(+v || 0, 0, 1); lsSet('radioVol', String(st.vol.toFixed(2))); applyLiveVol(); pump(); emit(); return api; },
-    // random station, "tuned in" with a short sweep of static
-    playRandom() {
-      const i = Math.floor(Math.random() * STATIONS.length), b = STATIONS[i].f;
-      const from = clamp(b + (Math.random() < 0.5 ? -1 : 1) * (45 + Math.random() * 50), FMIN, FMAX);
-      stopLive(true); L.lastMode = 'synth';
-      return tune(i, { from });
+    stations: STATIONS, // synthesized backup programmes; not listed in the UI
+    station: WNCI, columbus: COLUMBUS,
+    get state() {
+      return { on: st.on || L.on, synthOn: st.on, backup: isBackup(), idx: st.idx, f: st.f, vol: st.vol, cur: st.cur, tuning: !!st.tune, station: STATIONS[st.idx],
+        playing: (st.on && st.cur >= 0) || (L.on && L.status === 'playing'), liveStation: WNCI, live: liveView() };
     },
+    get on() { return st.on || L.on; }, get idx() { return st.idx; }, get f() { return st.f; }, get cur() { return st.cur; },
+    get volume() { return st.vol; }, get tuning() { return !!st.tune; }, get autoDone() { return st.autoDone; }, get backup() { return isBackup(); },
+    get live() { return liveView(); },
+    get liveStations() { return L.urls.length ? [WNCI] : []; },
+    probe: load, load,
+    play() { if (isBackup()) { if (!st.on) backupPlay(); return api; } if (!L.on) start(); return api; },
+    stop() { const was = st.on || L.on || L.status !== 'idle'; st.on = false; stopLive(true); L.status = 'idle'; pump(); stopTimer(); if (was) emit(); return api; },
+    toggle() { return (st.on || L.on) ? api.stop() : api.play(); },
+    // "נסו שוב" button: a fresh attempt (fresh lookup if the last one failed) with its own retry-once
+    retry() { if (isBackup()) return api.play(); start(); return api; },
+    // 3D tuning knob: off → play; unavailable → retry; on → the needle re-sweeps onto 97.9
+    retune() { if (!api.on) return api.play(); if (!st.on) sweep(dialUnits(WNCI), dialUnits(WNCI) + (Math.random() < 0.5 ? -60 : 60)); emit(); return api; },
+    tune(i, o) { stopLive(true); return tune(i, o); }, // synth programme (backup / tests)
+    onNotice(fn) { if (typeof fn === 'function') noticeSubs.add(fn); return () => noticeSubs.delete(fn); },
+    nowName() {
+      if (st.on) { const s = STATIONS[st.cur >= 0 ? st.cur : st.idx]; return s ? BACKUP_HE + ' · ' + s.he : BACKUP_HE; }
+      return 'WNCI 97.9 · ' + WNCI.he;
+    },
+    liveDial() { return dialUnits(WNCI); },
+    setVolume(v) { st.vol = clamp(+v || 0, 0, 1); lsSet('radioVol', String(st.vol.toFixed(2))); applyLiveVol(); pump(); emit(); return api; },
     // called once on the first user gesture (browsers block audio before one)
-    // V5: a random REAL station when live playback works, else (artifact CSP / offline / probe pending) a synth one;
-    // if the probe succeeds later, probe() switches to a real station (the synth keeps playing until it does)
     autostart() {
       if (st.autoDone) return false; st.autoDone = true;
-      if (L.avail === 'yes') { api.playRandom(); unlockLive(); playLive(randomLive(), { auto: true }); return true; }
-      if (L.avail === 'unknown') L.autoLive = true;
-      api.playRandom(); return true;
+      if (isBackup()) { backupPlay(); return true; }
+      start();
+      return true;
     },
     onChange(fn) { if (typeof fn === 'function') { subs.add(fn); try { fn(api.state); } catch (_) {} } return () => subs.delete(fn); },
-    // V4: ask the UI to open the radio panel (e.g. from the 3D radio) at a section ('live' | 'home')
-    openPanel(section) { for (const f of panelSubs) { try { f(section || 'home'); } catch (_) {} } return panelSubs.size > 0; },
+    // ask the UI to open the radio panel (e.g. from the 3D radio)
+    openPanel(section) { for (const f of panelSubs) { try { f(section || 'radio'); } catch (_) {} } return panelSubs.size > 0; },
     onPanelRequest(fn) { if (typeof fn === 'function') panelSubs.add(fn); return () => panelSubs.delete(fn); },
-    liveStations: LIVE_STATIONS,
     setSource(fn) { srcFn = typeof fn === 'function' ? fn : null; },
     setListener(fn) { lisFn = typeof fn === 'function' ? fn : null; },
     pump,
-    debug() { return { ctx: A.ac ? (A.ac.state || 'fake') : 'none', built: !!A.out, notes: st.notes, events: st.events, cur: st.cur, f: +st.f.toFixed(1), on: st.on, base: +st.base.toFixed(3), near: +st.near.toFixed(3), timer: !!A.iv }; },
+    debug() { return { ctx: A.ac ? (A.ac.state || 'fake') : 'none', built: !!A.out, notes: st.notes, events: st.events, cur: st.cur, f: +st.f.toFixed(1), on: st.on, base: +st.base.toFixed(3), near: +st.near.toFixed(3), timer: !!A.iv, avail: L.avail, live: L.status }; },
   };
   SINGLETON = api;
   if (opts.autoTimer) startTimer();

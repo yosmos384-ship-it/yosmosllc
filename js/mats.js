@@ -14,6 +14,8 @@
 // Exports: rand, noiseField, worldUV, canvasTexture, makeNormalFromHeight, normalPixelsFromHeight, textureFromPixels,
 //          makeMaterials (default), ALIASES, MATERIAL_INFO.
 
+import { cached } from './tex-cache.js'; // V6 PERF (pass-through unless core initialised it)
+
 /* ------------------------------------------------------------------ seeded random */
 export function rand(seed = 1) {
   let a = (seed >>> 0) || 0x9e3779b9;
@@ -57,7 +59,7 @@ export function canvasTexture(THREE, w, h, drawFn, opts = {}) {
   const c = makeCanvas(w, h);
   let tex;
   if (c) {
-    const g = c.getContext('2d');
+    const g = c.getContext('2d', { willReadFrequently: true }); // V6 PERF: CPU-backed (read back by style averages / normalisation)
     try { if (g) drawFn(g, w, h); } catch (e) { console.warn('[mats] draw failed', e); }
     tex = new THREE.CanvasTexture(c);
   } else {
@@ -83,7 +85,7 @@ export function textureFromPixels(THREE, rgba, w, h, opts = {}) {
   const c = makeCanvas(w, h);
   if (c) {
     try {
-      const g = c.getContext('2d');
+      const g = c.getContext('2d', { willReadFrequently: true }); // V6 PERF: CPU-backed (read back by style averages / normalisation)
       const img = g.createImageData(w, h);
       img.data.set(rgba);
       g.putImageData(img, 0, 0);
@@ -850,6 +852,9 @@ function buildMaterials(THREE, quality) {
   const S = low ? 256 : 512;    // regular
   const XS = low ? 128 : 256;   // small
   const M = {};
+  // V6 PERF: every generator call goes through the texture cache (IndexedDB hit = no generation; first visit = quarter-size
+  // now, full size in idle time). Key = generator + args + size; bump tex-cache VERSION when a generator changes.
+  const C = (fn, size, ...a) => cached('m:' + fn.name + ':' + size + ':' + JSON.stringify(a), size, (sz) => fn(THREE, sz, ...a));
   const std = (o) => new THREE.MeshStandardMaterial(o);
   const phys = (o) => new THREE.MeshPhysicalMaterial(o);
   const now = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
@@ -889,61 +894,61 @@ function buildMaterials(THREE, quality) {
   const withNS = (m, s) => { try { if (m.normalScale) m.normalScale.set(s, s); } catch (_) {} return m; };
 
   /* ---------------- wood floors & wood */
-  safe('oakHerringbone', () => withNS(std(Object.assign(tx(genHerringbone(THREE, L, 101)), { metalness: 0, envMapIntensity: 0.9 })), 1));
-  safe('oakWidePlank', () => withNS(std(Object.assign(tx(genWidePlank(THREE, L, 131)), { metalness: 0, envMapIntensity: 0.9 })), 1));
-  safe('oakSolid', () => withNS(std(Object.assign(tx(genBoards(THREE, S, 202, OAK_PAL, 1.0, 0.25, 0, 0.0004)), { metalness: 0 })), 1));
-  lazy('walnutWood', () => withNS(std(Object.assign(tx(genBoards(THREE, S, 303, WALNUT_PAL, 1.0, 0.2, 0, 0.0004)), { metalness: 0 })), 1));
-  safe('cedarWood', () => withNS(std(Object.assign(tx(genBoards(THREE, S, 404, CEDAR_PAL, 1.12, 0.14, 0.004, 0.003)), { metalness: 0 })), 1));
+  safe('oakHerringbone', () => withNS(std(Object.assign(tx(C(genHerringbone, L, 101)), { metalness: 0, envMapIntensity: 0.9 })), 1));
+  safe('oakWidePlank', () => withNS(std(Object.assign(tx(C(genWidePlank, L, 131)), { metalness: 0, envMapIntensity: 0.9 })), 1));
+  safe('oakSolid', () => withNS(std(Object.assign(tx(C(genBoards, S, 202, OAK_PAL, 1.0, 0.25, 0, 0.0004)), { metalness: 0 })), 1));
+  lazy('walnutWood', () => withNS(std(Object.assign(tx(C(genBoards, S, 303, WALNUT_PAL, 1.0, 0.2, 0, 0.0004)), { metalness: 0 })), 1));
+  safe('cedarWood', () => withNS(std(Object.assign(tx(C(genBoards, S, 404, CEDAR_PAL, 1.12, 0.14, 0.004, 0.003)), { metalness: 0 })), 1));
   safe('joistPaintedWhite', () => {
-    const t = genSurface(THREE, S, 505, 1.2, { rgb: [238, 237, 233], colA: 0.03, rough: 0.72, roughA: 0.1, oct: 3, base: 3, base2: 40, depth: 0.0006, warp: 0.3, cavity: 0.4 });
+    const t = C(genSurface, S, 505, 1.2, { rgb: [238, 237, 233], colA: 0.03, rough: 0.72, roughA: 0.1, oct: 3, base: 3, base2: 40, depth: 0.0006, warp: 0.3, cavity: 0.4 });
     return std(Object.assign(tx(t), { metalness: 0 }));
   });
   safe('plywood', () => {
-    const t = genBoards(THREE, S, 1616, { a: [206, 176, 130], b: [190, 158, 112], ring: 0.012, cath: 0.08, streakAmt: 0.2, ringAmt: 0.2, poreAmt: 0.02, toneAmt: 0.2, boardVar: 0.1, hueVar: 0.6, rough: 0.8 }, 1.22, 1.22, 0, 0.0003);
+    const t = C(genBoards, S, 1616, { a: [206, 176, 130], b: [190, 158, 112], ring: 0.012, cath: 0.08, streakAmt: 0.2, ringAmt: 0.2, poreAmt: 0.02, toneAmt: 0.2, boardVar: 0.1, hueVar: 0.6, rough: 0.8 }, 1.22, 1.22, 0, 0.0003);
     return std(Object.assign(tx(t), { metalness: 0 }));
   });
 
   /* ---------------- stone & tile */
   lazy('marbleCalacatta', () => {
-    const t = genMarbleSlab(THREE, L, 707, 1.6);
+    const t = C(genMarbleSlab, L, 707, 1.6);
     const o = Object.assign(tx(t), { metalness: 0, roughness: 1, envMapIntensity: 1.0 });
     if (!low) Object.assign(o, { clearcoat: 1, clearcoatRoughness: 0.04 });
     return withNS(phys(o), 0.4);
   });
-  safe('marbleTileLarge', () => withNS(std(Object.assign(tx(genMarbleTiles(THREE, L, 707, 1.22, 0.61, 2, 4, 0.002)), { metalness: 0, envMapIntensity: 1.0 })), 1));
-  lazy('zelligeTile', () => withNS(std(Object.assign(tx(genZellige(THREE, S, 909, 0.4, 4)), { metalness: 0 })), 1));
-  lazy('travertine', () => withNS(std(Object.assign(tx(genTravertine(THREE, S, 1010, 0.6)), { metalness: 0 })), 1));
-  safe('stoneSill', () => std(Object.assign(tx(genSurface(THREE, XS, 1111, 0.8, { rgb: [216, 209, 194], colA: 0.08, rough: 0.6, roughA: 0.1, oct: 4, base: 4, depth: 0.0008, speckle: 4 })), { metalness: 0 })));
-  safe('concretePolished', () => std(Object.assign(tx(genConcretePolished(THREE, S, 1212, 2.0)), { metalness: 0, envMapIntensity: 1.0 })));
-  safe('concrete', () => std(Object.assign(tx(genSurface(THREE, S, 1313, 2.0, { rgb: [178, 175, 168], colA: 0.16, rough: 0.88, roughA: 0.14, oct: 6, base: 4, depth: 0.0025, speckle: 25, speckPit: true, cavity: 0.8 })), { metalness: 0 })));
-  safe('concreteBand', () => std(Object.assign(tx(genSurface(THREE, S, 1414, 2.0, { rgb: [168, 166, 160], colA: 0.1, rough: 0.86, roughA: 0.1, oct: 5, base: 4, depth: 0.002, speckle: 10 })), { metalness: 0 })));
-  safe('paintedBlockGray', () => withNS(std(Object.assign(tx(genBlock(THREE, S, 1515)), { metalness: 0 })), 1));
+  safe('marbleTileLarge', () => withNS(std(Object.assign(tx(C(genMarbleTiles, L, 707, 1.22, 0.61, 2, 4, 0.002)), { metalness: 0, envMapIntensity: 1.0 })), 1));
+  lazy('zelligeTile', () => withNS(std(Object.assign(tx(C(genZellige, S, 909, 0.4, 4)), { metalness: 0 })), 1));
+  lazy('travertine', () => withNS(std(Object.assign(tx(C(genTravertine, S, 1010, 0.6)), { metalness: 0 })), 1));
+  safe('stoneSill', () => std(Object.assign(tx(C(genSurface, XS, 1111, 0.8, { rgb: [216, 209, 194], colA: 0.08, rough: 0.6, roughA: 0.1, oct: 4, base: 4, depth: 0.0008, speckle: 4 })), { metalness: 0 })));
+  safe('concretePolished', () => std(Object.assign(tx(C(genConcretePolished, S, 1212, 2.0)), { metalness: 0, envMapIntensity: 1.0 })));
+  safe('concrete', () => std(Object.assign(tx(C(genSurface, S, 1313, 2.0, { rgb: [178, 175, 168], colA: 0.16, rough: 0.88, roughA: 0.14, oct: 6, base: 4, depth: 0.0025, speckle: 25, speckPit: true, cavity: 0.8 })), { metalness: 0 })));
+  safe('concreteBand', () => std(Object.assign(tx(C(genSurface, S, 1414, 2.0, { rgb: [168, 166, 160], colA: 0.1, rough: 0.86, roughA: 0.1, oct: 5, base: 4, depth: 0.002, speckle: 10 })), { metalness: 0 })));
+  safe('paintedBlockGray', () => withNS(std(Object.assign(tx(C(genBlock, S, 1515)), { metalness: 0 })), 1));
 
   /* ---------------- walls / ceilings / exterior skins */
-  safe('plasterWall', () => withNS(std(Object.assign(tx(genSurface(THREE, S, 1717, 2.0, { rgb: [242, 239, 234], colA: 0.022, colB: 0.008, rough: 0.86, roughA: 0.05, roughA2: 0.08, oct: 4, base: 3, base2: 64, hA: 0.8, hB: 0.2, warp: 0.5, depth: 0.0006, cavity: 0.15 })), { metalness: 0 })), 0.6));
-  safe('ceilingPlaster', () => withNS(std(Object.assign(tx(genSurface(THREE, XS, 1818, 2.0, { rgb: [247, 246, 243], colA: 0.012, rough: 0.93, roughA: 0.03, oct: 3, base: 3, base2: 48, depth: 0.0003, cavity: 0.1 })), { metalness: 0 })), 0.5));
-  safe('stuccoSoftGray', () => withNS(std(Object.assign(tx(genSurface(THREE, S, 1919, 1.0, { rgb: [196, 197, 193], colA: 0.07, colB: 0.05, rough: 0.9, roughA: 0.08, oct: 5, base: 4, base2: 96, hA: 0.55, hB: 0.45, warp: 0.25, depth: 0.0025, speckle: 12, cavity: 0.9 })), { metalness: 0 })), 1));
-  safe('paintedSidingWhite', () => withNS(std(Object.assign(tx(genSiding(THREE, S, 2020)), { metalness: 0 })), 1));
-  safe('architecturalShingleCharcoal', () => withNS(std(Object.assign(tx(genArchShingles(THREE, S, 2121)), { metalness: 0 })), 1));
-  lazy('carpet', () => std(Object.assign(tx(genSurface(THREE, S, 1717 + 5, 0.5, { rgb: [176, 168, 156], colA: 0.18, rough: 0.98, roughA: 0.04, oct: 3, base: 64, depth: 0.002 })), { metalness: 0 })));
-  lazy('gravel', () => std(Object.assign(tx(genSurface(THREE, S, 2222, 0.6, { rgb: [128, 122, 112], colA: 0.6, rough: 0.95, roughA: 0.1, oct: 3, base: 48, depth: 0.01, speckle: 60, cavity: 1.2 })), { metalness: 0 })));
+  safe('plasterWall', () => withNS(std(Object.assign(tx(C(genSurface, S, 1717, 2.0, { rgb: [242, 239, 234], colA: 0.022, colB: 0.008, rough: 0.86, roughA: 0.05, roughA2: 0.08, oct: 4, base: 3, base2: 64, hA: 0.8, hB: 0.2, warp: 0.5, depth: 0.0006, cavity: 0.15 })), { metalness: 0 })), 0.6));
+  safe('ceilingPlaster', () => withNS(std(Object.assign(tx(C(genSurface, XS, 1818, 2.0, { rgb: [247, 246, 243], colA: 0.012, rough: 0.93, roughA: 0.03, oct: 3, base: 3, base2: 48, depth: 0.0003, cavity: 0.1 })), { metalness: 0 })), 0.5));
+  safe('stuccoSoftGray', () => withNS(std(Object.assign(tx(C(genSurface, S, 1919, 1.0, { rgb: [196, 197, 193], colA: 0.07, colB: 0.05, rough: 0.9, roughA: 0.08, oct: 5, base: 4, base2: 96, hA: 0.55, hB: 0.45, warp: 0.25, depth: 0.0025, speckle: 12, cavity: 0.9 })), { metalness: 0 })), 1));
+  safe('paintedSidingWhite', () => withNS(std(Object.assign(tx(C(genSiding, S, 2020)), { metalness: 0 })), 1));
+  safe('architecturalShingleCharcoal', () => withNS(std(Object.assign(tx(C(genArchShingles, S, 2121)), { metalness: 0 })), 1));
+  lazy('carpet', () => std(Object.assign(tx(C(genSurface, S, 1717 + 5, 0.5, { rgb: [176, 168, 156], colA: 0.18, rough: 0.98, roughA: 0.04, oct: 3, base: 64, depth: 0.002 })), { metalness: 0 })));
+  lazy('gravel', () => std(Object.assign(tx(C(genSurface, S, 2222, 0.6, { rgb: [128, 122, 112], colA: 0.6, rough: 0.95, roughA: 0.1, oct: 3, base: 48, depth: 0.01, speckle: 60, cavity: 1.2 })), { metalness: 0 })));
 
   /* ---------------- fabrics / leather (for interior) */
-  lazy('boucleFabric', () => withNS(phys(Object.assign(tx(genBoucle(THREE, S, 2323, 0.15)), { metalness: 0, sheen: 0.6, sheenRoughness: 0.8, sheenColor: new THREE.Color(0xffffff) })), 1));
-  lazy('linenFabric', () => withNS(phys(Object.assign(tx(genLinen(THREE, S, 2424, 0.12, [208, 198, 182])), { metalness: 0, sheen: 0.4, sheenRoughness: 0.7, sheenColor: new THREE.Color(0xf4ece0) })), 1));
-  lazy('leatherCognac', () => withNS(std(Object.assign(tx(genLeather(THREE, S, 2525, 0.3, [150, 84, 42])), { metalness: 0 })), 1));
+  lazy('boucleFabric', () => withNS(phys(Object.assign(tx(C(genBoucle, S, 2323, 0.15)), { metalness: 0, sheen: 0.6, sheenRoughness: 0.8, sheenColor: new THREE.Color(0xffffff) })), 1));
+  lazy('linenFabric', () => withNS(phys(Object.assign(tx(C(genLinen, S, 2424, 0.12, [208, 198, 182])), { metalness: 0, sheen: 0.4, sheenRoughness: 0.7, sheenColor: new THREE.Color(0xf4ece0) })), 1));
+  lazy('leatherCognac', () => withNS(std(Object.assign(tx(C(genLeather, S, 2525, 0.3, [150, 84, 42])), { metalness: 0 })), 1));
   lazy('velvet', () => {
-    const t = genSurface(THREE, XS, 2626, 0.5, { rgb: [52, 74, 60], colA: 0.18, rough: 0.85, roughA: 0.1, oct: 4, base: 4, depth: 0.0003, warp: 0.6 });
+    const t = C(genSurface, XS, 2626, 0.5, { rgb: [52, 74, 60], colA: 0.18, rough: 0.85, roughA: 0.1, oct: 4, base: 4, depth: 0.0003, warp: 0.6 });
     return phys(Object.assign(tx(t), { metalness: 0, sheen: 1, sheenRoughness: 0.35, sheenColor: new THREE.Color(0x9fbfa8) }));
   });
 
   /* ---------------- metals */
-  safe('brushedBrass', () => withNS(std(Object.assign(tx(genBrushed(THREE, S, 2727, 0.2, [205, 168, 98], 0.3, 0.16)), { metalness: 1, envMapIntensity: 1.2 })), 0.5));
+  safe('brushedBrass', () => withNS(std(Object.assign(tx(C(genBrushed, S, 2727, 0.2, [205, 168, 98], 0.3, 0.16)), { metalness: 1, envMapIntensity: 1.2 })), 0.5));
   safe('brassPolished', () => std({ color: 0xd8b26a, metalness: 1, roughness: 0.14, envMapIntensity: 1.2 }));
-  safe('blackSteel', () => std(Object.assign(tx(genBrushed(THREE, XS, 2828, 0.5, [30, 31, 33], 0.4, 0.12)), { metalness: 0.55 })));
+  safe('blackSteel', () => std(Object.assign(tx(C(genBrushed, XS, 2828, 0.5, [30, 31, 33], 0.4, 0.12)), { metalness: 0.55 })));
   safe('blackWindowFrame', () => std({ color: 0x18191a, metalness: 0.15, roughness: 0.42 }));
   safe('metalChrome', () => std({ color: 0xffffff, roughness: 0.08, metalness: 1 }));
-  safe('galvanized', () => std(Object.assign(tx(genBrushed(THREE, XS, 2929, 0.6, [178, 183, 186], 0.42, 0.2)), { metalness: 0.75, side: THREE.DoubleSide })));
+  safe('galvanized', () => std(Object.assign(tx(C(genBrushed, XS, 2929, 0.6, [178, 183, 186], 0.42, 0.2)), { metalness: 0.75, side: THREE.DoubleSide })));
   safe('gutterBlack', () => std({ color: 0x1a1b1c, roughness: 0.38, metalness: 0.35, side: THREE.DoubleSide }));
   safe('rubberGasket', () => std({ color: 0x101010, roughness: 0.9, metalness: 0 }));
   safe('pipeGray', () => std({ color: 0x9ea3a6, roughness: 0.45, metalness: 0.6 }));
@@ -983,7 +988,7 @@ function buildMaterials(THREE, quality) {
     return m;
   });
   safe('glassObscure', () => {
-    const t = genSurface(THREE, XS, 3030, 0.15, { rgb: [235, 240, 242], colA: 0.1, rough: 0.45, roughA: 0.4, oct: 3, base: 32, depth: 0.0006 });
+    const t = C(genSurface, XS, 3030, 0.15, { rgb: [235, 240, 242], colA: 0.1, rough: 0.45, roughA: 0.4, oct: 3, base: 32, depth: 0.0006 });
     const m = phys({
       color: 0xeef3f4, metalness: 0, roughness: 0.45, transparent: true, opacity: 0.82,
       normalMap: t.normalMap, envMapIntensity: 1.0, depthWrite: false, side: THREE.DoubleSide,
