@@ -473,7 +473,7 @@ export async function build(ctx) {
       if (f.extSkin) room = 'exterior';
       else { const c = geoCenter(geo); room = roomAt(floor, c[0], c[1]); }
     }
-    const key = [floor, room || '-', mat, f.ceiling ? 1 : 0, f.extSkin ? 1 : 0, f.walk ? 1 : 0, f.hidden ? 1 : 0, f.noCast ? 1 : 0, f.castLow ? 1 : 0].join('|');
+    const key = [floor, room || '-', mat, f.ceiling ? 1 : 0, f.extSkin ? 1 : 0, f.walk ? 1 : 0, f.hidden ? 1 : 0, f.noCast ? 1 : 0, f.castLow ? 1 : 0, f.lux ? 1 : 0].join('|'); // V11: f.lux → luxury-only mesh
     let b = batches.get(key);
     if (!b) { b = { floor, room, mat, f, geos: [] }; batches.set(key, b); }
     b.geos.push(geo);
@@ -1606,7 +1606,7 @@ export async function build(ctx) {
     const CR = 0.11;
     for (const k of ['living', 'bed1', 'bed2']) {
       const R = P.rooms.main[k]; if (!R) continue;
-      const [x0, z0, x1, z1] = innerRect(R.r), y = yMC - CR, f = { room: k, noCast: true };
+      const [x0, z0, x1, z1] = innerRect(R.r), y = yMC - CR, f = { room: k, noCast: true, lux: true };
       add(prismGeo(T, PROFILES.crown, { origin: [x0, y, z0], axP: [0, 0, 1], axQ: [0, 1, 0], dir: [1, 0, 0], length: x1 - x0 }), 'paintedTrim', 'main', f);
       add(prismGeo(T, PROFILES.crown, { origin: [x0, y, z1], axP: [0, 0, -1], axQ: [0, 1, 0], dir: [1, 0, 0], length: x1 - x0 }), 'paintedTrim', 'main', f);
       add(prismGeo(T, PROFILES.crown, { origin: [x0, y, z0], axP: [1, 0, 0], axQ: [0, 1, 0], dir: [0, 0, 1], length: z1 - z0 }), 'paintedTrim', 'main', f);
@@ -1621,7 +1621,7 @@ export async function build(ctx) {
       for (const b of [[x0 + o, z0 + o, x1 - o, z0 + o + wdt], [x0 + o, z1 - o - wdt, x1 - o, z1 - o], [x0 + o, z0 + o + wdt, x0 + o + wdt, z1 - o - wdt], [x1 - o - wdt, z0 + o + wdt, x1 - o, z1 - o - wdt]]) {
         const bg = boxGeo(b[0], y0, b[1], b[2], y1, b[3]); if (bg) g.push(bg);
       }
-      const cm = new T.Mesh(mergeGeos(g), coveMat); cm.name = 'house:coveLED'; cm.userData.floor = 'main'; cm.userData.room = 'living'; cm.userData.ceiling = true;
+      const cm = new T.Mesh(mergeGeos(g), coveMat); cm.name = 'house:coveLED'; cm.userData.floor = 'main'; cm.userData.room = 'living'; cm.userData.ceiling = true; cm.userData.luxOnly = true;
       root.add(cm);
     }
   });
@@ -1630,7 +1630,7 @@ export async function build(ctx) {
     // picture-frame panel molding with a chair rail: living room TV wall (west) and primary bedroom headboard wall (north)
     const panelWall = (room, origin, e1, n, a0, a1) => {
       const len = a1 - a0; if (len < 0.8) return;
-      const f = { room, noCast: true };
+      const f = { room, noCast: true, lux: true };
       const yRail = 0.88, railH = 0.065, yTop = (yMC - yM) - 0.11 - 0.13;
       // chair rail
       add(prismGeo(T, PROFILES.chair, { origin: [origin[0] + e1[0] * a0, yM + yRail, origin[2] + e1[2] * a0], axP: n, axQ: [0, 1, 0], dir: e1, length: len }), 'paintedTrim', 'main', f);
@@ -1734,10 +1734,11 @@ export async function build(ctx) {
       const room = (P.rooms[fl][k] || {}).r; if (!room) continue;
       const mat = (M.lampDisc || fallbackMat).clone(); lampMats[k] = mat;
       // trimless LED downlights: a thin dark baffle ring flush with the plaster and a slightly recessed glowing lens
-      const ring = [], disc = [];
+      const ring = [], disc = [], fxy = [];
       for (const [x, z] of fixtures[k]) {
         const cy = fl === 'main' ? yMC : ceilU(z);
         const tilt = fl === 'upper' && z > k0 && z < flatZ0 ? -theta : fl === 'upper' && z < k1 && z > flatZ1 ? theta : 0;
+        fxy.push([x, cy, z, tilt]);
         const r1 = new T.RingGeometry(0.036, 0.046, 32); r1.rotateX(Math.PI / 2); r1.translate(0, -0.0022, 0);
         const r2 = new T.CircleGeometry(0.036, 32); r2.rotateX(Math.PI / 2); r2.translate(0, -0.0026, 0);
         for (const [g, list] of [[r1, ring], [r2, disc]]) {
@@ -1747,7 +1748,7 @@ export async function build(ctx) {
         }
       }
       (ringsByFloor[fl] = ringsByFloor[fl] || []).push(...ring);
-      const dm = new T.Mesh(mergeGeos(disc), mat); dm.userData.floor = fl; dm.userData.ceiling = true; dm.userData.room = k; root.add(dm);
+      const dm = new T.Mesh(mergeGeos(disc), mat); dm.name = 'house:downlights:' + k; dm.userData.floor = fl; dm.userData.ceiling = true; dm.userData.room = k; dm.userData.luxOnly = true; dm.userData.fixtures = fxy; root.add(dm); // V11: SOW swaps the cans for flush mounts (sow-build.js)
       if (k === 'living' && coveMat) follow(mat, coveMat, mat.emissiveIntensity);
       const cx = (room[0] + room[2]) / 2, cz = (room[1] + room[3]) / 2;
       const area = (room[2] - room[0]) * (room[3] - room[1]);
@@ -1761,7 +1762,7 @@ export async function build(ctx) {
     }
     for (const fl of Object.keys(ringsByFloor)) {
       const rm = new T.Mesh(mergeGeos(ringsByFloor[fl]), M.recessTrim || fallbackMat); rm.name = `house:${fl}:downlightBaffles`;
-      rm.userData.floor = fl; rm.userData.ceiling = true; root.add(rm);
+      rm.userData.floor = fl; rm.userData.ceiling = true; rm.userData.luxOnly = true; root.add(rm);
     }
     // basement: bare-bulb porcelain fixtures + one light
     const bulbs = [], holders = [];
@@ -1802,6 +1803,7 @@ export async function build(ctx) {
       mesh.receiveShadow = !b.f.hidden && !/glass/i.test(b.mat);
       if (/glass/i.test(b.mat)) mesh.renderOrder = 2;
       if (b.f.hidden) mesh.visible = false;
+      if (b.f.lux) { mesh.userData.luxOnly = true; mesh.name += ':lux'; } // V11 SOW: hidden in the scope-of-work mode
       mesh.matrixAutoUpdate = false; mesh.updateMatrix();
       root.add(mesh);
       if (b.f.walk) { try { ctx.addWalkable(mesh); } catch (e) { console.warn('[house] addWalkable', e); } }

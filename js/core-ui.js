@@ -493,7 +493,8 @@ export function setupCompactUI({ tools, btnMore, btnPanoMore }) {
   });
   setupDialogs();
   // V7 RENDERS: "🖼 הדמיות" pre-rendered 360 gallery (buttons in the 360 bar, the tools column and the loader card)
-  import('./gallery.js').then((m) => m.installGallery()).catch((e) => console.warn('[gallery] not available', e));
+  import('./gallery.js').then((m) => m.installGallery()).then(() => import('./sow-ui.js')).then((m) => m.installSowUI()) // V11: "📋 שיפוץ לפי האקסל" pill / panel / before-after
+    .catch((e) => console.warn('[gallery / sow] not available', e));
 }
 
 /* ============================================================================================ V6: dialogs */

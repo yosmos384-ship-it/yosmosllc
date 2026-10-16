@@ -573,8 +573,10 @@ export function createNav(env) {
     const remaining = d + glide.suffix[glide.i];
     const vmax = GLIDE_V * (inp.run ? 1.5 : 1); // V7: ~1.0 m/s (was 1.6, Shift ×1.7)
     let v = Math.min(vmax, 0.22 + remaining * 1.0);
+    let turning = false; // V11: deliberately turning in place (turn-first) — not "stuck"
     if (glide.level && !glide.keepYaw && glide.manualT <= 0) { // V10: turn first, then walk (slow down while the heading is far off)
       const off = angDiff(player.state.yaw, Math.atan2(-dx, -dz));
+      turning = off > 0.6;
       v *= 0.12 + 0.88 * Math.max(0, Math.cos(Math.min(Math.PI / 2, off * 1.15)));
     }
     inp.moveX = dx * v; inp.moveZ = dz * v;
@@ -584,6 +586,10 @@ export function createNav(env) {
       inp.pitchTo = Math.abs(dy) > 0.2 ? clamp(Math.atan2(dy, run) * 0.6, -0.32, 0.22) : -0.05; inp.pitchRate = 1.6;
     }
     // progress / stuck detection
+    // V11 fix: while the walker turns in place (turn-first slows it to ~12 %), the progress window restarts — a re-route
+    // that needs a large turn used to trip "stuck" twice (< 0.1 m per 0.7 s) and stop with "הדרך חסומה — עצרתי".
+    // Bounded: glide.limit still ends a glide that never gets going.
+    if (turning) { glide.chkT = 0; glide.chkX = s.x; glide.chkZ = s.z; }
     glide.chkT += dt;
     if (glide.chkT > 0.7) {
       const m = Math.hypot(s.x - glide.chkX, s.z - glide.chkZ);

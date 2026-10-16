@@ -63,8 +63,13 @@ function evergreenGeo() {
 
 // ---------------------------------------------------------------- foliage clumps + shrubs (one InstancedMesh)
 export function buildFoliage(W) {
-  const list = W.foliage;
-  if (!list.length) return;
+  // V11: the hydrangea bodies (lux: true) go into their own instanced mesh tagged userData.luxOnly (SOW mode hides it)
+  const all = W.foliage;
+  if (!all.length) return;
+  const parts = [all.filter((f) => !f.lux), all.filter((f) => f.lux)];
+  for (let pi = 0; pi < 2; pi++) {
+  const list = parts[pi];
+  if (!list.length) continue;
   const geo = blobGeo(W.hi ? 2 : 1, 7, 0.24);
   const material = W.mats.foliage;
   if (material.map) material.map.repeat.set(2, 2);
@@ -81,9 +86,11 @@ export function buildFoliage(W) {
   mesh.instanceMatrix.needsUpdate = true;
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   mesh.castShadow = true; mesh.receiveShadow = true;
-  mesh.name = 'ext-foliage';
+  mesh.name = pi ? 'ext-lux-foliage' : 'ext-foliage';
+  if (pi) mesh.userData.luxOnly = true;
   mesh.computeBoundingSphere && mesh.computeBoundingSphere();
   tag(mesh); W.root.add(mesh);
+  }
 
   // (V2: hero-tree leaf cards live in exterior-veg.js)
 }

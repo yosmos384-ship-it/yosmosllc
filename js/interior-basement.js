@@ -1,5 +1,5 @@
 // interior-basement.js — pool table with 2D ball physics, laundry pair, utility sink, furnace, water heater, panel, storage
-import { THREE, PI, V3, Batch, hinged, drawer, waterFixture, basinWater, books, rng, clamp } from './interior-lib.js';
+import { THREE, PI, V3, Batch, hinged, drawer, waterFixture, basinWater, books, rng, clamp, luxOnly } from './interior-lib.js';
 import { bottle, glassCup } from './interior-kitchen.js';
 import { C as LX, soft, tube, bknob, rugLux, vase, bookStack, candle, artLux, sconce, tableLampLux } from './interior-lux.js';
 import { shaker } from './interior-lib.js';
@@ -433,7 +433,7 @@ export function buildBasement(E, G, top) {
   DH.solid(E, [dw, dh, dd], [0, dh / 2, dd / 2]);
   // rug near pool table? (unfinished basement: rubber mat by laundry)
   rugLux(root, 1.5, 0.62, [6.4, B0, 1.25], 0x8f8a7c);
-  buildLounge(E, G, root, B0);
+  luxOnly(() => buildLounge(E, G, root, B0), [G]); // V11: velvet lounge + bar cart = staging, not in the SOW (unfinished basement)
   E.switchAt(G, root.sub(5.75, B0, 7.19, PI), 'basement', [0, 1.2, 0]);
   B.build(G, E.M, { name: 'basement' });
 }

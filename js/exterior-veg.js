@@ -237,7 +237,7 @@ function emitTree(W, r, T, opts, barkBucket, cardsOut, tint) {
 export function buildHeroTrees(W) {
   setupLeafMaterial(W);
   const r = mulberry32(1956);
-  const cards = [];
+  const cards = [], luxCards = [];
   W.nearClumps = [];
   for (const T of W.nearTrees) {
     const big = T.h > 14;
@@ -249,10 +249,15 @@ export function buildHeroTrees(W) {
       fill: W.hi ? 2.4 : 1.1,
       minR: W.hi ? 0.008 : 0.016,
     };
-    emitTree(W, r, T, opts, W.B.bark, cards, tint);
-    W.colliders.push(new THREE.Box3(new V(T.x - T.r * 1.25, 0, T.z - T.r * 1.25), new V(T.x + T.r * 1.25, 4, T.z + T.r * 1.25)));
+    // V11: a tree marked lux (the new ornamental in the front lawn) is luxury landscaping → own buckets / mesh (SOW hides it)
+    const lux = !!(T.lux && W.BL), B0 = W.B;
+    if (lux) W.B = W.BL;
+    emitTree(W, r, T, opts, W.B.bark, lux ? luxCards : cards, tint);
+    const cb = new THREE.Box3(new V(T.x - T.r * 1.25, 0, T.z - T.r * 1.25), new V(T.x + T.r * 1.25, 4, T.z + T.r * 1.25)); if (lux) cb.__lux = true;
+    W.colliders.push(cb);
     if (T.ring) treeRing(W, T.x, T.z, T.ring);
     else W.excl.push([T.x - T.r * 1.7, T.z - T.r * 1.7, T.x + T.r * 1.7, T.z + T.r * 1.7]);
+    W.B = B0;
   }
   if (!cards.length) return;
   // baked into ONE regular mesh (not instanced) so the photoreal path tracer includes the hero crowns
@@ -264,6 +269,13 @@ export function buildHeroTrees(W) {
   tag(mesh, { noPathtrace: false, hero: true });
   W.root.add(mesh);
   W.heroLeaves = mesh;
+  if (luxCards.length) {
+    const lm = new THREE.Mesh(bakeCards(luxCards, r, true), W.mats.leafCard);
+    lm.castShadow = true; lm.receiveShadow = true; lm.customDepthMaterial = W.mats.leafCardDepth;
+    lm.name = 'ext-lux-hero-foliage'; lm.userData.luxOnly = true;
+    tag(lm, { noPathtrace: false, hero: true });
+    W.root.add(lm);
+  }
 }
 // cards → one BufferGeometry: position / normal / uv / color (ao × tint) / aPhase (per-card wind phase)
 function bakeCards(cards, r, tinted) {
@@ -542,7 +554,7 @@ export function buildHydrangeas(W, list) {
     // body: 3 overlapping leafy blobs
     for (let k = 0; k < 3; k++) {
       const a = k * 2.1 + r() * 0.5, o = s * 0.32;
-      W.foliage.push({ x: h.x + Math.cos(a) * o, y: s * 0.62, z: h.z + Math.sin(a) * o, sx: s * 0.72, sy: s * 0.62, sz: s * 0.72, color: 0x86a96c, kind: 'shrub' });
+      W.foliage.push({ x: h.x + Math.cos(a) * o, y: s * 0.62, z: h.z + Math.sin(a) * o, sx: s * 0.72, sy: s * 0.62, sz: s * 0.72, color: 0x86a96c, kind: 'shrub', lux: true }); // V11: hydrangea bodies are luxury landscaping
     }
     const n = Math.round(9 + s * 14);
     const col = HYD[h.color] || HYD.white;

@@ -134,7 +134,7 @@ export function buildAC(W) {
   const x = hole.x1 + 0.62, z = 2.85;
   B.concrete.add(boxGeo(0.95, 0.12, 0.95), mat(x, 0.03, z), 0xe0ded8);
   const unit = new THREE.Mesh(boxGeo(0.72, 0.66, 0.72), W.mats.ac);
-  unit.position.set(x, 0.09 + 0.33, z); unit.castShadow = true; unit.receiveShadow = true;
+  unit.position.set(x, 0.09 + 0.33, z); unit.castShadow = true; unit.receiveShadow = true; unit.name = 'ext-ac-unit'; // V11: SOW panel highlights it
   tag(unit); W.root.add(unit);
   B.darkMetal.add(boxGeo(0.76, 0.04, 0.76), mat(x, 0.77, z), 0x3a3c3d);
   const grill = new THREE.CircleGeometry(0.3, 28); grill.rotateX(-Math.PI / 2);

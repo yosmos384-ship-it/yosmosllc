@@ -39,9 +39,15 @@ export async function build(ctx) {
       if (!obj || !ctx.addInteractive) return;
       const safe = () => { try { const r = onUse(); if (r && typeof r.catch === 'function') r.catch((e) => console.warn('[interior] action', e)); } catch (e) { console.warn('[interior] action', e); } };
       const lab = typeof label === 'function' ? () => { try { return label(); } catch (e) { return ''; } } : label;
-      try { ctx.addInteractive(obj, { label: lab, onUse: safe }); } catch (e) { console.warn('[interior] addInteractive', e); }
+      try { const h = ctx.addInteractive(obj, { label: lab, onUse: safe }); if (h && L.VARIANT.mode) { (ctx.variantInteractives = ctx.variantInteractives || []).push({ h, obj, mode: L.VARIANT.mode }); if (L.VARIANT.mode === 'sow') h.enabled = false; } } catch (e) { console.warn('[interior] addInteractive', e); }
     },
-    collider(b) { try { ctx.addCollider && ctx.addCollider(b); } catch (e) { } },
+    collider(b) {
+      try {
+        const r = ctx.addCollider && ctx.addCollider(b);
+        // V11 SOW: colliders of luxury-only / SOW-only pieces are switched with them (js/sow.js empties / restores the box)
+        if (r && r.isBox3 && L.VARIANT.mode) { (ctx.variantColliders = ctx.variantColliders || []).push({ box: r, orig: r.clone(), mode: L.VARIANT.mode }); if (L.VARIANT.mode === 'sow') r.makeEmpty(); }
+      } catch (e) { }
+    },
     box(x0, x1, z0, z1, y0, y1) { E.collider(new THREE.Box3(new THREE.Vector3(Math.min(x0, x1), y0, Math.min(z0, z1)), new THREE.Vector3(Math.max(x0, x1), y1, Math.max(z0, z1)))); },
     roomHook(room, fn) { (hooks[room] = hooks[room] || []).push(fn); },
     /** o: {room, floor, group, pos(world), mats:[shade, bulb], point, intensity, emissive:[shadeI, bulbI]} */

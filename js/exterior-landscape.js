@@ -31,7 +31,19 @@ export function buildLandscape(W) {
     ['driveway', buildDriveway], ['frontWalk', buildFrontWalk], ['beds', buildBeds], ['planting', buildPlanting],
     ['lights', buildLights], ['cedarFence', buildCedarFence], ['patio', buildPatio], ['streetDetails', buildStreetDetails],
   ];
-  for (const [n, fn] of steps) { try { fn(W); } catch (e) { console.warn('[exterior] landscape ' + n + ' failed:', e); } }
+  // V11 SOW: everything but the street details is the luxury landscaping → built into W.BL (luxury-only buckets);
+  // colliders and lights it adds are tagged too (js/sow.js hides them in the scope-of-work mode)
+  for (const [n, fn] of steps) {
+    const lux = n !== 'streetDetails' && W.BL;
+    const B0 = W.B, nc = W.colliders.length, kids = new Set(W.root.children);
+    if (lux) W.B = W.BL;
+    try { fn(W); } catch (e) { console.warn('[exterior] landscape ' + n + ' failed:', e); }
+    W.B = B0;
+    if (lux) {
+      for (let i = nc; i < W.colliders.length; i++) W.colliders[i].__lux = true;
+      for (const c of W.root.children) if (!kids.has(c)) c.userData.luxOnly = true;
+    }
+  }
 }
 
 // ---------------------------------------------------------------- driveway: charcoal pavers + soldier border (same footprint)

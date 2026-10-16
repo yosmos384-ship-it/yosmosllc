@@ -1,6 +1,6 @@
 {
  "version": 7,
- "generated": "2026-10-15T19:46:54.163Z",
+ "generated": "2026-10-16T06:47:05.421Z",
  "size": [
   4096,
   2048
@@ -106,6 +106,22 @@
     "#3B4146",
     "#4A3020",
     "#1A1A1A"
+   ]
+  },
+  {
+   "id": "sow",
+   "he": "שיפוץ לפי האקסל",
+   "en": "Scope-of-work rehab",
+   "es": "Remodelación según presupuesto",
+   "desc_he": "הבית האמיתי כפי שהוא בסרטון + בדיוק השיפוץ שבתקציב המלווה ($59,000): ריצוף LVP אלון-אפור בכל הבית, צבע חדש אפור-בהיר, דלתות פנים לבנות, מטבח שייקר לבן עם משטח קוורץ ואריחי מטרו, מכשירי נירוסטה, 2 חדרי רחצה מלאים באריחים, תאורה, חשמל ומערכות חדשות. החוץ נשאר כמו שהוא.",
+   "desc_en": "The real house as it is in the video + exactly the rehab in the lender budget ($59,000): grey-oak LVP throughout, fresh light-grey paint, white interior doors, a white shaker kitchen with quartz-look counters and subway tile, stainless appliances, 2 fully tiled bathrooms, new lights, electrical and mechanicals. The exterior stays as-is.",
+   "desc_es": "La casa real tal como está en el video + exactamente la remodelación del presupuesto del prestamista ($59,000): piso LVP roble gris en toda la casa, pintura nueva gris claro, puertas interiores blancas, cocina shaker blanca con encimera tipo cuarzo y azulejo metro, electrodomésticos de acero inoxidable, 2 baños completos con azulejo, iluminación, electricidad y equipos nuevos. El exterior queda igual.",
+   "swatch": [
+    "#CEC8BE",
+    "#9C9488",
+    "#E6E4DF",
+    "#D9D7D2",
+    "#5E4A3E"
    ]
   }
  ],
@@ -454,9 +470,58 @@
    "bytes": 678315,
    "smBytes": 68939,
    "yaw": 6.283185307179586
+  },
+  "sow/living": {
+   "full": "renders/sow/living.jpg",
+   "sm": "renders/sow/living_sm.jpg",
+   "bytes": 574796,
+   "smBytes": 58619,
+   "yaw": -2.879793265790644
+  },
+  "sow/kitchen": {
+   "full": "renders/sow/kitchen.jpg",
+   "sm": "renders/sow/kitchen_sm.jpg",
+   "bytes": 491039,
+   "smBytes": 52670,
+   "yaw": 0.3490658503988659
+  },
+  "sow/bed1": {
+   "full": "renders/sow/bed1.jpg",
+   "sm": "renders/sow/bed1_sm.jpg",
+   "bytes": 536719,
+   "smBytes": 49840,
+   "yaw": 1.7453292519943295
+  },
+  "sow/bath1": {
+   "full": "renders/sow/bath1.jpg",
+   "sm": "renders/sow/bath1_sm.jpg",
+   "bytes": 489782,
+   "smBytes": 53071,
+   "yaw": -0.26179938779914913
+  },
+  "sow/bed3": {
+   "full": "renders/sow/bed3.jpg",
+   "sm": "renders/sow/bed3_sm.jpg",
+   "bytes": 409175,
+   "smBytes": 41754,
+   "yaw": 1.3962634015954636
+  },
+  "sow/bath2": {
+   "full": "renders/sow/bath2.jpg",
+   "sm": "renders/sow/bath2_sm.jpg",
+   "bytes": 510973,
+   "smBytes": 57565,
+   "yaw": -0.08726646259971638
+  },
+  "sow/street": {
+   "full": "renders/sow/street.jpg",
+   "sm": "renders/sow/street_sm.jpg",
+   "bytes": 676215,
+   "smBytes": 68440,
+   "yaw": 6.283185307179586
   }
  },
- "totalBytes": 24280507,
+ "totalBytes": 28351165,
  "renderLog": [
   {
    "style": "mediterranean",
@@ -1007,6 +1072,25 @@
     99.9,
     89.1,
     81.8
+   ]
+  },
+  {
+   "style": "sow",
+   "node": "street",
+   "yaw": 6.283185307179586,
+   "totalMs": 295551,
+   "faceMs": [
+    21336,
+    33717,
+    15033,
+    15116,
+    8824,
+    11653
+   ],
+   "mean": [
+    81.8,
+    100.6,
+    109.3
    ]
   }
  ]

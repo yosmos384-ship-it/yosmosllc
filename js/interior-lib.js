@@ -263,13 +263,42 @@ function prepGeo(geo, key, color, o) {
   return g;
 }
 
+// V11 SOW: geometry added while VARIANT.mode is 'lux' / 'sow' goes to separate meshes tagged userData.luxOnly /
+// userData.sowOnly (same material → no extra shader programs). js/sow.js flips their visibility. sowOnly meshes start
+// hidden, so the normal tour is unchanged.
+export const VARIANT = { mode: null };
+// run fn with the variant mode set; Object3Ds added meanwhile to the given parents are tagged too (pendants, groups)
+export function variant(mode, fn, parents = []) {
+  const prev = VARIANT.mode; VARIANT.mode = mode;
+  const before = parents.map((p) => (p ? new Set(p.children) : null));
+  try { return fn(); } catch (e) { console.warn('[interior] variant ' + mode, e); return null; } finally {
+    VARIANT.mode = prev;
+    parents.forEach((p, i) => { if (!p) return; for (const c of p.children) if (!before[i].has(c)) tagVariant(c, mode); });
+  }
+}
+export function tagVariant(o, mode) {
+  if (!o || !mode) return o;
+  if (mode === 'lux') o.userData.luxOnly = true; else if (mode === 'sow') { o.userData.sowOnly = true; o.visible = false; }
+  return o;
+}
+export const luxOnly = (fn, parents) => variant('lux', fn, parents);
+export const sowOnly = (fn, parents) => variant('sow', fn, parents);
 export class Batch {
   constructor() { this.parts = new Map(); this.root = new Frame(this, new THREE.Matrix4()); }
-  push(key, g) { if (!this.parts.has(key)) this.parts.set(key, []); this.parts.get(key).push(g); }
+  push(key, g) {
+    const pk = VARIANT.mode ? { v: VARIANT.mode, key } : key;
+    if (VARIANT.mode) { // one shared variant key object per (mode, key)
+      this.vkeys = this.vkeys || new Map(); const id = VARIANT.mode + '\u0001' + (typeof key === 'string' ? key : (key.uuid || key.name));
+      let k = this.vkeys.get(id); if (!k) { k = pk; this.vkeys.set(id, k); }
+      if (!this.parts.has(k)) this.parts.set(k, []); this.parts.get(k).push(g); return;
+    }
+    if (!this.parts.has(key)) this.parts.set(key, []); this.parts.get(key).push(g);
+  }
   build(parent, M, { shadow = true, receive = true, name = '' } = {}) {
     const out = [];
-    for (const [key, list] of this.parts) {
+    for (const [pk, list] of this.parts) {
       if (!list.length) continue;
+      const vmode = pk && pk.v ? pk.v : null, key = vmode ? pk.key : pk;
       let geo = null;
       try { geo = list.length === 1 ? list[0] : mergeGeometries(list, false); } catch (e) { geo = null; }
       if (!geo) { console.warn('[interior] merge failed', name, key); continue; }
@@ -279,9 +308,10 @@ export class Batch {
       mesh.name = name + ':' + (typeof key === 'string' ? key : (mat.name || 'mat'));
       mesh.castShadow = shadow && !mat.transparent;
       mesh.receiveShadow = receive;
+      if (vmode) { tagVariant(mesh, vmode); mesh.name += ':' + vmode; }
       parent.add(mesh); out.push(mesh);
     }
-    this.parts.clear();
+    this.parts.clear(); if (this.vkeys) this.vkeys.clear();
     return out;
   }
 }

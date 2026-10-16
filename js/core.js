@@ -14,6 +14,7 @@ import { createRadio } from './radio-engine.js'; // V3 UI: shared 6-station radi
 import { createRender } from './core-render.js'; // V2: postFX, window lights, room reflection probes, mirrors
 import { createPathTrace } from './core-pathtrace.js'; // V2: "הדמיה מציאותית" (path-traced 360 / view, raster fallback)
 import { createStyles, STYLE_STRINGS } from './styles.js'; // V3 STYLE: 3 renovation options (window.__tour.styles / ctx.styles)
+import { createSow } from './sow.js'; // V11: "📋 שיפוץ לפי האקסל" scope-of-work mode
 import { onLangChange, register as i18nRegister, getLang, t as i18nT, tr as i18nTr, extend as i18nExtend } from './i18n.js'; // V7: languages (he / en / es)
 import { createWorlds, HOME } from './worlds.js'; // V10: worlds (home / limo / casino …)
 import { createRoomPicker } from './core-picker.js'; // V10: room picker bar
@@ -1552,8 +1553,9 @@ export async function boot() {
 
   /* ================================================================ load modules */
   const styles = createStyles(ctx); ctx.styles = styles; // V3 STYLE: list() works now; set() before init() is queued
+  const sow = createSow(ctx); ctx.sow = sow; // V11: scope-of-work mode (js/sow.js; UI in js/sow-ui.js)
   window.__tour = {
-    styles,
+    styles, sow,
     radio, zoom, dpad, minimap, styleUI, guards, get framer() { return nav && nav.framer; }, // V3 UI
     ctx, setMode, teleport, player, world, pano, scanner, setTOD, get mode() { return mode; }, panoNodes, lamps, render, pathtrace, nav,
     // photoreal 360 flag, unified: reads pathtrace.viewing (via pano.photoreal); setting it is a manual override for tests

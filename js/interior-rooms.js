@@ -1,6 +1,6 @@
 // interior-rooms.js — bedrooms 1-4 and the living/dining room (V2 luxury staging).
 // Layout positions are the validated V1 ones (door swings, stair, windows); pieces are restyled and drapes added.
-import { THREE, PI, Batch, shaker, hinged, drawer, plant, rng } from './interior-lib.js';
+import { THREE, PI, Batch, shaker, hinged, drawer, plant, rng, luxOnly } from './interior-lib.js';
 import { mug } from './interior-kitchen.js';
 import { buildTV, buildRemote } from './interior-tv.js';
 import {
@@ -278,7 +278,7 @@ export function buildBedroomsUpper(E, G0) {
 export function buildLiving(E, G, top, buildRadio) {
   const F0 = E.plan.mainFloor, B = new Batch(), root = B.root;
   // olive tree in terracotta (west wall, north of the TV console; replaces the V1 bookshelf)
-  { const OT = root.sub(5.98, F0, 4.38, 0); oliveTree(OT, rng(71), { s: 0.8, h: 1.75, leaves: 300, spread: 0.68 }); E.box(5.78, 6.12, 4.21, 4.55, F0, F0 + 0.4); }
+  luxOnly(() => { const OT = root.sub(5.98, F0, 4.38, 0); oliveTree(OT, rng(71), { s: 0.8, h: 1.75, leaves: 300, spread: 0.68 }); E.box(5.78, 6.12, 4.21, 4.55, F0, F0 + 0.4); }); // V11: hidden in SOW mode
   // walnut media console (z 4.62..6.02) with fluted doors + brass
   const C = root.sub(5.546, F0, 5.32, PI / 2), cw = 1.4, cd = 0.42, ch = 0.55;
   C.box('walnut', [cw, 0.03, cd], [0, ch - 0.015, cd / 2], 0xffffff, { r: 0.008, grain: 'h' });
@@ -364,11 +364,11 @@ export function buildLiving(E, G, top, buildRadio) {
   lemons(DT, 0, 0.76, 0, rng(78), 6);
   E.box(7.5, 8.8, 3.23, 4.47, F0, F0 + 0.8);
   if (top) {
-    try { pendant(E, top, { x: 8.15, z: 3.85, floor: 'main', room: 'living', ceilY: E.plan.mainCeil, y: F0 + 1.55, style: 'tiered', point: true, intensity: 30, emissive: [1.3, 3], labels: ['הדלק מנורת אוכל', 'כבה מנורת אוכל'] }); }
+    try { luxOnly(() => pendant(E, top, { x: 8.15, z: 3.85, floor: 'main', room: 'living', ceilY: E.plan.mainCeil, y: F0 + 1.55, style: 'tiered', point: true, intensity: 30, emissive: [1.3, 3], labels: ['הדלק מנורת אוכל', 'כבה מנורת אוכל'] }), [top, G]); }
     catch (e) { console.warn('[interior] dining pendant', e); }
   }
   // large abstract canvas above the dining table (north wall)
-  artLux(root.sub(8.42, F0, 3.108, 0), 0, 0, 1.68, 0, 0.86, 1.12, { key: 'wood', fc: OAK, fw: 0.025 });
+  luxOnly(() => artLux(root.sub(8.42, F0, 3.108, 0), 0, 0, 1.68, 0, 0.86, 1.12, { key: 'wood', fc: OAK, fw: 0.025 }));
   // linen drapes: picture window (S) and side window (E, stacks south)
   curtains(E, G, root.sub(7.7, F0, 7.19, PI), root.sub(7.7, F0, 7.19, PI), { w: 2.1, top: 2.24, ext: 0.12, z: 0.085, color: LX.linen, stack: 0.22, openZ: 1.35 });
   curtains(E, G, root.sub(9.019, F0, 5.2, -PI / 2), root.sub(9.019, F0, 5.2, -PI / 2), { w: 1.2, top: 2.24, ext: 0.12, z: 0.085, sides: ['R'], endPad: 0.03, color: LX.linen });

@@ -1,9 +1,10 @@
 // interior-kitchen.js — shaker L-kitchen (north + west walls), appliances, sink, salad station
-import { THREE, PI, V3, Batch, Frame, shaker, pull, knob, hinged, drawer, waterFixture, basinWater, plant, roundRectPts, rng, clamp } from './interior-lib.js';
+import { THREE, PI, V3, Batch, Frame, shaker, pull, knob, hinged, drawer, waterFixture, basinWater, plant, roundRectPts, rng, clamp, luxOnly } from './interior-lib.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { C as LX, bpull, bknob, soft, tube, vase, branches, bookStack, candle, lemons, pendant, romanShade, rugLux } from './interior-lux.js';
 
 const WHITE = 0xf4f3ef, INNER = 0xf0ebe1, BLACK = 0x1b1b1b, SS = 0xd4d6d8;
+const FRIDGE_C = 0x34483f; // V11: panel-ready fridge fronts (own colour → styles.js 'fridge' slot; = cabinet colour except in SOW)
 const GREEN = LX.green, GREEN_D = LX.greenDark, BRASS = LX.brass; // V2: deep green shaker + brushed brass
 const H = 0.884, TOE = 0.10, D = 0.58, FT = 0.02, FRONT = D + FT; // base cabinet dims (local, above floor)
 const UY0 = 1.372, UH = 0.914, UD = 0.31;                          // upper cabinets
@@ -248,9 +249,9 @@ function buildFridge(E, G, f) {
   const liner = new THREE.MeshStandardMaterial({ color: 0xf6f7f8, emissive: 0xeef5ff, emissiveIntensity: 0, roughness: 0.35, vertexColors: true });
   const b = new Batch(), L = f.withBatch(b);
   // shell
-  f.box('duo', [0.03, Hh, DP], [-W / 2 + 0.015, Hh / 2, DP / 2], GREEN, { r: 0.004 });
-  f.box('duo', [0.03, Hh, DP], [W / 2 - 0.015, Hh / 2, DP / 2], GREEN, { r: 0.004 });
-  f.box('duo', [W, 0.03, DP], [0, Hh - 0.015, DP / 2], GREEN, { r: 0.004 });
+  f.box('duo', [0.03, Hh, DP], [-W / 2 + 0.015, Hh / 2, DP / 2], FRIDGE_C, { r: 0.004 });
+  f.box('duo', [0.03, Hh, DP], [W / 2 - 0.015, Hh / 2, DP / 2], FRIDGE_C, { r: 0.004 });
+  f.box('duo', [W, 0.03, DP], [0, Hh - 0.015, DP / 2], FRIDGE_C, { r: 0.004 });
   f.box('duo', [W - 0.06, 0.08, 0.02], [0, 0.04, DP - 0.03], GREEN_D, { slot: 3 });
   // liner (fresh food compartment)
   const lw = W - 0.06, ly0 = split + 0.02, ly1 = Hh - 0.03;
@@ -292,7 +293,7 @@ function buildFridge(E, G, f) {
     labels: ['פתח מקרר', 'סגור מקרר'],
     draw: (p) => {
       const x0 = left ? 0 : -dW, cx = x0 + dW / 2;
-      shaker(p, 'duo', x0, 0, dW, dH, dT, GREEN, { frame: 0.085 });
+      shaker(p, 'duo', x0, 0, dW, dH, dT, FRIDGE_C, { frame: 0.085 });
       p.box('plastic', [dW - 0.04, dH - 0.04, 0.012], [cx, dH / 2, -dT - 0.006], 0xf1f2f3, { r: 0.004 });
       const hx = left ? dW - 0.05 : -dW + 0.05;
       bpull(p, hx, dH / 2, 0, 0.62, true);
@@ -312,7 +313,7 @@ function buildFridge(E, G, f) {
     pos: [0, (split + 0.08) / 2 + 0.005, DP + dT], w: W - 0.006, h: split - 0.09, t: dT, depth: 0.55, slide: 0.45,
     labels: ['פתח מקפיא', 'סגור מקפיא'], boxKey: 'plastic', boxColor: 0xe9ecef, boxH: 0.4,
     draw: (p) => {
-      shaker(p, 'duo', -(W - 0.006) / 2, -(split - 0.09) / 2, W - 0.006, split - 0.09, dT, GREEN, { frame: 0.085 });
+      shaker(p, 'duo', -(W - 0.006) / 2, -(split - 0.09) / 2, W - 0.006, split - 0.09, dT, FRIDGE_C, { frame: 0.085 });
       bpull(p, 0, (split - 0.09) / 2 - 0.08, 0, 0.5, false);
     },
     contents: (cf, bw, bd) => {
@@ -710,9 +711,9 @@ export function buildKitchen(E, G) {
   // ---- full-height Calacatta backsplash
   const tt = 0.01, y0 = CT, y1 = F0 + UY0, yFull = F0 + 2.3, yCeil = E.plan.mainCeil - 0.004;
   const slabN = (x0, x1, ya, yb) => root.box('marble', [x1 - x0, yb - ya, tt], [(x0 + x1) / 2, (ya + yb) / 2, WN + tt / 2], 0xffffff, { r: 0 });
-  slabN(WW, 6.58, y0, y1); slabN(6.58, 8.02, y0, F0 + 1.03); slabN(8.02, WE, y0, yFull);
+  luxOnly(() => { slabN(WW, 6.58, y0, y1); slabN(6.58, 8.02, y0, F0 + 1.03); slabN(8.02, WE, y0, yFull); }); // V11: SOW → subway (js/sow-build.js)
   const slabW = (z0, z1, ya, yb) => root.box('marble', [tt, yb - ya, z1 - z0], [WW + tt / 2, (ya + yb) / 2, (z0 + z1) / 2], 0xffffff, { r: 0 });
-  slabW(WN + tt, 0.8, y0, y1); slabW(0.8, 1.562, y0, yCeil); slabW(1.562, 2.075, y0, y1);
+  luxOnly(() => { slabW(WN + tt, 0.8, y0, y1); slabW(0.8, 1.562, y0, yCeil); slabW(1.562, 2.075, y0, y1); });
   root.box('marble', [1.44, 0.02, 0.06], [7.3, F0 + 1.04, WN + 0.03], 0xffffff, { r: 0.004 }); // window stool
   // ---- upper cabinets (green shaker, brass knobs)
   const shelfDishes = (f, x0, w, ys, d) => {
@@ -738,6 +739,7 @@ export function buildKitchen(E, G) {
   upperCab(E, G, FW, zx(2.98), 0.9, { y0: 1.86, h: 0.426, d: 0.6, shelves: [], n: 2, inside: (f, x0, w, ys) => { f.box('plastic', [0.4, 0.06, 0.45], [x0 + 0.25, ys[0] + 0.03, 0.3], 0x777777, { r: 0.01 }); f.box('plastic', [0.36, 0.08, 0.3], [x0 + 0.66, ys[0] + 0.04, 0.3], 0xc9b28a, { r: 0.01 }); } });
   // ---- open floating walnut shelves (north wall, east end) with styled ceramics
   const ledMat = E.glow ? E.glow('kitchen', 1.1, { emissive: 0xfff0d8 }) : E.M.led;
+  luxOnly(() => { // V11: open walnut shelves + styling are luxury-only
   const SX0 = 8.11, SX1 = WE - 0.005, sd = 0.27, st = 0.05;
   for (const sy of [F0 + 1.56, F0 + 1.96]) {
     root.box('walnut', [SX1 - SX0, st, sd], [(SX0 + SX1) / 2, sy + st / 2, WN + tt + sd / 2], 0xffffff, { r: 0.006, grain: 'h' });
@@ -751,6 +753,7 @@ export function buildKitchen(E, G) {
     vase(root, 8.6, y2, z, 'globe', 0xb48a5a, 0.9, 'clay'); branches(root, 8.6, y2 + 0.18, z, 0.17, r, 4);
     candle(root, 8.82, y2, z - 0.04, 0.12, 0.03); candle(root, 8.9, y2, z + 0.05, 0.08, 0.03);
   }
+  });
   // crown molding (green) + light rail + LED strips under uppers
   const crownN = (x0, x1) => { const c0 = Math.max(WW, x0 - 0.02), c1 = Math.min(WE, x1 + 0.02), c2 = Math.max(WW, x0 - 0.03), c3 = Math.min(WE, x1 + 0.03); FN.box('duo', [c1 - c0, 0.05, 0.05], [(c0 + c1) / 2, UY0 + UH + 0.025, UD + FT - 0.005], GREEN, { r: 0.008 }); FN.box('duo', [c3 - c2, 0.02, 0.07], [(c2 + c3) / 2, UY0 + UH + 0.06, UD + FT + 0.005], GREEN, { r: 0.006 }); FN.box('duo', [x1 - x0, 0.02, 0.015], [(x0 + x1) / 2, UY0 - 0.01, UD + FT - 0.008], GREEN, { r: 0.002 }); FN.box(ledMat, [x1 - x0 - 0.04, 0.006, 0.012], [(x0 + x1) / 2, UY0 - 0.004, 0.08], 0xffffff, { r: 0 }); };
   crownN(WW, 6.5);
@@ -781,10 +784,10 @@ export function buildKitchen(E, G) {
   try { romanShade(E, G, root.sub(7.3, F0, WN, 0), root.sub(7.3, F0, WN, 0), { w: 1.3, top: 2.18, bottom: 1.27, z: 0.085, color: LX.linen }); } catch (e) { console.warn('[interior] roman shade', e); }
   // sculptural globe pendants over the sink counter (one real light)
   if (E.top) {
-    try {
+    try { luxOnly(() => { // V11: luxury pendants hidden in SOW mode (flush-mount LED there)
       pendant(E, E.top, { x: 6.95, z: 0.5, floor: 'main', room: 'kitchen', ceilY: E.plan.mainCeil, y: F0 + 1.64, style: 'globe', r: 0.14, point: true, intensity: 16, labels: ['הדלק מנורה מעל הכיור', 'כבה מנורה מעל הכיור'] });
       pendant(E, E.top, { x: 7.65, z: 0.5, floor: 'main', room: 'kitchen', ceilY: E.plan.mainCeil, y: F0 + 1.64, style: 'globe', r: 0.14, point: false, labels: ['הדלק מנורה מעל הכיור', 'כבה מנורה מעל הכיור'] });
-    } catch (e) { console.warn('[interior] kitchen pendants', e); }
+    }, [E.top, G]); } catch (e) { console.warn('[interior] kitchen pendants', e); }
   }
 
   E.switchAt(G, root.sub(8.05, F0, WS, PI), 'kitchen', [0, 1.2, 0]);

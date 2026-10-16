@@ -182,9 +182,10 @@ export function treeRing(W, x, z, rad) {
   g.rotateX(-Math.PI / 2);
   const uv = g.attributes.uv, pos = g.attributes.position;
   for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i) + x, -(pos.getZ(i) + z));
-  W.B.mulch.add(g, mat(x, 0.02, z), 0xe8e0d8);
+  const B = W.BL || W.B; // V11: mulch rings + steel edging are luxury landscaping (hidden in the SOW mode)
+  B.mulch.add(g, mat(x, 0.02, z), 0xe8e0d8);
   // crisp steel edging ring
   const e = new THREE.CylinderGeometry(rad, rad, 0.07, 40, 1, true);
-  W.B.darkMetal.add(e, mat(x, 0.015, z), 0x1e1e1e);
+  B.darkMetal.add(e, mat(x, 0.015, z), 0x1e1e1e);
   W.excl.push([x - rad, z - rad, x + rad, z + rad]);
 }

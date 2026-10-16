@@ -21,6 +21,7 @@ export const GALLERY_STRINGS = {
     tip: 'ראו הדמיות של כל סגנון שיפוץ', currentBtn: '✓ זה הסגנון הנוכחי בסיור', prevRoom: 'החדר הקודם', nextRoom: 'החדר הבא',
     swipe: 'החליקו מהר הצידה לחדר אחר',
     roomTip: 'יש הדמיות לחדר הזה · 🖼', nearNote: 'אין הדמיה לחדר הזה — מוצג החדר הקרוב',
+    ba: '⇆ לפני / אחרי', baTitle: 'השוואה: הבית היום (מהסרטון) מול השיפוץ לפי האקסל', // V11
     rooms: { street: 'חזית ורחוב', frontyard: 'חצר קדמית', living: 'סלון', kitchen: 'מטבח', bath1: 'חדר רחצה 1', bed1: 'חדר שינה 1', bed2: 'חדר שינה 2', bed3: 'חדר שינה 3', bed4: 'חדר שינה 4', bath2: 'חדר רחצה 2', hall: 'מסדרון', landing: 'מבואה', basement: 'מרתף', backyard: 'חצר אחורית', porch: 'מרפסת כניסה' },
   },
   en: {
@@ -34,6 +35,7 @@ export const GALLERY_STRINGS = {
     tip: 'See renders of every renovation style', currentBtn: '✓ This is the current tour style', prevRoom: 'Previous room', nextRoom: 'Next room',
     swipe: 'Swipe fast sideways for another room',
     roomTip: 'This room has renders · 🖼', nearNote: 'No render of this room — showing the nearest one',
+    ba: '⇆ Before / after', baTitle: 'Compare: the house today (from the video) vs the scope-of-work rehab',
     rooms: { street: 'Front & street', frontyard: 'Front yard', living: 'Living room', kitchen: 'Kitchen', bath1: 'Bathroom 1', bed1: 'Bedroom 1', bed2: 'Bedroom 2', bed3: 'Bedroom 3', bed4: 'Bedroom 4', bath2: 'Bathroom 2', hall: 'Hall', landing: 'Landing', basement: 'Basement', backyard: 'Back yard', porch: 'Porch' },
   },
   es: {
@@ -47,6 +49,7 @@ export const GALLERY_STRINGS = {
     tip: 'Mira los renders de cada estilo de reforma', currentBtn: '✓ Es el estilo actual del recorrido', prevRoom: 'Estancia anterior', nextRoom: 'Estancia siguiente',
     swipe: 'Desliza rápido de lado para otra estancia',
     roomTip: 'Hay renders de esta estancia · 🖼', nearNote: 'No hay render de esta estancia — se muestra la más cercana',
+    ba: '⇆ Antes / después', baTitle: 'Comparar: la casa hoy (del video) frente a la remodelación según presupuesto',
     rooms: { street: 'Fachada y calle', frontyard: 'Jardín delantero', living: 'Salón', kitchen: 'Cocina', bath1: 'Baño 1', bed1: 'Dormitorio 1', bed2: 'Dormitorio 2', bed3: 'Dormitorio 3', bed4: 'Dormitorio 4', bath2: 'Baño 2', hall: 'Pasillo', landing: 'Rellano', basement: 'Sótano', backyard: 'Jardín trasero', porch: 'Porche' },
   },
 };
@@ -91,6 +94,7 @@ const CSS = `
 #gallery .gv-meta .gv-desc{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #gallery .gv-apply{flex:0 0 auto;min-height:36px;padding:6px 12px;border-radius:10px;border:0;background:linear-gradient(180deg,rgba(67,224,255,.9),rgba(30,170,210,.9));color:var(--accent-ink,#04212a);font:700 12.5px/1.2 inherit;font-family:inherit;cursor:pointer}
 #gallery .gv-apply:disabled{opacity:.5;cursor:default}
+#gallery .gv-ba{flex:0 0 auto;min-height:36px;padding:6px 12px;border-radius:10px;border:1px solid rgba(255,214,140,.7);background:rgba(255,214,140,.14);color:#ffe2ad;font:700 12.5px/1.2 inherit;font-family:inherit;cursor:pointer;margin-inline-end:8px}
 #gallery .gv-msg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 16px;border-radius:12px;background:rgba(12,16,24,.82);border:1px solid rgba(255,255,255,.14);font-size:13.5px;font-weight:600;display:none;pointer-events:none;text-align:center;max-width:calc(100vw - 40px)}
 #gallery .gv-msg.on{display:block}
 #gallery .gv-prog{position:absolute;top:0;left:0;height:3px;width:0;background:var(--accent,#43e0ff);box-shadow:0 0 8px rgba(67,224,255,.7);transition:width .25s ease, opacity .4s ease;z-index:2}
@@ -117,6 +121,7 @@ const CSS = `
   #gallery .gv-sw i{width:5px;height:16px}
   #gallery .gv-meta .gv-hint{display:none}
   #gallery .gv-apply{flex:1;min-height:44px;font-size:14px}
+  #gallery .gv-ba{min-height:44px;font-size:14px}
 }
 @media (max-height:520px){#gallery .gv-meta .gv-hint,#gallery .gv-meta .gv-desc{display:none}#gallery .gv-bot{gap:5px;padding-top:6px}#gallery .gv-chip{min-height:34px;padding:3px 9px}#gallery .gv-nav{top:36%}}
 /* V9: floating "🖼 הדמיות" + "🎨 סגנון" in every tour mode (thumb zone, bottom-right; placed by JS above whatever
@@ -250,7 +255,7 @@ export function installGallery(opts = {}) {
     <div class="gv-bot">
       <div class="gv-row gv-styles" role="listbox"></div>
       <div class="gv-row gv-rooms" role="listbox"></div>
-      <div class="gv-meta"><span class="gv-desc"></span><span class="gv-hint"></span><button class="gv-apply" type="button"></button></div>
+      <div class="gv-meta"><span class="gv-desc"></span><span class="gv-hint"></span><button class="gv-ba" type="button"></button><button class="gv-apply" type="button"></button></div>
     </div>`;
   document.body.appendChild(root);
   const $ = (s) => root.querySelector(s);
@@ -261,6 +266,9 @@ export function installGallery(opts = {}) {
   stylesRow.setAttribute('aria-label', S.style); roomsRow.setAttribute('aria-label', S.room);
   { const h = $('.gv-hint'), a = document.createElement('span'), b = document.createElement('span'); a.textContent = S.hint; b.textContent = S.swipe; h.append(a, ' · ', b); } // separate nodes: each one translates
   applyBtn.textContent = S.apply;
+  // V11: "⇆ לפני / אחרי" (only on the scope-of-work style): the video frame of the room vs the SOW render (js/sow-ui.js)
+  const baBtn = $('.gv-ba'); baBtn.textContent = S.ba; baBtn.title = S.baTitle;
+  baBtn.addEventListener('click', (e) => { e.stopPropagation(); const room = st.room; close(); try { window.__sowUI && window.__sowUI.openBA(room); } catch (err) { console.warn('[gallery] before/after', err); } });
 
   const st = { open: false, manifest: null, mPromise: null, style: null, room: null, yaw: 0, pitch: 0, fov: FOV_DEF, fovT: FOV_DEF, vyaw: 0, vpitch: 0, drag: false, dirty: true, raf: 0, seq: 0, loaded: '', quality: '', viewer: null, triedGL: false, lastT: 0, errors: 0 };
   const stats = { opens: 0, loads: 0, smMs: 0, fullMs: 0, lastUrl: '', errors: 0 };
@@ -328,6 +336,7 @@ export function installGallery(opts = {}) {
     applyBtn.classList.toggle('is-cur', isCur);
     if (!applyBusy) applyBtn.textContent = isCur ? S.currentBtn : S.apply;
     applyBtn.title = ready ? '' : S.applyWait;
+    baBtn.style.display = st.style === 'sow' && window.__sowUI && window.__sowUI.hasBefore(st.room) ? '' : 'none';
     for (const el of [stylesRow.querySelector('.on'), roomsRow.querySelector('.on')]) if (el && el.scrollIntoView) try { el.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (_) {}
   }
 
@@ -530,7 +539,7 @@ export function installGallery(opts = {}) {
     if (applyBusy) return;
     const id = st.style, sd = st.manifest && (st.manifest.styles || []).find((x) => x.id === id);
     applyBusy = true; applyBtn.disabled = true; applyBtn.textContent = S.applying;
-    Promise.resolve().then(() => t.styles.set(id)).then(() => {
+    Promise.resolve().then(() => (id === 'sow' && t.sow ? t.sow.enable() : t.styles.set(id))).then(() => { // V11: the SOW style = the whole SOW mode
       applyBusy = false; stats.applied = (stats.applied || 0) + 1;
       close();
       try { t.styleUI && t.styleUI.render && t.styleUI.render(); } catch (_) {}

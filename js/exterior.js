@@ -86,12 +86,13 @@ export async function build(ctx) {
       { x: 1.8, z: 13.2, h: 10.5, r: 0.27, crown: 4.4, ring: 1.1, tint: 0xf4ffe8, front: true }, // front-yard maple (uplit)
       { x: -3.4, z: -27.5, h: 12.5, r: 0.32, crown: 5.0, ring: 0, tint: 0xfff6e6 },            // back-left
       { x: 12.4, z: -29.5, h: 10.5, r: 0.26, crown: 4.3, ring: 0, tint: 0xf0ffe6 },            // back-right
-      { x: 12.4, z: 11.0, h: 6.6, r: 0.14, crown: 2.9, ring: 0.95, tint: 0xeaf6f0 },          // NEW: ornamental (serviceberry) east front lawn
+      { x: 12.4, z: 11.0, h: 6.6, r: 0.14, crown: 2.9, ring: 0.95, tint: 0xeaf6f0, lux: true }, // NEW: ornamental (serviceberry) east front lawn — V11: luxury-only
     ],
     hydrangeas: [], ornGrasses: [], nightLights: [],
   };
   _debug.W = W;
   for (const [name] of BUCKETS) W.B[name] = new Bucket(name);
+  W.BL = {}; for (const [name] of BUCKETS) W.BL[name] = new Bucket('lux-' + name); // V11 SOW: luxury-only landscaping
 
   const step = (name, fn) => { try { fn(W); } catch (e) { console.warn('[exterior] ' + name + ' failed:', e); } };
   step('materials', () => { W.mats = makeMaterials(W); });
@@ -113,35 +114,41 @@ export async function build(ctx) {
   step('heroTrees', buildHeroTrees);
   step('backdrop', buildBackdrop);       // instanced mid trees (realistic) + far blob trees
   step('fences', buildFences);           // neighbours' chain link only (our lot has the cedar fence)
-  step('hydrangeas', () => buildHydrangeas(W, W.hydrangeas));
-  step('ornGrasses', () => buildOrnGrasses(W, W.ornGrasses));
+  step('hydrangeas', () => { const k = new Set(W.root.children); buildHydrangeas(W, W.hydrangeas); for (const c of W.root.children) if (!k.has(c)) c.userData.luxOnly = true; }); // V11: luxury-only
+  step('ornGrasses', () => { const k = new Set(W.root.children); buildOrnGrasses(W, W.ornGrasses); for (const c of W.root.children) if (!k.has(c)) c.userData.luxOnly = true; });
   step('foliage', buildFoliage);
   step('horizon', buildHorizon);
   step('grass', buildGrassV2);
 
-  // merge buckets into meshes
-  for (const [name, mk, shHi, shLo, walk] of BUCKETS) {
+  // merge buckets into meshes (V11: then the luxury-only landscaping buckets, tagged userData.luxOnly)
+  for (const [lux, [name, mk, shHi, shLo, walk]] of [...BUCKETS.map((b) => [false, b]), ...BUCKETS.map((b) => [true, b])]) {
     try {
-      const b = W.B[name];
+      const b = lux ? W.BL[name] : W.B[name];
       if (!b || b.empty) continue;
       const geo = b.build();
       if (!geo) continue;
       const mesh = new THREE.Mesh(geo, W.mats[mk]);
-      mesh.name = 'ext-' + name;
+      mesh.name = (lux ? 'ext-lux-' : 'ext-') + name;
+      if (lux) mesh.userData.luxOnly = true;
       mesh.castShadow = hi ? shHi : shLo;
       mesh.receiveShadow = name !== 'lens' && name !== 'glassLit';
       tag(mesh, PT_FLAGS[name]);
       root.add(mesh);
       if (walk) W.walkables.push(mesh);
       W.meshes = W.meshes || {};
-      W.meshes[name] = mesh;
+      W.meshes[(lux ? 'lux-' : '') + name] = mesh;
     } catch (e) { console.warn('[exterior] bucket ' + name + ' failed:', e); }
   }
   root.updateMatrixWorld(true);
 
   // physics / navigation hooks
   try { if (ctx.addWalkable) for (const m of W.walkables) ctx.addWalkable(m); } catch (e) { console.warn('[exterior] walkables', e); }
-  try { if (ctx.addCollider) for (const b of W.colliders) ctx.addCollider(b); } catch (e) { console.warn('[exterior] colliders', e); }
+  try {
+    if (ctx.addCollider) for (const b of W.colliders) {
+      const r = ctx.addCollider(b);
+      if (r && r.isBox3 && b.__lux) (ctx.variantColliders = ctx.variantColliders || []).push({ box: r, orig: r.clone(), mode: 'lux' }); // V11
+    }
+  } catch (e) { console.warn('[exterior] colliders', e); }
   try {
     if (ctx.registerRoom) {
       const hole = holeRect(plan), sb = streetBand(plan), L = plan.lot;

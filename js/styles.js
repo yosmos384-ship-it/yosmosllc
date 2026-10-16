@@ -134,6 +134,29 @@ const INDUSTRIAL = {
   curtain: { c: '#7D776C' }, bedding: { c: '#A39D92' }, linen: { c: '#6F6A61' }, rug: { c: '#7A5446', tex: 'oriental', ns: 0.8 }, towel: { c: '#8B867D' }, throw: { c: '#8A5A2B' },
 };
 
+// V11: "📋 שיפוץ לפי האקסל" — the owner's lender scope of work ($59,000): the REAL current house (exterior as in the walkthrough
+// video: warm-grey painted stucco, brown asphalt shingles, white vinyl windows + louvered shutters, white trim / gutters)
+// + exactly the budgeted rehab, builder grade: grey-oak LVP everywhere (tile in the baths), agreeable-grey walls, white
+// ceilings / trim / doors, white shaker kitchen + quartz-look counters + white subway backsplash + stainless appliances,
+// white tile / cultured marble baths with chrome, brushed nickel hardware, simple grey fabrics. Not listed by list() —
+// only js/sow.js switches to it (with the luxOnly / sowOnly visibility swap).
+const SOW = {
+  wall: { c: '#D5D0C7' }, wallAccent: { c: '#D5D0C7' }, wallKitchen: { c: '#D5D0C7' }, wallBathPaint: { c: '#D5D0C7' },
+  ceiling: { c: '#E6E5E1' }, trim: { c: '#E5E4DF' }, trimAccent: { c: '#E5E4DF' }, door: { c: '#E4E3DE', r: 0.42 },
+  floorMain: { c: '#9C9488', tex: '=floorBed', r: 0.95, ns: 0.7 }, floorBed: { c: '#9C9488', r: 0.95, ns: 0.7 }, stairWood: { c: '#978F84', r: 0.95 },
+  floorBath: { c: null, tex: 'porcelain', ns: 0.8 }, wallBath: { c: null, tex: 'subwayWhite', ns: 1 },
+  doorExt: { c: '#E3E2DD', r: 0.45, m: 0 }, windowFrame: { c: '#ECEBE6', r: 0.45, m: 0 }, metalDark: { c: null }, hardware: { c: '#B9B9B5', r: 0.36 }, faucetMetal: { c: '#D3D4D5', r: 0.16 },
+  extWall: { c: '#BDB8AE' }, extGable: { c: '#BDB8AE' }, extTrim: { c: '#E4E2DC' }, roof: { c: '#5E4A3E' }, shutter: { c: '#E4E3DE' },
+  cedar: { c: '#DEDCD6' }, gutter: { c: '#E4E2DC' },
+  basementWall: { c: '#C6C2B8' }, basementCeil: { c: '#6F5C49' }, basementFloor: { c: null },
+  counter: { c: '#D9D7D2', tex: 'quartz', cc: 0.12, ns: 0.4 }, vanityTop: { c: '#ECEAE5', tex: 'quartz', cc: 0.2, ns: 0.3 }, cabinet: { c: '#E6E4DF' }, hood: { c: '#A7AAAD' },
+  fridge: { c: '#AFB2B4' },
+  wood: { c: '#5C4A3B' }, woodLight: { c: null }, stoneTable: { c: '#C4BFB6' },
+  sofaFabric: { c: '#A29E98', sheen: '#B8B4AE' }, upholstery: { c: '#ADA89F' }, chairLeather: { c: '#6A5646' },
+  headboard: { c: '#8D8984' }, velvetAccent: { c: '#7E7A75' }, clubChair: { c: '#6A5646' },
+  curtain: { c: '#D6D2CA' }, bedding: { c: '#E2E0DB' }, linen: { c: '#BDB7AD' }, rug: { c: '#A89F90', tex: 'jute', ns: 1 }, towel: { c: '#E0DED9' }, throw: { c: '#7D8892' },
+};
+
 // All user-visible style strings (he / en / es) in ONE object — the i18n bot reads / extends this.
 export const STYLE_STRINGS = {
   modern: {
@@ -184,6 +207,14 @@ export const STYLE_STRINGS = {
     es: { name: 'Loft industrial', desc: 'Carácter de loft: ladrillo visto en salón y cocina, hormigón pulido en el suelo, marcos y herrajes de metal negro, nogal en los dormitorios, cocina gris pizarra con encimeras de hormigón, sofá de cuero coñac, metro verde oscuro y mosaico hexagonal en los baños.',
       materials: 'Paredes: ladrillo visto + gris cálido · Suelo: hormigón pulido + nogal · Cocina: gris pizarra + hormigón · Herrajes: metal negro · Baño: metro verde oscuro + mosaico hexagonal · Exterior: ladrillo rojo + metal negro' },
   },
+  sow: {
+    he: { name: 'שיפוץ לפי האקסל', desc: 'הבית האמיתי כפי שהוא בסרטון + בדיוק השיפוץ שבתקציב המלווה ($59,000): ריצוף LVP אלון-אפור בכל הבית, צבע חדש אפור-בהיר, דלתות פנים לבנות, מטבח שייקר לבן עם משטח קוורץ ואריחי מטרו, מכשירי נירוסטה, 2 חדרי רחצה מלאים באריחים, תאורה, חשמל ומערכות חדשות. החוץ נשאר כמו שהוא.',
+      materials: 'רצפה: LVP אלון-אפור · קירות: אפור-בהיר · מטבח: שייקר לבן + קוורץ + מטרו לבן · מכשירים: נירוסטה · אמבטיות: אריחים לבנים + כרום · חוץ: ללא שינוי (כמו בסרטון)' },
+    en: { name: 'Scope-of-work rehab', desc: 'The real house as it is in the video + exactly the rehab in the lender budget ($59,000): grey-oak LVP throughout, fresh light-grey paint, white interior doors, a white shaker kitchen with quartz-look counters and subway tile, stainless appliances, 2 fully tiled bathrooms, new lights, electrical and mechanicals. The exterior stays as-is.',
+      materials: 'Floor: grey-oak LVP · Walls: light grey · Kitchen: white shaker + quartz-look + white subway · Appliances: stainless · Baths: white tile + chrome · Exterior: unchanged (as in the video)' },
+    es: { name: 'Remodelación según presupuesto', desc: 'La casa real tal como está en el video + exactamente la remodelación del presupuesto del prestamista ($59,000): piso LVP roble gris en toda la casa, pintura nueva gris claro, puertas interiores blancas, cocina shaker blanca con encimera tipo cuarzo y azulejo metro, electrodomésticos de acero inoxidable, 2 baños completos con azulejo, iluminación, electricidad y equipos nuevos. El exterior queda igual.',
+      materials: 'Suelo: LVP roble gris · Paredes: gris claro · Cocina: shaker blanca + tipo cuarzo + metro blanco · Electrodomésticos: acero inoxidable · Baños: azulejo blanco + cromo · Exterior: sin cambios (como en el video)' },
+  },
 };
 
 const DEFS = [
@@ -202,7 +233,10 @@ export const STYLES = DEFS.map((d) => {
     materials: S.he.materials, materialsEn: S.en.materials, materialsEs: S.es.materials,
   });
 });
-const BY_ID = Object.fromEntries(STYLES.map((s) => [s.id, s]));
+// V11: the scope-of-work style — selectable through set('sow') (js/sow.js), not part of the style picker / list()
+export const SOW_STYLE = (() => { const S = STYLE_STRINGS.sow; return { id: 'sow', swatch: ['#CEC8BE', '#9C9488', '#E6E4DF', '#D9D7D2', '#5E4A3E'], light: [1, 0.99, 0.97], slots: SOW, hidden: true,
+  he: S.he.name, en: S.en.name, es: S.es.name, desc: S.he.desc, descEn: S.en.desc, descEs: S.es.desc, materials: S.he.materials, materialsEn: S.en.materials, materialsEs: S.es.materials }; })();
+const BY_ID = Object.fromEntries(STYLES.concat([SOW_STYLE]).map((s) => [s.id, s]));
 const pub = (s) => ({ id: s.id, he: s.he, en: s.en, es: s.es, desc: s.desc, descEn: s.descEn, descEs: s.descEs, materials: s.materials, materialsEn: s.materialsEn, materialsEs: s.materialsEs, swatch: s.swatch.slice() });
 export function list() { return STYLES.map(pub); }
 
@@ -528,6 +562,53 @@ function juteFn(u, v, o) {
   const k = (0.82 + h * 0.2 + (fib - 0.5) * 0.12) * edge;
   o.r = 0.74 * k; o.g = 0.64 * k; o.b = 0.47 * k; o.h = h * 0.8 + fib * 0.1; o.ro = 0.97;
 }
+/* ---------------- V11 (scope-of-work) recipes */
+// glazed white 3x6" subway tile, running bond, light-grey grout (builder backsplash / tub surround)
+function texSubwayWhite(THREE, S) {
+  const B = G.buffers(S, S), tile = 0.6, px = tile / S, tw = 0.15, th = 0.075, gw = 0.0028;
+  const f = noiseField(S, S, rand(771), 4, 6), f2 = noiseField(S, S, rand(772), 2, 48);
+  for (let y = 0; y < S; y++) {
+    const v = (S - y - 0.5) * px, r = Math.floor(v / th), lv = v - r * th, off = (r % 2) * tw / 2;
+    for (let x = 0; x < S; x++) {
+      const i = y * S + x; let u = (x + 0.5) * px - off; u = ((u % tile) + tile) % tile;
+      const c = Math.floor(u / tw), lu = u - c * tw, d = Math.min(lu, tw - lu, lv, th - lv);
+      if (d < gw / 2) { G.put(B, i, 196, 194, 189); B.hgt[i] = 0.12; B.rgh[i] = 0.85; continue; }
+      const hb = G.bevelH(d - gw / 2, 0.0035), ti = G.hash3(c, r, 773);
+      const k = (1 + (ti - 0.5) * 0.025 + (f[i] - 0.5) * 0.02) * (0.93 + 0.07 * hb);
+      G.put(B, i, 236 * k, 236 * k, 232 * k);
+      B.hgt[i] = 0.3 + 0.62 * hb + (f[i] - 0.5) * 0.02;
+      B.rgh[i] = 0.1 + (f2[i] - 0.5) * 0.04 + (1 - hb) * 0.1;
+    }
+  }
+  return fin(THREE, B, { tile: [tile, tile], depth: 0.003, cavity: 1.0, cavityR: 1 });
+}
+// 12x24" grey porcelain floor tile (stacked joints offset by a third), thin warm-grey grout
+function texPorcelain(THREE, S) {
+  const B = G.buffers(S, S), tile = 1.2, px = tile / S, tw = 0.6, th = 0.3, gw = 0.003;
+  const f = noiseField(S, S, rand(781), 5, 4), f2 = noiseField(S, S, rand(782), 3, 40);
+  for (let y = 0; y < S; y++) {
+    const v = (S - y - 0.5) * px, r = Math.floor(v / th), lv = v - r * th, off = (r % 2) * tw / 2;
+    for (let x = 0; x < S; x++) {
+      const i = y * S + x; let u = (x + 0.5) * px - off; u = ((u % tile) + tile) % tile;
+      const c = Math.floor(u / tw), lu = u - c * tw, d = Math.min(lu, tw - lu, lv, th - lv);
+      if (d < gw / 2) { G.put(B, i, 150, 147, 142); B.hgt[i] = 0.1; B.rgh[i] = 0.85; continue; }
+      const hb = G.bevelH(d - gw / 2, 0.0015), ti = G.hash3(c, r, 783);
+      const k = (1 + (ti - 0.5) * 0.05 + (f[i] - 0.5) * 0.12 + (f2[i] - 0.5) * 0.05) * (0.94 + 0.06 * hb);
+      G.put(B, i, 182 * k, 179 * k, 173 * k);
+      B.hgt[i] = 0.35 + 0.6 * hb + (f[i] - 0.5) * 0.03;
+      B.rgh[i] = 0.42 + (f2[i] - 0.5) * 0.08 + (1 - hb) * 0.15;
+    }
+  }
+  return fin(THREE, B, { tile: [tile, tile], depth: 0.0015, cavity: 0.9, cavityR: 1 });
+}
+// quartz-look / cultured marble: near-white with fine grey speckle and faint cloud (interior 0..1 tile)
+function quartzFn(u, v, o) {
+  const { n2, fbm } = NZ;
+  const cl = fbm(u * 3 + 11, v * 3, 3, 3, 4), sp = n2(u * 260, v * 260, 260, 260), sp2 = n2(u * 120 + 7, v * 120, 120, 120);
+  const dot = sp > 0.93 ? -0.09 : sp2 > 0.95 ? -0.05 : 0;
+  const base = 0.9 + (cl - 0.5) * 0.04 + dot;
+  o.r = base; o.g = base * 0.995; o.b = base * 0.985; o.h = cl * 0.05; o.ro = 0.22 + (cl - 0.5) * 0.06;
+}
 const RECIPES = {
   beadboard: (THREE, q) => texBeadboard(THREE, q ? 256 : 512),
   subway: (THREE, q) => texSubway(THREE, q ? 256 : 512),
@@ -549,6 +630,10 @@ const RECIPES = {
   concreteSlab: (THREE, q) => synthTex(concreteSlabFn, q ? 256 : 512, { ns: 0.8 }),
   kilim: (THREE, q) => synthTex(kilimFn, q ? 256 : 512, { ns: 2, wrap: false }),
   jute: (THREE, q) => synthTex(juteFn, q ? 256 : 512, { ns: 3, wrap: false }),
+  // V11
+  subwayWhite: (THREE, q) => texSubwayWhite(THREE, q ? 256 : 512),
+  porcelain: (THREE, q) => texPorcelain(THREE, q ? 256 : 512),
+  quartz: (THREE, q) => synthTex(quartzFn, q ? 256 : 512, { ns: 0.5 }),
 };
 export const STYLE_RECIPES = RECIPES; // read-only (texture previews / tests)
 // nominal average albedo (sRGB 0..255) of the ORIGINAL textures, used only when a canvas cannot be read (node tests)
@@ -625,9 +710,10 @@ const REMAP = [
   { src: 0x283a30, ref: 0x34483c, slot: 'cabinet', room: /^kitchen$/ },
   { src: 0xd2ab62, ref: 0xd2ab62, slot: 'hardware', bathSlot: 'faucetMetal' },
   { src: 0xb48a45, ref: 0xd2ab62, slot: 'hardware', bathSlot: 'faucetMetal' },
+  { src: 0x34483f, ref: 0x34483f, slot: 'fridge', room: /^kitchen$/ }, // V11: panel-ready fridge fronts (= cabinet except SOW)
 ];
 // the colour each of these slots had originally (for c:null in remapped slots)
-const REMAP_BASE = { cabinet: 0x34483c, hardware: 0xd2ab62, faucetMetal: 0xd2ab62 };
+const REMAP_BASE = { cabinet: 0x34483c, hardware: 0xd2ab62, faucetMetal: 0xd2ab62, fridge: 0x34483c };
 
 /* ================================================================== engine */
 export function createStyles(ctx) {
@@ -833,8 +919,8 @@ export function createStyles(ctx) {
     for (const R of remaps) {
       const arr = R.attr.array, is = R.is;
       for (const g of R.groups) {
-        const spec = style.slots[g.slot];
-        const hx = spec && spec.c != null ? spec.c : REMAP_BASE[g.slot];
+        const spec = style.slots[g.slot] || (g.slot === 'fridge' ? style.slots.cabinet : null); // V11: fridge follows the cabinets
+        const hx = spec && spec.c != null ? spec.c : g.slot === 'fridge' ? REMAP_BASE.cabinet : REMAP_BASE[g.slot];
         const tgt = g.raw ? (() => { const n = typeof hx === 'number' ? hx : parseInt(String(hx).replace('#', ''), 16); return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; })() : hexLin(hx);
         const r = tgt[0] * g.ratio[0], gg = tgt[1] * g.ratio[1], b = tgt[2] * g.ratio[2];
         for (let k = 0; k < g.idx.length; k++) { const j = g.idx[k] * is; arr[j] = r; arr[j + 1] = gg; arr[j + 2] = b; }

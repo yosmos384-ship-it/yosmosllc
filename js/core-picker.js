@@ -34,8 +34,21 @@ export function createRoomPicker(env) {
         b.type = 'button'; b.className = 'pk-chip' + (it.cls ? ' ' + it.cls : ''); b.dataset.key = it.key; b.setAttribute('role', 'option');
         b.textContent = it.he; b.dataset.he = it.he;
         if (it.title) b.title = it.title;
-        b.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); try { env.onPick && env.onPick(it.key, it); } catch (err) { console.warn('[picker]', err); } sync(); });
-        b.addEventListener('pointerdown', (e) => e.stopPropagation());
+        b.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); if (b.__lp) { b.__lp = false; return; } try { env.onPick && env.onPick(it.key, it); } catch (err) { console.warn('[picker]', err); } sync(); });
+        // V11: long-press (550 ms) → 'picker:longpress' event {key} (the SOW mode opens its before / after view); the
+        // click that follows the long press is swallowed. A listener that handles it calls e.preventDefault().
+        let lpT = 0, lpX = 0, lpY = 0;
+        const lpClear = () => { clearTimeout(lpT); lpT = 0; };
+        b.addEventListener('pointerdown', (e) => {
+          e.stopPropagation(); lpClear(); b.__lp = false; lpX = e.clientX; lpY = e.clientY;
+          lpT = setTimeout(() => {
+            lpT = 0;
+            try { const ev = new CustomEvent('picker:longpress', { detail: { key: it.key }, cancelable: true }); window.dispatchEvent(ev); if (ev.defaultPrevented) b.__lp = true; } catch (_) {}
+          }, 550);
+        });
+        b.addEventListener('pointermove', (e) => { if (lpT && Math.hypot(e.clientX - lpX, e.clientY - lpY) > 10) lpClear(); });
+        for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, lpClear);
+        b.addEventListener('contextmenu', (e) => { if (b.__lp) e.preventDefault(); });
         grp.appendChild(b); chips.set(it.key, b);
       }
       sc.appendChild(grp);
