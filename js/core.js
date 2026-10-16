@@ -1345,6 +1345,9 @@ export async function boot() {
     // V6 PERF: the opaque loader covers the canvas while modules build — rendering the half-built scene there only cost
     // synchronous shader compiles + shadow passes between build steps (compileAsync at the end prepares the programs)
     if (loadingNoRender) return;
+    // V9: the full-screen renders viewer covers the canvas → skip the 3D frame (phone GPU / battery); the scene state
+    // (mode, position, heading) is untouched, so closing the viewer returns to exactly the same view
+    if (document.body.classList.contains('gallery-open')) return;
     try { render.renderFrame(activeCam, dt); } catch (e) { if (!frame._err) { frame._err = true; reportError('רינדור', e); } }
     if (mode === 'pano' && pano.renderOverlay) pano.renderOverlay(activeCam); // V2 nav: arrows over the path-traced 360
   }
@@ -1403,6 +1406,15 @@ export async function boot() {
     // photoreal 360 flag, unified: reads pathtrace.viewing (via pano.photoreal); setting it is a manual override for tests
     get pathtraceActive() { return pano.photoreal; }, set pathtraceActive(v) { pano.photoreal = v; },
     perf: PERF, texCache: texCacheStats, // V6 PERF
+    toast: (m, ms) => toast(m, ms), // V9: used by the renders viewer after "apply this style"
+    // V9: where the visitor is now (renders viewer opens at this room): {mode, key, floor, x, z, node}
+    roomInfo() {
+      try {
+        if (mode === 'pano' && pano.node) { const n = pano.node; return { mode, key: n.id, floor: n.floor, x: n.p.x, z: n.p.z, node: n.id }; }
+        const s = player.state, r = roomAt(s.x, s.feet, s.z);
+        return { mode, key: r ? r.key : null, floor: r ? r.floor : floorAt(s.x, s.feet, s.z), x: s.x, z: s.z, node: null };
+      } catch (_) { return { mode, key: null, floor: null, x: 0, z: 0, node: null }; }
+    },
   };
   document.body.classList.add('loading');
   setBodyMode('intro');

@@ -13,27 +13,40 @@ export const GALLERY_STRINGS = {
     btn: 'הדמיות', btnTitle: 'הדמיות 360° מוכנות של כל סגנונות השיפוץ', loaderBtn: 'בינתיים: צפו בהדמיות המוכנות',
     title: 'הדמיות מוכנות', subtitle: 'סגנונות שיפוץ · 360°', close: 'סגור', style: 'סגנון', room: 'חדר',
     hint: 'גררו כדי להסתכל · צביטה או גלגלת לזום', loading: 'טוען הדמיה…', loadingHd: 'טוען איכות מלאה…',
-    apply: 'החל סגנון זה בסיור', applying: 'מחיל…', applied: 'הסגנון הוחל בסיור ✓', applyWait: 'הסיור עדיין נטען — אפשר להחיל אחרי הטעינה', applyFail: 'החלת הסגנון נכשלה',
+    apply: '✓ החל סגנון זה בסיור', applying: 'מחיל…', applied: 'הסגנון הוחל בסיור ✓', applyWait: 'הסיור עדיין נטען — אפשר להחיל אחרי הטעינה', applyFail: 'החלת הסגנון נכשלה',
     current: 'הסגנון הנוכחי בסיור', missing: 'אין עדיין הדמיה לחדר הזה בסגנון הזה', error: 'טעינת ההדמיה נכשלה — בדקו חיבור ונסו שוב', none: 'ההדמיות עדיין לא זמינות',
     noWebgl: 'תצוגה שטוחה (הדפדפן אינו תומך ב-WebGL) — גללו הצידה', resetView: 'איפוס מבט',
+    // V9: floating buttons in the tour + viewer navigation
+    fabTitle: 'הדמיות 360° של כל סגנון שיפוץ — נפתח בחדר שבו אתם נמצאים', styleFab: 'סגנון', styleFabTitle: 'החלפת סגנון השיפוץ בסיור',
+    tip: 'ראו הדמיות של כל סגנון שיפוץ', currentBtn: '✓ זה הסגנון הנוכחי בסיור', prevRoom: 'החדר הקודם', nextRoom: 'החדר הבא',
+    swipe: 'החליקו מהר הצידה לחדר אחר',
+    roomTip: 'יש הדמיות לחדר הזה · 🖼', nearNote: 'אין הדמיה לחדר הזה — מוצג החדר הקרוב',
     rooms: { street: 'חזית ורחוב', frontyard: 'חצר קדמית', living: 'סלון', kitchen: 'מטבח', bath1: 'חדר רחצה 1', bed1: 'חדר שינה 1', bed2: 'חדר שינה 2', bed3: 'חדר שינה 3', bed4: 'חדר שינה 4', bath2: 'חדר רחצה 2', hall: 'מסדרון', landing: 'מבואה', basement: 'מרתף', backyard: 'חצר אחורית', porch: 'מרפסת כניסה' },
   },
   en: {
     btn: 'Renders', btnTitle: 'Ready-made 360° renders of every renovation style', loaderBtn: 'Meanwhile: view the ready-made renders',
     title: 'Ready-made renders', subtitle: 'Renovation styles · 360°', close: 'Close', style: 'Style', room: 'Room',
     hint: 'Drag to look around · pinch or scroll to zoom', loading: 'Loading render…', loadingHd: 'Loading full quality…',
-    apply: 'Apply this style in the tour', applying: 'Applying…', applied: 'Style applied in the tour ✓', applyWait: 'The tour is still loading — you can apply it afterwards', applyFail: 'Could not apply the style',
+    apply: '✓ Apply this style in the tour', applying: 'Applying…', applied: 'Style applied in the tour ✓', applyWait: 'The tour is still loading — you can apply it afterwards', applyFail: 'Could not apply the style',
     current: 'Current tour style', missing: 'No render of this room in this style yet', error: 'The render failed to load — check the connection and retry', none: 'Renders are not available yet',
     noWebgl: 'Flat view (no WebGL in this browser) — scroll sideways', resetView: 'Reset view',
+    fabTitle: 'Ready-made 360° renders of every renovation style — opens in the room you are in', styleFab: 'Style', styleFabTitle: 'Change the renovation style in the tour',
+    tip: 'See renders of every renovation style', currentBtn: '✓ This is the current tour style', prevRoom: 'Previous room', nextRoom: 'Next room',
+    swipe: 'Swipe fast sideways for another room',
+    roomTip: 'This room has renders · 🖼', nearNote: 'No render of this room — showing the nearest one',
     rooms: { street: 'Front & street', frontyard: 'Front yard', living: 'Living room', kitchen: 'Kitchen', bath1: 'Bathroom 1', bed1: 'Bedroom 1', bed2: 'Bedroom 2', bed3: 'Bedroom 3', bed4: 'Bedroom 4', bath2: 'Bathroom 2', hall: 'Hall', landing: 'Landing', basement: 'Basement', backyard: 'Back yard', porch: 'Porch' },
   },
   es: {
     btn: 'Renders', btnTitle: 'Renders 360° listos de todos los estilos de reforma', loaderBtn: 'Mientras tanto: ver los renders listos',
     title: 'Renders listos', subtitle: 'Estilos de reforma · 360°', close: 'Cerrar', style: 'Estilo', room: 'Estancia',
     hint: 'Arrastra para mirar · pellizca o usa la rueda para el zoom', loading: 'Cargando render…', loadingHd: 'Cargando calidad completa…',
-    apply: 'Aplicar este estilo en el recorrido', applying: 'Aplicando…', applied: 'Estilo aplicado en el recorrido ✓', applyWait: 'El recorrido aún se está cargando — podrás aplicarlo después', applyFail: 'No se pudo aplicar el estilo',
+    apply: '✓ Aplicar este estilo en el recorrido', applying: 'Aplicando…', applied: 'Estilo aplicado en el recorrido ✓', applyWait: 'El recorrido aún se está cargando — podrás aplicarlo después', applyFail: 'No se pudo aplicar el estilo',
     current: 'Estilo actual del recorrido', missing: 'Aún no hay render de esta estancia en este estilo', error: 'No se pudo cargar el render — revisa la conexión', none: 'Los renders aún no están disponibles',
     noWebgl: 'Vista plana (este navegador no tiene WebGL) — desplázate de lado', resetView: 'Restablecer vista',
+    fabTitle: 'Renders 360° listos de todos los estilos de reforma — se abre en la estancia donde estás', styleFab: 'Estilo', styleFabTitle: 'Cambiar el estilo de reforma en el recorrido',
+    tip: 'Mira los renders de cada estilo de reforma', currentBtn: '✓ Es el estilo actual del recorrido', prevRoom: 'Estancia anterior', nextRoom: 'Estancia siguiente',
+    swipe: 'Desliza rápido de lado para otra estancia',
+    roomTip: 'Hay renders de esta estancia · 🖼', nearNote: 'No hay render de esta estancia — se muestra la más cercana',
     rooms: { street: 'Fachada y calle', frontyard: 'Jardín delantero', living: 'Salón', kitchen: 'Cocina', bath1: 'Baño 1', bed1: 'Dormitorio 1', bed2: 'Dormitorio 2', bed3: 'Dormitorio 3', bed4: 'Dormitorio 4', bath2: 'Baño 2', hall: 'Pasillo', landing: 'Rellano', basement: 'Sótano', backyard: 'Jardín trasero', porch: 'Porche' },
   },
 };
@@ -89,6 +102,50 @@ const CSS = `
 @media (max-width:900px){#btnGalleryRow{display:block}}
 #loader .gv-loadbtn{display:block;width:100%;margin-top:14px;min-height:44px;border-radius:12px;border:1px solid rgba(67,224,255,.45);background:rgba(67,224,255,.12);color:var(--text,#eef3f8);font:700 14px/1.2 inherit;font-family:inherit;cursor:pointer}
 #loader .gv-loadbtn:hover{background:rgba(67,224,255,.22)}
+/* V9: viewer — room arrows, toast under the title (the chip panel is taller on phones), wrapped chips on portrait phones */
+#gallery .gv-nav{position:absolute;z-index:2;top:42%;width:46px;height:46px;margin-top:-23px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(12,16,24,.62);color:#fff;font:700 26px/1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+#gallery .gv-nav:hover{background:rgba(40,52,70,.9)}
+#gallery .gv-prev{inset-inline-start:calc(8px + env(safe-area-inset-left,0px))}
+#gallery .gv-next{inset-inline-end:calc(8px + env(safe-area-inset-right,0px))}
+#gallery .gv-toast{bottom:auto;top:calc(66px + env(safe-area-inset-top,0px));white-space:normal;text-align:center;max-width:calc(100vw - 32px)}
+#gallery .gv-apply.is-cur{background:rgba(124,243,200,.16);color:var(--accent-2,#7cf3c8);border:1px solid rgba(124,243,200,.5);opacity:1}
+#gallery .gv-pos{font-variant-numeric:tabular-nums;opacity:.8}
+@media (max-width:600px){
+  #gallery .gv-bot{gap:6px;padding-top:14px}
+  #gallery .gv-row{flex-wrap:wrap;justify-content:center;overflow:visible;touch-action:manipulation;gap:5px}
+  #gallery .gv-chip{min-height:36px;padding:4px 9px;font-size:12px;gap:5px;border-radius:10px}
+  #gallery .gv-sw i{width:5px;height:16px}
+  #gallery .gv-meta .gv-hint{display:none}
+  #gallery .gv-apply{flex:1;min-height:44px;font-size:14px}
+}
+@media (max-height:520px){#gallery .gv-meta .gv-hint,#gallery .gv-meta .gv-desc{display:none}#gallery .gv-bot{gap:5px;padding-top:6px}#gallery .gv-chip{min-height:34px;padding:3px 9px}#gallery .gv-nav{top:36%}}
+/* V9: floating "🖼 הדמיות" + "🎨 סגנון" in every tour mode (thumb zone, bottom-right; placed by JS above whatever
+   occupies the bottom edge: the action button, the 360 bar, floor chips, the info line) */
+#quickFab{position:fixed;z-index:11;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:stretch;gap:8px;direction:ltr;transition:opacity .25s ease}
+#quickFab.qf-row{flex-direction:row-reverse;align-items:center}
+#quickFab.qf-off{opacity:0;visibility:hidden;pointer-events:none}
+#quickFab>button{display:flex;align-items:center;justify-content:center;gap:7px;border-radius:999px;font-family:inherit;font-weight:800;white-space:nowrap;touch-action:manipulation;cursor:pointer}
+#btnRendersFab{min-height:52px;padding:0 18px;font-size:15.5px;color:#2a1a04;border:0;background:linear-gradient(180deg,#ffe4ad,#efb45a);box-shadow:0 8px 22px rgba(239,180,90,.38),0 0 0 1px rgba(255,255,255,.4) inset}
+#btnRendersFab:hover{background:linear-gradient(180deg,#fff0cc,#f5c070)}
+#btnRendersFab .qf-ico{font-size:19px;line-height:1}
+#btnStyleFab{min-height:46px;padding:0 16px;font-size:14px;color:var(--text,#eef3f8);background:rgba(12,16,24,.8);border:1px solid rgba(67,224,255,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 18px rgba(0,0,0,.3)}
+#btnStyleFab:hover{background:rgba(30,44,60,.9)}
+#btnStyleFab .qf-ico{font-size:17px;line-height:1}
+body:not(.has-styles) #btnStyleFab{display:none}
+#btnRendersFab.qf-pulse{animation:qfPulse 1.5s ease-out 6}
+@keyframes qfPulse{0%{box-shadow:0 0 0 0 rgba(255,214,140,.85),0 8px 22px rgba(239,180,90,.38)}75%{box-shadow:0 0 0 20px rgba(255,214,140,0),0 8px 22px rgba(239,180,90,.38)}100%{box-shadow:0 0 0 0 rgba(255,214,140,0),0 8px 22px rgba(239,180,90,.38)}}
+#quickFab .qf-tip{position:absolute;bottom:calc(100% + 12px);right:0;width:max-content;max-width:min(240px,calc(100vw - 40px));padding:10px 14px;border-radius:14px;background:#fff1d4;color:#2a1a04;font-size:14px;font-weight:700;line-height:1.3;box-shadow:0 10px 26px rgba(0,0,0,.42);display:none;cursor:pointer;direction:rtl;text-align:right}
+body.ltr #quickFab .qf-tip{direction:ltr;text-align:left}
+#quickFab .qf-tip::after{content:"";position:absolute;top:100%;right:30px;border:8px solid transparent;border-top-color:#fff1d4}
+#quickFab.qf-tipon .qf-tip{display:block;animation:qfTip .35s ease-out}
+@keyframes qfTip{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+#quickFab.qf-tipside .qf-tip{bottom:auto;top:2px;right:calc(100% + 12px)}
+#quickFab.qf-tipside .qf-tip::after{top:16px;right:-16px;border-top-color:transparent;border-left-color:#fff1d4}
+/* V9: while the tip bubble is up (≤ 3–9 s) a fading walk / 360 hint must not show through under it */
+body.qf-tipping #hint{opacity:0!important}
+/* phones: the transient #hint (walk / 360 tips) moves to the free left part of the bottom area, beside the buttons */
+body.qf-on #hint{max-width:calc(100vw - 2 * (28px + var(--qf-w,130px)))}
+@media (max-width:900px){body.qf-on #hint{left:calc(16px + env(safe-area-inset-left,0px));transform:translate(0,10px);max-width:calc(100vw - 44px - var(--qf-w,130px) - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px))}body.qf-on #hint.show{transform:translate(0,0)}}
 `;
 
 /* ============================================================================================ WebGL viewer */
@@ -186,6 +243,8 @@ export function installGallery(opts = {}) {
     <div class="gv-prog"></div>
     <div class="gv-top"><div class="gv-t"><b></b><small></small></div><span class="gv-sp"></span></div>
     <button class="gv-x" type="button"></button>
+    <button class="gv-nav gv-prev" type="button"></button>
+    <button class="gv-nav gv-next" type="button"></button>
     <div class="gv-msg" role="status" aria-live="polite"></div>
     <div class="gv-toast" role="status" aria-live="polite"></div>
     <div class="gv-bot">
@@ -196,10 +255,12 @@ export function installGallery(opts = {}) {
   document.body.appendChild(root);
   const $ = (s) => root.querySelector(s);
   const cv = $('.gv-cv'), flat = $('.gv-flat'), flatImg = flat.querySelector('img'), msg = $('.gv-msg'), prog = $('.gv-prog'), toastEl = $('.gv-toast');
-  const stylesRow = $('.gv-styles'), roomsRow = $('.gv-rooms'), applyBtn = $('.gv-apply'), xBtn = $('.gv-x');
+  const stylesRow = $('.gv-styles'), roomsRow = $('.gv-rooms'), applyBtn = $('.gv-apply'), xBtn = $('.gv-x'), prevBtn = $('.gv-prev'), nextBtn = $('.gv-next');
+  prevBtn.setAttribute('aria-label', S.prevRoom); prevBtn.title = S.prevRoom; nextBtn.setAttribute('aria-label', S.nextRoom); nextBtn.title = S.nextRoom;
   xBtn.textContent = '✕'; xBtn.setAttribute('aria-label', S.close); xBtn.title = S.close;
   stylesRow.setAttribute('aria-label', S.style); roomsRow.setAttribute('aria-label', S.room);
-  $('.gv-hint').textContent = S.hint; applyBtn.textContent = S.apply;
+  { const h = $('.gv-hint'), a = document.createElement('span'), b = document.createElement('span'); a.textContent = S.hint; b.textContent = S.swipe; h.append(a, ' · ', b); } // separate nodes: each one translates
+  applyBtn.textContent = S.apply;
 
   const st = { open: false, manifest: null, mPromise: null, style: null, room: null, yaw: 0, pitch: 0, fov: FOV_DEF, fovT: FOV_DEF, vyaw: 0, vpitch: 0, drag: false, dirty: true, raf: 0, seq: 0, loaded: '', quality: '', viewer: null, triedGL: false, lastT: 0, errors: 0 };
   const stats = { opens: 0, loads: 0, smMs: 0, fullMs: 0, lastUrl: '', errors: 0 };
@@ -215,6 +276,14 @@ export function installGallery(opts = {}) {
   }
   const item = (s, r) => st.manifest && st.manifest.items && st.manifest.items[s + '/' + r];
   const nameOf = (o) => (o && (o[lang()] || o.he || o.en || o.id)) || '';
+  const roomList = (style) => ((st.manifest && st.manifest.rooms) || []).map((r) => r.id).filter((id) => item(style, id));
+  let applyBusy = false;
+  // V9: previous / next room of the current style (arrows, fast sideways swipe), wraps around
+  function stepRoom(d) {
+    const rl = roomList(st.style); if (rl.length < 2) return;
+    const i = rl.indexOf(st.room);
+    select(st.style, rl[((i < 0 ? 0 : i) + d + rl.length) % rl.length]);
+  }
   const roomName = (id) => S.rooms[id] || (st.manifest && (st.manifest.rooms || []).find((r) => r.id === id) || {})[lang()] || id;
 
   /* ---------- UI */
@@ -247,9 +316,17 @@ export function installGallery(opts = {}) {
     const sd = (m.styles || []).find((x) => x.id === st.style);
     $('.gv-top b').textContent = S.title + (sd ? ' · ' + nameOf(sd) : '');
     $('.gv-top small').textContent = (st.room ? roomName(st.room) + ' · ' : '') + S.subtitle;
+    const rl = roomList(st.style), ri = rl.indexOf(st.room);
+    const rtl = (document.documentElement.dir || 'rtl') === 'rtl';
+    prevBtn.textContent = rtl ? '›' : '‹'; nextBtn.textContent = rtl ? '‹' : '›';
+    prevBtn.style.display = nextBtn.style.display = rl.length > 1 ? '' : 'none';
+    root.dataset.pos = ri >= 0 ? (ri + 1) + '/' + rl.length : '';
     $('.gv-desc').textContent = sd ? (sd['desc_' + lang()] || sd.desc || '') : '';
     const t = tour(), ready = !!(t && t.styles && t.styles.ready);
-    applyBtn.disabled = !ready || st.style === tourCur;
+    const isCur = ready && st.style === tourCur;
+    applyBtn.disabled = !ready || isCur || applyBusy;
+    applyBtn.classList.toggle('is-cur', isCur);
+    if (!applyBusy) applyBtn.textContent = isCur ? S.currentBtn : S.apply;
     applyBtn.title = ready ? '' : S.applyWait;
     for (const el of [stylesRow.querySelector('.on'), roomsRow.querySelector('.on')]) if (el && el.scrollIntoView) try { el.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (_) {}
   }
@@ -310,9 +387,11 @@ export function installGallery(opts = {}) {
 
   /* ---------- look controls */
   const ptrs = new Map(); let pinch0 = 0, pinchF = FOV_DEF, lastMove = 0;
+  let swipe = null; // V9: a fast one-finger sideways flick (touch / pen) = next / previous room; slow drags still look
   function onDown(e) {
     if (!st.open) return;
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    swipe = ptrs.size === 1 && e.pointerType !== 'mouse' ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), yaw: st.yaw, pitch: st.pitch } : null;
     try { cv.setPointerCapture(e.pointerId); } catch (_) {}
     if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); pinchF = st.fovT; }
     st.drag = true; st.vyaw = st.vpitch = 0;
@@ -332,6 +411,18 @@ export function installGallery(opts = {}) {
     st.dirty = true;
   }
   function onUp(e) {
+    const sw = swipe && swipe.id === e.pointerId ? swipe : null; if (sw) swipe = null;
+    if (sw && e.type === 'pointerup' && ptrs.size === 1) {
+      const dx = e.clientX - sw.x, dy = e.clientY - sw.y, dt = performance.now() - sw.t, W = cv.clientWidth || window.innerWidth || 1;
+      stats.lastFlick = { dx: Math.round(dx), dy: Math.round(dy), dt: Math.round(dt) };
+      if (dt < 320 && Math.abs(dx) >= Math.max(80, W * 0.22) && Math.abs(dy) < Math.abs(dx) * 0.6) {
+        ptrs.delete(e.pointerId); st.drag = false;
+        st.yaw = sw.yaw; st.pitch = sw.pitch; st.vyaw = st.vpitch = 0; st.dirty = true; // undo the look rotation of the flick
+        const rtl = (document.documentElement.dir || 'rtl') === 'rtl';
+        stepRoom((rtl ? dx > 0 : dx < 0) ? 1 : -1); stats.swipes = (stats.swipes || 0) + 1;
+        return;
+      }
+    }
     ptrs.delete(e.pointerId);
     if (ptrs.size < 2) pinch0 = 0;
     if (!ptrs.size) { st.drag = false; if (performance.now() - lastMove > 90) st.vyaw = st.vpitch = 0; }
@@ -367,8 +458,32 @@ export function installGallery(opts = {}) {
   }
 
   /* ---------- open / close */
+  // V9: the room the visitor is in now → the rendered room to open (walk: the room under the player; 360: the node):
+  // same room → its render; bed2 → bed1, bed4 → bed3 (same kind of room); outside → street; otherwise the nearest
+  // rendered 360 node on the same floor (hall → bath1 / living, landing → bed3 / bath2); basement / unknown → living.
+  // Dollhouse / plan have no "current room": the room last viewed in this session, else living.
+  const ANALOG = { bed2: 'bed1', bed4: 'bed3', frontyard: 'street', porch: 'street', backyard: 'street' };
+  function hereRoom(style) {
+    const t = tour(), has = (id) => !!(id && item(style, id));
+    let info = null; try { info = t && t.roomInfo ? t.roomInfo() : null; } catch (_) { info = null; }
+    if (!info || (info.mode !== 'walk' && info.mode !== 'pano')) return null;
+    if (has(info.key)) return info.key;
+    if (has(ANALOG[info.key])) return ANALOG[info.key];
+    if (info.floor === 'outside') return has('street') ? 'street' : (has('living') ? 'living' : null);
+    let best = null, bd = Infinity;
+    for (const n of (t.panoNodes || [])) {
+      if (!n || !n.p || n.floor !== info.floor || !has(n.id)) continue;
+      const d = Math.hypot(n.p.x - info.x, n.p.z - info.z); if (d < bd) { bd = d; best = n.id; }
+    }
+    return best || (has('living') ? 'living' : null);
+  }
+  let saved = null; // V9: what the tour was doing when the viewer opened (tests compare it after closing)
   async function open(o = {}) {
     stats.opens++;
+    const t0 = tour();
+    try { saved = t0 && t0.mode ? { mode: t0.mode, x: t0.player && t0.player.state.x, z: t0.player && t0.player.state.z, yaw: t0.player && t0.player.state.yaw, node: t0.pano && t0.pano.node && t0.pano.node.id, pyaw: t0.pano && t0.pano.yaw } : null; } catch (_) { saved = null; }
+    try { if (t0 && t0.dpad && t0.dpad.release) t0.dpad.release(); } catch (_) {} // a held arrow must not keep walking underneath
+    try { if (document.pointerLockElement) document.exitPointerLock(); } catch (_) {}
     st.open = true; root.classList.add('show'); document.body.classList.add('gallery-open');
     try { xBtn.focus({ preventScroll: true }); } catch (_) {}
     if (!st.raf) { st.lastT = 0; st.raf = requestAnimationFrame(loop); }
@@ -377,30 +492,51 @@ export function installGallery(opts = {}) {
     try { m = await loadManifest(); } catch (e) { console.warn('[gallery] manifest', e); setMsg(S.none); return api; }
     if (!st.open) return api;
     setMsg('');
-    const t = tour();
-    const want = o.style || st.style || curTourStyle() || (m.styles && m.styles[0] && m.styles[0].id);
+    // V9: the style applied in the tour first (then the last one browsed), the room the visitor is in
+    const want = o.style || curTourStyle() || st.style || (m.styles && m.styles[0] && m.styles[0].id);
     const style = (m.styles || []).some((s) => s.id === want) ? want : (m.styles[0] && m.styles[0].id);
-    let room = o.room || st.room;
-    if (!room) { try { const n = t && t.mode === 'pano' && t.pano && t.pano.node; if (n && item(style, n.id)) room = n.id; } catch (_) {} }
+    const here = o.room ? null : hereRoom(style);
+    let room = o.room || here || st.room;
     if (!room) room = m.defaultRoom || 'living';
+    st.openedAt = room;
+    // V9: the visitor's room has no render of its own → the nearest one is shown, with a one-line note
+    let near = false;
+    if (here) { try { const inf = tour().roomInfo(); near = inf.key !== here && !(inf.floor === 'outside' && here === 'street'); } catch (_) { near = false; } }
+    st.openedNear = near;
     await select(style, room);
+    if (near && st.open) toast(S.nearNote);
     return api;
   }
   function close() {
     if (!st.open) return;
     st.open = false; root.classList.remove('show'); document.body.classList.remove('gallery-open');
     if (st.raf) cancelAnimationFrame(st.raf); st.raf = 0;
-    ptrs.clear(); st.drag = false;
+    ptrs.clear(); st.drag = false; swipe = null;
+    try { if (root.contains(document.activeElement)) document.activeElement.blur(); } catch (_) {}
   }
   xBtn.addEventListener('click', (e) => { e.stopPropagation(); close(); });
-  window.addEventListener('keydown', (e) => { if (st.open && e.key === 'Escape') { e.stopPropagation(); close(); } }, true);
+  prevBtn.addEventListener('click', (e) => { e.stopPropagation(); stepRoom(-1); });
+  nextBtn.addEventListener('click', (e) => { e.stopPropagation(); stepRoom(1); });
+  window.addEventListener('keydown', (e) => {
+    if (!st.open) return;
+    if (e.key === 'Escape') { e.stopPropagation(); close(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.stopPropagation(); const rtl = (document.documentElement.dir || 'rtl') === 'rtl'; stepRoom((e.key === 'ArrowLeft') === rtl ? 1 : -1); }
+  }, true);
+  // V9: "✓ החל סגנון זה בסיור" → the style is applied to the live tour and the viewer closes: the tour is exactly where
+  // it was (mode, position, heading — it was only paused underneath)
   applyBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     const t = tour(); if (!t || !t.styles || !t.styles.ready) { toast(S.applyWait); return; }
-    applyBtn.disabled = true; applyBtn.textContent = S.applying;
-    Promise.resolve().then(() => t.styles.set(st.style)).then(() => { toast(S.applied); try { t.styleUI && t.styleUI.render && t.styleUI.render(); } catch (_) {} },
-      (err) => { console.warn('[gallery] apply', err); toast(S.applyFail); })
-      .finally(() => { applyBtn.textContent = S.apply; renderChips(); });
+    if (applyBusy) return;
+    const id = st.style, sd = st.manifest && (st.manifest.styles || []).find((x) => x.id === id);
+    applyBusy = true; applyBtn.disabled = true; applyBtn.textContent = S.applying;
+    Promise.resolve().then(() => t.styles.set(id)).then(() => {
+      applyBusy = false; stats.applied = (stats.applied || 0) + 1;
+      close();
+      try { t.styleUI && t.styleUI.render && t.styleUI.render(); } catch (_) {}
+      try { if (t.toast) t.toast(S.applied + (sd ? ' · ' + (sd.he || nameOf(sd)) : ''), 2600); } catch (_) {}
+    }, (err) => { applyBusy = false; console.warn('[gallery] apply', err); toast(S.applyFail); })
+      .finally(() => { applyBusy = false; applyBtn.textContent = S.apply; renderChips(); });
   });
 
   /* ---------- entry buttons */
@@ -418,6 +554,141 @@ export function installGallery(opts = {}) {
   }
   const card = document.querySelector('#loader .card');
   if (card && !document.querySelector('#loader .gv-loadbtn')) { const b = mk('btnGalleryLoader', 'gv-loadbtn', '', S.btnTitle); b.textContent = '🖼 ' + S.loaderBtn; card.appendChild(b); }
+  /* ---------- V9: floating "🖼 הדמיות" + "🎨 סגנון" (walk, 360, dollhouse, plan) */
+  function installFab() {
+    if (document.getElementById('quickFab')) return null;
+    const box = document.createElement('div'); box.id = 'quickFab'; box.className = 'qf-off';
+    box.innerHTML = '<div class="qf-tip" role="status"></div>'
+      + '<button id="btnRendersFab" type="button" aria-haspopup="dialog"><span class="qf-ico" aria-hidden="true">🖼</span><span class="qf-lbl"></span></button>'
+      + '<button id="btnStyleFab" type="button" aria-haspopup="dialog"><span class="qf-ico" aria-hidden="true">🎨</span><span class="qf-lbl"></span></button>';
+    document.body.appendChild(box);
+    const tip = box.querySelector('.qf-tip'), bR = box.querySelector('#btnRendersFab'), bS = box.querySelector('#btnStyleFab');
+    tip.textContent = S.tip; bR.querySelector('.qf-lbl').textContent = S.btn; bR.title = S.fabTitle;
+    bS.querySelector('.qf-lbl').textContent = S.styleFab; bS.title = S.styleFabTitle;
+    const fs = { pulsed: false, tipT: 0, layout: '' };
+    const stopTip = () => { box.classList.remove('qf-tipon'); document.body.classList.remove('qf-tipping'); bR.classList.remove('qf-pulse'); clearTimeout(fs.tipT); };
+    bR.addEventListener('click', (e) => { e.stopPropagation(); stopTip(); open(); });
+    tip.addEventListener('click', (e) => { e.stopPropagation(); stopTip(); open(); });
+    // 🎨 → the style picker sheet (the V3 panel). Its outside-tap handler closes it on pointerdown, so remember whether it
+    // was open before that (window capture runs first) to make the chip a toggle.
+    let wasOpen = false;
+    window.addEventListener('pointerdown', (e) => { if (e.target instanceof Node && bS.contains(e.target)) { try { const u = tour() && tour().styleUI; wasOpen = !!(u && u.panel && u.panel.open); } catch (_) { wasOpen = false; } } }, true);
+    bS.addEventListener('click', (e) => {
+      e.stopPropagation(); stopTip();
+      const u = tour() && tour().styleUI; if (!u || !u.check || !u.check()) return;
+      if (wasOpen) { u.panel.hide(); wasOpen = false; return; }
+      u.render(); u.panel.show();
+    });
+    // placement: bottom-right thumb zone, above any visible bottom element it would overlap horizontally; if the column
+    // would reach the top controls it becomes a row, then moves left of the tools column, else it hides
+    const BOTTOM = ['btnAct', 'panoUI', 'floorChips', 'info', 'measureBar', 'dpad'];
+    const TOP = ['tools', 'topbar', 'leftStack'];
+    const shown = (el) => { if (!el) return null; const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity < 0.05) return null; const r = el.getBoundingClientRect(); return r.width && r.height ? r : null; };
+    const MODES = ['walk', 'pano', 'dollhouse', 'plan'];
+    function tourMode() { const t = tour(); try { return t ? t.mode : ''; } catch (_) { return ''; } }
+    function place() {
+      const body = document.body, intro = document.getElementById('intro');
+      const m = tourMode();
+      const hide = !MODES.includes(m) && !body.classList.contains('mode-transition') || body.classList.contains('loading') || body.classList.contains('tools-open')
+        || body.classList.contains('gallery-open') || (intro && intro.classList.contains('show'));
+      if (hide) { box.classList.add('qf-off'); body.classList.remove('qf-on'); stopTip(); fs.layout = 'off'; return; }
+      const hintEl = document.getElementById('hint');
+      if (box.classList.contains('qf-tipon') && hintEl && hintEl.classList.contains('show')) { // a new walk / 360 hint wins
+        // a room tip cut short this way is shown again once the hint has gone
+        if (tip.dataset.room && fs.lastRoomTip === tip.dataset.room && seenRooms.has(tip.dataset.room)) { seenRooms.delete(tip.dataset.room); fs.roomTips = Math.max(0, (fs.roomTips || 0) - 1); if (!fs.roomTips) fs.tipShown = Math.max(0, (fs.tipShown || 0) - 1); }
+        stopTip();
+      }
+      const vh = window.innerHeight, vw = window.innerWidth;
+      const toolsR = shown(document.getElementById('tools'));
+      const cands = [['col', 0], ['row', 0]];
+      if (toolsR) { const rx = Math.max(0, vw - toolsR.left + 8 - 16); cands.push(['col', rx], ['row', rx]); }
+      box.classList.remove('qf-off');
+      for (const [lay, rx] of cands) {
+        box.classList.toggle('qf-row', lay === 'row');
+        box.style.right = rx ? `calc(${16 + rx}px + env(safe-area-inset-right,0px))` : '';
+        box.style.bottom = '';
+        const fr = box.getBoundingClientRect();
+        let need = vh - fr.bottom; // CSS base (16 px + safe area)
+        for (const id of BOTTOM) {
+          const r = shown(document.getElementById(id)); if (!r) continue;
+          if (r.right <= fr.left - 4 || r.left >= fr.right + 4 || r.top >= vh - 1) continue;
+          need = Math.max(need, vh - r.top + 10);
+        }
+        let topLim = 4;
+        for (const id of TOP) {
+          const r = shown(document.getElementById(id)); if (!r) continue;
+          if (r.right <= fr.left - 4 || r.left >= fr.right + 4) continue;
+          topLim = Math.max(topLim, r.bottom + 8);
+        }
+        const top = vh - need - fr.height;
+        if (top >= topLim && fr.left >= 4) {
+          box.style.bottom = Math.round(need) + 'px';
+          body.classList.add('qf-on'); body.style.setProperty('--qf-w', Math.round(fr.width + rx) + 'px');
+          box.classList.toggle('qf-tipside', vh < 560 || top - topLim < 64);
+          fs.layout = lay + (rx ? '@' + Math.round(rx) : '') + ' b' + Math.round(need);
+          maybeTip();
+          return;
+        }
+      }
+      box.classList.add('qf-off'); body.classList.remove('qf-on'); box.style.right = ''; box.style.bottom = ''; fs.layout = 'off(no room)';
+    }
+    // first-time discoverability: a pulse + "ראו הדמיות של כל סגנון שיפוץ" once the tour has started (in memory only:
+    // a refresh is a full reset, V8)
+    function maybeTip() {
+      if (fs.pulsed || !MODES.includes(tourMode())) return;
+      fs.pulsed = true;
+      let tries = 0;
+      const go = () => {
+        if (box.classList.contains('qf-off')) { fs.pulsed = false; return; }
+        if (fs.roomTips) return; // a room tip (below) already did the job
+        // not on top of a walk / 360 hint that is still showing (it fades after ~5 s)
+        const h = document.getElementById('hint'); if (h && h.classList.contains('show') && ++tries < 24) { setTimeout(go, 500); return; }
+        // starting in a room that has renders → the room tip is the first-time tip
+        if (roomTip()) return;
+        tip.textContent = S.tip; delete tip.dataset.room;
+        bR.classList.add('qf-pulse'); box.classList.add('qf-tipon'); document.body.classList.add('qf-tipping'); fs.tipShown = (fs.tipShown || 0) + 1;
+        fs.tipT = setTimeout(stopTip, 9000);
+      };
+      setTimeout(go, 900);
+    }
+    // V9: the first time (per page load) the visitor is in a room that has renders, a subtle 3-second bubble
+    // "יש הדמיות לחדר הזה · 🖼" above the button; tapping it opens the viewer at that room
+    const seenRooms = new Set();
+    function curRenderedRoom() {
+      const t = tour(); if (!t || !t.roomInfo || !st.manifest) return null;
+      let info = null; try { info = t.roomInfo(); } catch (_) { return null; }
+      if (!info || (info.mode !== 'walk' && info.mode !== 'pano') || !info.key) return null;
+      const sty = curTourStyle() || st.style || (st.manifest.styles && st.manifest.styles[0] && st.manifest.styles[0].id);
+      return item(sty, info.key) ? info.key : null;
+    }
+    function roomTip() {
+      if (box.classList.contains('qf-off') || body().classList.contains('gallery-open')) return false;
+      const h = document.getElementById('hint'); if (h && h.classList.contains('show')) return false; // after the walk / 360 hint
+      const k = curRenderedRoom(); if (!k || seenRooms.has(k)) return false;
+      seenRooms.add(k);
+      clearTimeout(fs.tipT);
+      tip.textContent = S.roomTip; tip.dataset.room = k;
+      box.classList.add('qf-tipon'); document.body.classList.add('qf-tipping');
+      if (!fs.roomTips) { bR.classList.add('qf-pulse'); fs.tipShown = (fs.tipShown || 0) + 1; fs.pulsed = true; }
+      fs.roomTips = (fs.roomTips || 0) + 1; fs.lastRoomTip = k;
+      fs.tipT = setTimeout(stopTip, 3000);
+      return true;
+    }
+    const body = () => document.body;
+    setInterval(() => { try { if (fs.pulsed) roomTip(); } catch (e) { /* tour not ready */ } }, 600);
+    let raf = 0; const sched = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; try { place(); } catch (e) { console.warn('[gallery] fab', e); } }); };
+    window.addEventListener('resize', sched); window.addEventListener('orientationchange', sched);
+    try {
+      new MutationObserver(sched).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      for (const id of ['intro', 'hint']) { const it = document.getElementById(id); if (it) new MutationObserver(sched).observe(it, { attributes: true, attributeFilter: ['class'] }); }
+      if (window.ResizeObserver) { const ro = new ResizeObserver(sched); for (const id of BOTTOM.concat(TOP)) { const e = document.getElementById(id); if (e) ro.observe(e); } }
+    } catch (_) {}
+    setInterval(sched, 1000); // cheap safety net (mode getters, late-built panels)
+    sched();
+    const showTip = (ms = 9000) => { clearTimeout(fs.tipT); tip.textContent = S.tip; delete tip.dataset.room; bR.classList.add('qf-pulse'); box.classList.add('qf-tipon'); document.body.classList.add('qf-tipping'); fs.tipT = setTimeout(stopTip, ms); }; // tests / screenshots
+    return { place, stopTip, showTip, roomTip, get layout() { return fs.layout; }, get tipShown() { return fs.tipShown || 0; }, get roomTips() { return fs.roomTips || 0; }, get lastRoomTip() { return fs.lastRoomTip || ''; }, get seenRooms() { return [...seenRooms]; }, el: box };
+  }
+  const fab = installFab();
   // warm the manifest in idle time so the first open is instant
   try { (window.requestIdleCallback || ((f) => setTimeout(f, 1500)))(() => loadManifest().catch(() => {})); } catch (_) {}
 
@@ -428,6 +699,7 @@ export function installGallery(opts = {}) {
     get view() { return { yaw: st.yaw, pitch: st.pitch, fov: st.fov }; },
     setView(yaw, pitch, fov) { if (isFinite(yaw)) st.yaw = yaw; if (isFinite(pitch)) st.pitch = clamp(pitch, -1.45, 1.45); if (isFinite(fov)) st.fov = st.fovT = clamp(fov, FOV_MIN, FOV_MAX); st.dirty = true; },
     root, STRINGS: GALLERY_STRINGS,
+    get openedAt() { return st.openedAt; }, get openedNear() { return !!st.openedNear; }, get saved() { return saved; }, hereRoom: (s) => hereRoom(s || curTourStyle() || st.style), stepRoom, fab,
   };
   G = api;
   try { window.__gallery = api; } catch (_) {}
