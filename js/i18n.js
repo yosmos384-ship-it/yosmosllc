@@ -42,6 +42,7 @@ export const DICT = {
   'כניסה לסיור': ['Enter the tour', 'Entrar al recorrido'],
   '3351 Eakin Rd — כניסה לסיור': ['3351 Eakin Rd — enter the tour', '3351 Eakin Rd — entrar al recorrido'],
   'גרסה 9': ['Version 9', 'Versión 9'],
+  'גרסה 10': ['Version 10', 'Versión 10'],
   'שפה': ['Language', 'Idioma'],
   'בחירת שפה': ['Choose language', 'Elegir idioma'],
   'חלק מהרכיבים לא נטענו': ['Some components did not load', 'Algunos componentes no se cargaron'],
@@ -120,6 +121,36 @@ export const DICT = {
   'ניווט בלחיצות': ['Click navigation', 'Navegación con clics'],
   'ניווט חופשי: נעילת עכבר + WASD (N)': ['Free navigation: mouse lock + WASD (N)', 'Navegación libre: bloqueo del ratón + WASD (N)'],
   'חופשי (WASD)': ['Free (WASD)', 'Libre (WASD)'],
+
+  // ---- V10 CORE: room picker, worlds (limo / casino), limo parking spot
+  'בחירת חדר': ['Choose a room', 'Elegir estancia'],
+  'עולמות': ['Worlds', 'Mundos'], 'עולם': ['World', 'Mundo'],
+  'הקישו על חדר — הולכים אליו': ['Tap a room — walk there', 'Toca una estancia — camina hasta allí'],
+  'הולכים אל {0}': ['Walking to {0}', 'Caminando a {0}'],
+  'הגעתם: {0}': ['You are in: {0}', 'Llegaste: {0}'],
+  'ההליכה בוטלה': ['Walk cancelled', 'Caminata cancelada'],
+  '🚘 לימוזינה': ['🚘 Limousine', '🚘 Limusina'],
+  'לימוזינה': ['Limousine', 'Limusina'],
+  '🚘 עלה ללימוזינה': ['🚘 Get in the limousine', '🚘 Subir a la limusina'],
+  'עלה ללימוזינה': ['Get in the limousine', 'Subir a la limusina'],
+  'הלימוזינה מחכה · הקישו על הדלת או על 🚘 כדי לעלות': ['The limousine is waiting · tap the door or 🚘 to get in', 'La limusina te espera · toca la puerta o 🚘 para subir'],
+  'הלימוזינה מחכה ליד המדרכה': ['The limousine is waiting at the curb', 'La limusina espera junto a la acera'],
+  'קזינו': ['Casino', 'Casino'],
+  '⟵ חזרה הביתה': ['⟵ Back home', '⟵ Volver a casa'],
+  'חזרה הביתה': ['Back home', 'Volver a casa'],
+  '🏠 הביתה': ['🏠 Home', '🏠 Casa'],
+  'הביתה': ['Home', 'Casa'],
+  'בקרוב': ['Coming soon', 'Próximamente'],
+  '🚧 בקרוב': ['🚧 Coming soon', '🚧 Próximamente'],
+  'טוען {0}…': ['Loading {0}…', 'Cargando {0}…'],
+  'טוען עולם…': ['Loading…', 'Cargando…'],
+  'הטעינה נכשלה — חוזרים': ['Loading failed — going back', 'Falló la carga — regresando'],
+  'זמין רק בבית': ['Available only at the house', 'Disponible solo en la casa'],
+  'עולם בדיקה': ['Test world', 'Mundo de prueba'],
+  'חדר בדיקה א׳': ['Test room A', 'Sala de prueba A'],
+  'חדר בדיקה ב׳': ['Test room B', 'Sala de prueba B'],
+  'עמוד בדיקה': ['Test pillar', 'Pilar de prueba'],
+  'עבור לחדר הזה בהליכה': ['Walk to this room', 'Caminar a esta estancia'],
 
   // ---- minimap / floors / rooms
   'מפה — איפה אנחנו': ['Map — where we are', 'Mapa — dónde estamos'],
@@ -342,6 +373,7 @@ export const HELP = {
     <ul>
       <li><b>360° tour</b> — stand at fixed spots, drag to look, arrows on the floor move between spots, download a panorama.</li>
       <li><b>✨ Photoreal render</b> (in 360° mode) — a path-traced render of the whole surroundings; look around in the result and download a PNG. <b>📷 Render the current view</b> — a high-resolution image of what you see.</li>
+      <li><b>Room bar</b> (bottom of the screen while walking) — tap a room and you walk there on your own (doors open, stairs included); tap it again or move to stop. <b>🚘 Limousine</b> takes you to the limousine waiting at the curb — tap its door to get in; <b>⟵ Back home</b> returns to the house.</li>
       <li><b>🖼 Renders</b> (the yellow button in the corner, in every mode) — ready-made 360° renders of every renovation style; they open in the room you are in and in the current style. Swipe sideways or use ‹ › for another room; "✓ Apply this style in the tour" switches the style and returns you to exactly the same spot.</li>
       <li><b>Scan / dollhouse</b> — a rotating "dollhouse" view; filter by floor; double-click a floor to go in.</li>
       <li><b>Floor plan</b> — a top view; drag to pan, wheel to zoom, tap a room to enter it.</li>
@@ -377,6 +409,7 @@ export const HELP = {
     <ul>
       <li><b>Recorrido 360°</b> — puntos fijos, arrastra para mirar, flechas en el piso para pasar de un punto a otro, descarga de panorámica.</li>
       <li><b>✨ Render fotorrealista</b> (en modo 360°) — render con trazado de rayos de todo el entorno; puedes mirar alrededor y descargar un PNG. <b>📷 Render de la vista actual</b> — imagen en alta resolución de lo que ves.</li>
+      <li><b>Barra de estancias</b> (abajo, al caminar) — toca una estancia y caminas hasta allí solo (las puertas se abren, escaleras incluidas); tócala de nuevo o muévete para parar. <b>🚘 Limusina</b> te lleva a la limusina que espera junto a la acera — toca su puerta para subir; <b>⟵ Volver a casa</b> regresa a la casa.</li>
       <li><b>🖼 Renders</b> (el botón amarillo de la esquina, en todos los modos) — renders 360° listos de todos los estilos de remodelación; se abren en la estancia donde estás y en el estilo actual. Desliza de lado o usa ‹ › para otra estancia; "✓ Aplicar este estilo en el recorrido" cambia el estilo y te devuelve exactamente al mismo punto.</li>
       <li><b>Escaneo / casa de muñecas</b> — vista giratoria tipo maqueta; filtro por planta; doble clic en un piso para entrar.</li>
       <li><b>Plano de planta</b> — vista desde arriba; arrastra para desplazar, rueda para zoom, toca una habitación para entrar.</li>
@@ -407,7 +440,7 @@ export const KEYED = {
 };
 
 /* ============================================================================================ engine */
-const st = { lang: 'he', started: false, observer: null, subs: new Set(), missing: new Set(), extra: new Map(), patterns: null };
+const st = { lang: 'he', started: false, observer: null, subs: new Set(), missing: new Set(), extra: new Map(), patterns: null, gen: 0 };
 const srcText = new WeakMap(); // Text node → { src, out }
 const srcAttr = new WeakMap(); // Element → { [attr]: { src, out } }
 const ATTRS = ['title', 'aria-label', 'placeholder', 'alt'];
@@ -425,6 +458,25 @@ export function registerTable(he, en, es) {
     if (typeof a === 'string') register(a, typeof b === 'string' ? b : '', typeof c === 'string' ? c : '');
     else if (a && typeof a === 'object') registerTable(a, b, c);
   }
+}
+
+// V10: other modules (limo / casino worlds) bring their own dictionaries and merge them here:
+//   extend({ he: {key: 'עברית', …}, en: {key: 'English', …}, es: {key: 'Español', …} })   (parallel tables, nested ok)
+//   extend({ 'עברית {0}': ['English {0}', 'Español {0}'], … })                            (he → [en, es] pairs)
+// Hebrew keys already in DICT keep the DICT text. Text already on screen is re-translated (and canvas listeners
+// are notified) so a dictionary loaded late still applies.
+export function extend(tables) {
+  if (!tables || typeof tables !== 'object') return 0;
+  const before = st.extra.size;
+  if (tables.he && typeof tables.he === 'object' && !Array.isArray(tables.he)) registerTable(tables.he, tables.en, tables.es);
+  else for (const k of Object.keys(tables)) { const v = tables[k]; if (Array.isArray(v)) register(k, v[0], v[1]); }
+  st.patterns = null; st.gen++;
+  for (const k of [...st.missing]) if (DICT[k] || st.extra.has(k)) st.missing.delete(k);
+  if (typeof document !== 'undefined' && st.started && st.lang !== 'he') {
+    translateDom(document.body);
+    for (const f of st.subs) { try { f(st.lang); } catch (e) { console.warn('[i18n] listener', e); } }
+  }
+  return st.extra.size - before;
 }
 
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -502,7 +554,7 @@ function skipped(el) {
 function doText(n) {
   const cur = n.data, p = n.parentElement;
   let rec = srcText.get(n);
-  if (rec && cur === rec.out && rec.lang === st.lang) return; // up to date
+  if (rec && cur === rec.out && rec.lang === st.lang && rec.gen === st.gen) return; // up to date
   const keyed = !!(p && p.hasAttribute('data-i18n'));
   if (!rec || (cur !== rec.out && cur !== rec.src)) { // new content written by the page
     if (!HEB.test(cur) && !keyed) { if (rec) srcText.delete(n); return; }
@@ -513,21 +565,21 @@ function doText(n) {
   const key = keyed ? p.getAttribute('data-i18n') : '';
   if (key && KEYED[key]) out = KEYED[key][st.lang] != null ? KEYED[key][st.lang] : rec.src;
   else out = st.lang === 'he' ? rec.src : keepSpace(rec.src, (x) => tr(x));
-  rec.out = out; rec.lang = st.lang;
+  rec.out = out; rec.lang = st.lang; rec.gen = st.gen;
   if (n.data !== out) n.data = out;
 }
 function keepSpace(s, f) { const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(s); return m[1] + f(m[2]) + m[3]; }
 function doAttr(el, a) {
   const cur = el.getAttribute(a); if (cur == null) return;
   let recs = srcAttr.get(el); let rec = recs && recs[a];
-  if (rec && cur === rec.out && rec.lang === st.lang) return;
+  if (rec && cur === rec.out && rec.lang === st.lang && rec.gen === st.gen) return;
   if (!rec || (cur !== rec.out && cur !== rec.src)) {
     if (!HEB.test(cur)) { if (rec) delete recs[a]; return; }
     if (!recs) { recs = {}; srcAttr.set(el, recs); }
     rec = recs[a] = { src: cur, out: cur, lang: 'he' };
   }
   const out = st.lang === 'he' ? rec.src : tr(rec.src);
-  rec.out = out; rec.lang = st.lang;
+  rec.out = out; rec.lang = st.lang; rec.gen = st.gen;
   if (cur !== out) el.setAttribute(a, out);
 }
 function walk(root) {
@@ -643,7 +695,7 @@ export function initI18n() {
   return api;
 }
 export const api = {
-  LANGS, DICT, HELP, t, tr, setLang, getLang, onLangChange, register, registerTable, mountSwitcher, translateDom, initI18n,
+  LANGS, DICT, HELP, t, tr, setLang, getLang, onLangChange, register, registerTable, extend, mountSwitcher, translateDom, initI18n,
   get lang() { return st.lang; }, get missing() { return [...st.missing]; }, clearMissing() { st.missing.clear(); },
   get size() { return Object.keys(DICT).length + st.extra.size; },
 };

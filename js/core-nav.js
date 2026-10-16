@@ -251,7 +251,7 @@ export function createFloorCursor(scene) {
 // heading whose view cone (current horizontal FOV) covers the largest floor area (Σ d²). Candidate standing points for
 // a room: centre, 4 inset corners, 4 inset wall midpoints — corners looking across the diagonal usually win.
 // Camera-yaw convention (core): look direction = (−sin yaw, 0, −cos yaw).
-export function createFramer({ world, plan }) {
+export function createFramer({ world, plan, isHome }) {
   const RAYS = 72, near = [], ray = new THREE.Ray(), hit = new THREE.Vector3(), box = new THREE.Box3();
   const TAU = Math.PI * 2;
   function floorKey(x, feet, z) {
@@ -263,6 +263,7 @@ export function createFramer({ world, plan }) {
   }
   // smallest plan room containing the point → {key, r:[x0,z0,x1,z1], he, floor} | null (outside)
   function roomRect(x, feet, z) {
+    if (isHome && !isHome()) return null; // V10: the plan rooms only exist in the 'home' world
     const fl = floorKey(x, feet, z); if (fl === 'outside') return null;
     const rs = (plan.rooms && plan.rooms[fl]) || {};
     let best = null, ba = Infinity;
@@ -373,7 +374,8 @@ export function createNav(env) {
   let lastClick = null, lastPairT = -1e9, hoverItem = null, lastMode = '', touchHinted = false;
   let glide = null;
   let settle = null; // V3: after an arrow glide into a room, ease the heading to the framed view
-  const framer = createFramer({ world, plan });
+  const framer = createFramer({ world, plan, isHome: env.isHome });
+  let homeGraph = null; // V10: the house graph (other worlds swap in their own via setGraph)
   let navD = 2.4;
   const arrowState = { x: 1e9, z: 1e9, feet: 1e9, t: -1e9, force: true };
   let time = 0;
@@ -386,7 +388,8 @@ export function createNav(env) {
   function build() {
     const t0 = performance.now();
     const panos = (env.getPanoNodes ? env.getPanoNodes() : []).map((n) => ({ id: n.id, he: n.he, p: { x: n.p.x, y: n.p.y, z: n.p.z }, floor: n.floor }));
-    graph = buildNavGraph(plan, { world, house: env.ctx && env.ctx.house, panos });
+    graph = buildNavGraph(plan, { world, house: env.ctx && env.ctx.house, panos, extra: env.getExtraNodes ? env.getExtraNodes() : [] });
+    homeGraph = graph;
     buildInfo = Object.assign(graph.stats(), { ms: Math.round(performance.now() - t0) });
     if (buildInfo.warnings.length) console.info('[nav] graph warnings', buildInfo.warnings);
     arrowState.force = true;
@@ -489,7 +492,10 @@ export function createNav(env) {
     const suffix = new Array(route.length).fill(0);
     for (let i = route.length - 2; i >= 0; i--) suffix[i] = suffix[i + 1] + Math.hypot(route[i + 1].x - route[i].x, route[i + 1].z - route[i].z);
     const s = player.state;
-    glide = { pts: route, suffix, i: 1, t: 0, chkT: 0, chkX: s.x, chkZ: s.z, stuck: 0, wait: false, manualT: 0, checked: {}, limit: 6 + suffix[0] * 3.2, label: opts.label || '', keepYaw: !!opts.keepYaw, frame: !!opts.frame };
+    const prev = glide;
+    glide = { pts: route, suffix, i: 1, t: 0, chkT: 0, chkX: s.x, chkZ: s.z, stuck: 0, wait: false, manualT: 0, checked: {}, limit: 8 + suffix[0] * 3.2, label: opts.label || '', keepYaw: !!opts.keepYaw, frame: !!opts.frame,
+      key: opts.key != null ? opts.key : null, arriveYaw: isFinite(opts.arriveYaw) ? opts.arriveYaw : null, level: !!opts.level, onArrive: opts.onArrive || null, onEnd: opts.onEnd || null }; // V10 picker walks
+    if (prev && prev.onEnd) { try { prev.onEnd(false, prev); } catch (_) {} }
     settle = null;
     const end = route[route.length - 1];
     cursor.show(new THREE.Vector3(end.x, groundY(end.x, end.z, end.y), end.z), UPV, 'target');
@@ -501,18 +507,22 @@ export function createNav(env) {
     const g = glide;
     glide = null; cursor.hide(); arrowState.force = true;
     if (msg) toast(msg);
-    if (arrived && g.frame) {
+    if (arrived && g.arriveYaw != null) { // V10: the room picker frames the room with its (framed) 360 heading
+      if (angDiff(g.arriveYaw, player.state.yaw) > 0.05) settle = { yaw: g.arriveYaw, t: 2.4, pitch: -0.06 };
+    } else if (arrived && g.frame) {
       try {
         const s = player.state, f = framer.frameYaw({ x: s.x, feet: s.feet, z: s.z }, { prefYaw: s.yaw, prefWeight: 0.3, vfov: camera.fov, aspect: camera.aspect });
         if (f.rect && angDiff(f.yaw, s.yaw) > 0.12) settle = { yaw: f.yaw, t: 1.8 };
       } catch (_) { settle = null; }
     }
+    if (arrived && g.onArrive) { try { g.onArrive(g); } catch (_) {} }
+    if (g.onEnd) { try { g.onEnd(!!arrived, g); } catch (_) {} }
   }
   // called by core before player.update() in walk mode; may add {moveX, moveZ, yawTo, yawRate} to the input
   function walkInput(dt, inp) {
     if (!glide && settle) {
       if (getMode() !== 'walk' || Math.abs(inp.forward || 0) > 0.1 || Math.abs(inp.strafe || 0) > 0.1 || Math.abs(inp.lookX || 0) + Math.abs(inp.lookY || 0) > 1e-5) settle = null;
-      else { inp.yawTo = settle.yaw; inp.yawRate = 2.6; settle.t -= dt; if (settle.t <= 0 || angDiff(player.state.yaw, settle.yaw) < 0.01) settle = null; }
+      else { inp.yawTo = settle.yaw; inp.yawRate = 2.6; if (settle.pitch != null) inp.yawMax = 1.7; if (settle.pitch != null) { inp.pitchTo = settle.pitch; inp.pitchRate = 2; } settle.t -= dt; if (settle.t <= 0 || angDiff(player.state.yaw, settle.yaw) < 0.01) settle = null; }
     }
     if (!glide) return;
     if (getMode() !== 'walk') { stopGlide(); return; }
@@ -562,9 +572,17 @@ export function createNav(env) {
     }
     const remaining = d + glide.suffix[glide.i];
     const vmax = GLIDE_V * (inp.run ? 1.5 : 1); // V7: ~1.0 m/s (was 1.6, Shift ×1.7)
-    const v = Math.min(vmax, 0.22 + remaining * 1.0);
+    let v = Math.min(vmax, 0.22 + remaining * 1.0);
+    if (glide.level && !glide.keepYaw && glide.manualT <= 0) { // V10: turn first, then walk (slow down while the heading is far off)
+      const off = angDiff(player.state.yaw, Math.atan2(-dx, -dz));
+      v *= 0.12 + 0.88 * Math.max(0, Math.cos(Math.min(Math.PI / 2, off * 1.15)));
+    }
     inp.moveX = dx * v; inp.moveZ = dz * v;
-    if (glide.manualT <= 0 && !glide.keepYaw) { inp.yawTo = Math.atan2(-dx, -dz); inp.yawRate = 2.4; }
+    if (glide.manualT <= 0 && !glide.keepYaw) { inp.yawTo = Math.atan2(-dx, -dz); inp.yawRate = 2.4; if (glide.level) inp.yawMax = 1.7; }
+    if (glide.manualT <= 0 && glide.level) { // V10: look ahead naturally — level on the flat, along the flight on stairs
+      const dy = p.y - s.feet, run = Math.max(0.4, d);
+      inp.pitchTo = Math.abs(dy) > 0.2 ? clamp(Math.atan2(dy, run) * 0.6, -0.32, 0.22) : -0.05; inp.pitchRate = 1.6;
+    }
     // progress / stuck detection
     glide.chkT += dt;
     if (glide.chkT > 0.7) {
@@ -676,6 +694,32 @@ export function createNav(env) {
     const dist = Math.min(len, free - 0.05);
     if (dist < 0.12) return false;
     return startGlide([{ ...h0, door: null }, { x: h0.x + dx * dist, y: h0.y, z: h0.z + dz * dist, door: null }], { keepYaw: true });
+  }
+
+  /* ---------------- V10: walk to a destination (room picker) */
+  // to = {x, y (feet), z}; o = {key, label, arriveYaw, onArrive, onEnd}. Natural walk along the graph (~1 m/s), doors
+  // opened on the way, stairs; the heading follows the path, then turns to arriveYaw (the room's framed view).
+  function walkTo(to, o = {}) {
+    if (!graph || getMode() !== 'walk' || !to) return false;
+    const h0 = here();
+    if (Math.hypot(to.x - h0.x, to.z - h0.z) < 0.25 && Math.abs(to.y - h0.y) < 0.3) {
+      stopGlide();
+      if (isFinite(o.arriveYaw)) settle = { yaw: o.arriveYaw, t: 2.4, pitch: -0.06 };
+      if (o.onArrive) { try { o.onArrive(null); } catch (_) {} }
+      if (o.onEnd) { try { o.onEnd(true, null); } catch (_) {} }
+      return true;
+    }
+    const route = planRoute(h0, to);
+    if (!route) { toast('אין דרך להגיע לנקודה הזו'); return false; }
+    return startGlide(route, { key: o.key, label: o.label, arriveYaw: o.arriveYaw, level: true, frame: !isFinite(o.arriveYaw), onArrive: o.onArrive, onEnd: o.onEnd });
+  }
+  // V10 worlds: another world brings its own graph (null = back to the house graph)
+  function setGraph(g) {
+    stopGlide(); settle = null;
+    graph = g || homeGraph;
+    walkLen = -1; walkArrowList = []; arrows.clear(); setHoverItem(null); cursor.hide();
+    arrowState.force = true;
+    return graph;
   }
 
   /* ---------------- double-click / double-tap */
@@ -893,6 +937,7 @@ export function createNav(env) {
     build, walkInput, update, onClick, onDblClick, dragLook, hoverNdc, walkHint, setClickMode, step, framer,
     get settling() { return !!settle; },
     surfaceAt, groundY, panoArrowList, panoRoute, panoInDirection, startGlide, stopGlide, planRoute, walkDouble,
+    walkTo, setGraph, get homeGraph() { return homeGraph; }, get glideKey() { return glide ? glide.key : null; }, // V10
     get graph() { return graph; }, get ready() { return !!graph; }, get clickMode() { return clickMode; }, get gliding() { return !!glide; },
     get arrows() { return arrows; }, get cursor() { return cursor; }, get info() { return buildInfo; },
     // test / debug helpers

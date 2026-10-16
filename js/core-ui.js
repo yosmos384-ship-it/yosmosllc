@@ -34,10 +34,45 @@ export function createMinimap(canvas, plan) {
   }
   const ROOM_FILL = { main: 'rgba(120,200,255,0.10)', upper: 'rgba(170,150,255,0.12)', basement: 'rgba(200,190,170,0.10)' };
 
+  // V10 worlds: a world may bring its own simple map {rooms:[{he, r:[x0,z0,x1,z1]}], bounds?:[x0,z0,x1,z1]}
+  let worldSpec = null;
+  function drawWorld(args) {
+    const { x, z, yaw, roomName } = args, sp = worldSpec, rooms = Array.isArray(sp.rooms) ? sp.rooms.filter((r) => r && r.r) : [];
+    const compact = W < 120, pad = compact ? 5 : 8;
+    let b = Array.isArray(sp.bounds) ? sp.bounds : null;
+    if (!b) { b = [Infinity, Infinity, -Infinity, -Infinity]; for (const r of rooms) { b[0] = Math.min(b[0], r.r[0]); b[1] = Math.min(b[1], r.r[1]); b[2] = Math.max(b[2], r.r[2]); b[3] = Math.max(b[3], r.r[3]); } }
+    if (!isFinite(b[0])) b = [x - 5, z - 5, x + 5, z + 5];
+    const bw = Math.max(0.5, b[2] - b[0]), bd = Math.max(0.5, b[3] - b[1]);
+    const s = Math.min((W - 2 * pad) / bw, (H - 2 * pad) / bd), cx = (b[0] + b[2]) / 2, cz = (b[1] + b[3]) / 2;
+    const X = (wx) => (wx - cx) * s + W / 2, Y = (wz) => (wz - cz) * s + H / 2;
+    g.lineWidth = 1;
+    for (const r of rooms) {
+      const [x0, z0, x1, z1] = r.r, cur = r.he === roomName;
+      g.fillStyle = cur ? 'rgba(80,230,255,0.30)' : 'rgba(255,214,140,0.12)';
+      g.strokeStyle = cur ? 'rgba(120,240,255,0.95)' : 'rgba(255,255,255,0.5)';
+      g.fillRect(X(x0), Y(z0), (x1 - x0) * s, (z1 - z0) * s);
+      g.strokeRect(X(x0) + 0.5, Y(z0) + 0.5, (x1 - x0) * s - 1, (z1 - z0) * s - 1);
+    }
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    const fs = compact ? 7.5 : 9;
+    g.font = `600 ${fs}px system-ui, -apple-system, "Segoe UI", Arial, sans-serif`;
+    for (const r of rooms) {
+      const cur = r.he === roomName; if (compact && !cur) continue;
+      const w = (r.r[2] - r.r[0]) * s, txt = tr(r.he || ''); if (!txt || g.measureText(txt).width > w + 8) continue;
+      g.fillStyle = '#fff'; g.fillText(txt, X((r.r[0] + r.r[2]) / 2), Y((r.r[1] + r.r[3]) / 2));
+    }
+    const px = X(x), pz = Y(z), ang = Math.atan2(-Math.cos(yaw), -Math.sin(yaw)), R = compact ? Math.min(20, W * 0.3) : 34;
+    const grd = g.createRadialGradient(px, pz, 2, px, pz, R); grd.addColorStop(0, 'rgba(80,230,255,0.6)'); grd.addColorStop(1, 'rgba(80,230,255,0)');
+    g.fillStyle = grd; g.beginPath(); g.moveTo(px, pz); g.arc(px, pz, R, ang - 0.55, ang + 0.55); g.closePath(); g.fill();
+    g.fillStyle = '#4fe6ff'; g.strokeStyle = '#fff'; g.lineWidth = compact ? 1.5 : 2;
+    g.beginPath(); g.arc(clamp(px, 4, W - 4), clamp(pz, 4, H - 4), compact ? 3.2 : 4.5, 0, Math.PI * 2); g.fill(); g.stroke();
+  }
+  function setWorld(spec) { worldSpec = spec && Array.isArray(spec.rooms) ? spec : null; if (last) draw(last); }
   function draw(args) {
     last = args;
     const { x, z, yaw, floor, roomName } = args;
     if (!W) resize();
+    if (worldSpec) { g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H); drawWorld(args); return; }
     const compact = W < 120;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, W, H);
@@ -105,7 +140,7 @@ export function createMinimap(canvas, plan) {
     g.fillStyle = 'rgba(255,255,255,0.6)'; g.font = `600 ${compact ? 7 : 9}px system-ui, Arial`; g.textAlign = 'center';
     g.fillText(compact ? '↑' : 'N ↑', W - (compact ? 6 : 14), compact ? 7 : 10);
   }
-  return { draw, resize, setBig, get big() { return !!(card && card.classList.contains('big')); }, get size() { return { w: W, h: H }; } };
+  return { draw, resize, setBig, setWorld, get world() { return worldSpec; }, get big() { return !!(card && card.classList.contains('big')); }, get size() { return { w: W, h: H }; } };
 }
 
 export function toastFn(el) {

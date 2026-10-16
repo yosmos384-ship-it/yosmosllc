@@ -6,7 +6,7 @@ import { Sky } from 'three/addons/objects/Sky.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import plan from './plan.js';
 import { easings, createTweener, createAudio, scanSound, createParticles, createScanner, createMeasure } from './core-fx.js';
-import { createWorld, createPlayer } from './core-player.js';
+import { createWorld, createPlayer, createWorldSwitch } from './core-player.js'; // V10: per-world collision sets
 import { createPano } from './core-pano.js';
 import { createNav } from './core-nav.js'; // V2 nav: arrows, floor cursor, glide, double-click walk, click-navigation mode
 import { createMinimap, toastFn, FLOOR_HE, defaultFov, createZoom, createDpad, createRadioUI, createStyleUI, setupCompactUI, installGuards } from './core-ui.js'; // V3 UI
@@ -14,7 +14,11 @@ import { createRadio } from './radio-engine.js'; // V3 UI: shared 6-station radi
 import { createRender } from './core-render.js'; // V2: postFX, window lights, room reflection probes, mirrors
 import { createPathTrace } from './core-pathtrace.js'; // V2: "הדמיה מציאותית" (path-traced 360 / view, raster fallback)
 import { createStyles, STYLE_STRINGS } from './styles.js'; // V3 STYLE: 3 renovation options (window.__tour.styles / ctx.styles)
-import { onLangChange, register as i18nRegister, getLang } from './i18n.js'; // V7: languages (he / en / es)
+import { onLangChange, register as i18nRegister, getLang, t as i18nT, tr as i18nTr, extend as i18nExtend } from './i18n.js'; // V7: languages (he / en / es)
+import { createWorlds, HOME } from './worlds.js'; // V10: worlds (home / limo / casino …)
+import { createRoomPicker } from './core-picker.js'; // V10: room picker bar
+import { buildSimpleGraph } from './navgraph.js'; // V10: nav graphs for other worlds
+import { LIMO_SPOT, limoDoorWorld } from './exterior-limo.js'; // V10: limousine parking spot (home world)
 import { initTexCache, startTexUpgrades, texCacheStats } from './tex-cache.js'; // V6 PERF: IndexedDB texture cache + progressive textures
 
 const $ = (id) => document.getElementById(id);
@@ -22,7 +26,7 @@ const FLOOR_IDX = { basement: 0, main: 1, upper: 2, roof: 3 };
 const UP = new THREE.Vector3(0, 1, 0);
 const HOUSE_C = new THREE.Vector3(plan.W / 2, 1.0, plan.D / 2);
 // camera yaw convention (core): rotation.y; yaw 0 looks toward -z (toward the house from the street)
-const START = { p: [6.05, 1.6, 19.5], yaw: 0 };
+const START = { p: [6.05, 1.6, 17.3], yaw: 0 }; // V10: on the front walk just inside the curb (the limousine parks on the street at z ≈ 19–21)
 const MODULES = [
   { id: 'house', file: './house.js', he: 'מבנה הבית' },
   { id: 'interior', file: './interior.js', he: 'פנים, מטבח ורהיטים' },
@@ -210,7 +214,7 @@ export async function boot() {
     for (const b of document.querySelectorAll('[data-tod]')) b.classList.toggle('on', b.dataset.tod === name);
     const from = { ...todCur, sunC: todCur.sunC.clone(), hemiSky: todCur.hemiSky.clone(), hemiGround: todCur.hemiGround.clone(), fog: todCur.fog.clone() };
     todAnim = { from, to: TOD[name], t: instant ? 1.6 : 0, dur: 1.6, lastEnv: 0 };
-    for (const L of lamps) L.handle.set(name !== 'day');
+    for (const L of lamps) if (L.world === HOME) L.handle.set(name !== 'day');
     lampsDirty = true;
     renderer.shadowMap.needsUpdate = true;
     store('tod', name);
@@ -235,7 +239,11 @@ export async function boot() {
   /* ================================================================ core systems */
   const tweener = createTweener();
   const audio = createAudio(() => activeCam);
-  const world = createWorld();
+  const homeColl = createWorld(); // V10: the house's collision set; other worlds get their own (worlds.js)
+  const world = createWorldSwitch(homeColl); // everything below talks to the active set through this facade
+  let worlds = null; // V10 (created after the nav controller)
+  const curWorld = () => (worlds ? worlds.current() : HOME);
+  const atHome = () => curWorld() === HOME;
   const toast = toastFn($('toast'));
   // V3 UI: radio engine — a random station starts on the first user gesture (browsers block audio before one);
   // non-positional background mix everywhere + louder / panned near the 3D radio (it registers itself as the source)
@@ -291,7 +299,9 @@ export async function boot() {
   const _rp = new THREE.Vector3();
   function roomAt(x, feet, z) {
     _rp.set(x, feet + 0.8, z);
-    for (const r of roomsReg) if (r.box.containsPoint(_rp)) return r;
+    const w = curWorld();
+    for (const r of roomsReg) if ((r.world || HOME) === w && r.box.containsPoint(_rp)) return r;
+    if (w !== HOME) return null;
     for (const r of roomsPlan) if (r.box.containsPoint(_rp)) return r;
     return null;
   }
@@ -333,15 +343,16 @@ export async function boot() {
     // (house.js, userData.baseIntensity) ×0.22 and lowered 0.55 m (no hot ceiling), other lamps ×0.3; 1.2–9 cd
     // (spots ≤ 14). Interior lamps are pulled to warm 2700 K.
     const raw = light.intensity > 0 ? light.intensity : (light.isSpotLight ? 20 : 8);
+    const lw = opts.world || HOME; // V10: lamps belong to a world (other worlds keep their own intensities: opts.raw)
     const fl0 = opts.floor || (light.userData && light.userData.floor) || '';
     const recessed = !!(light.isPointLight && light.userData && light.userData.baseIntensity !== undefined && (fl0 === 'main' || fl0 === 'upper'));
-    const base = Math.min(light.isSpotLight ? 14 : 9, Math.max(1.2, raw * (recessed ? 0.22 : light.isSpotLight ? 0.35 : 0.3)));
-    try {
+    const base = opts.raw ? raw : Math.min(light.isSpotLight ? 14 : 9, Math.max(1.2, raw * (recessed ? 0.22 : light.isSpotLight ? 0.35 : 0.3)));
+    if (!opts.raw) try {
       if (recessed && !light.userData.__lookLowered) { light.position.y -= 0.55; light.userData.__lookLowered = true; }
       if (fl0 !== 'outside' && light.color) light.color.lerp(LAMP_2700K, 0.6);
       light.userData.lookBase = base; light.userData.lookRaw = raw;
     } catch (_) {}
-    const L = { light, room: opts.room || '', floor: opts.floor || null, optFloor: opts.floor || null, base, on: false, fx: [] };
+    const L = { light, room: opts.room || '', floor: opts.floor || null, optFloor: opts.floor || null, base, on: false, fx: [], world: lw };
     if (opts.fixture) {
       try {
         opts.fixture.traverse((m) => {
@@ -372,11 +383,11 @@ export async function boot() {
     };
     L.handle = handle;
     lamps.push(L);
-    L.on = todName !== 'day'; apply();
+    L.on = lw === HOME ? todName !== 'day' : opts.on !== false; apply();
     lampsDirty = true;
     return handle;
   }
-  function lampsInRoom(roomName) { return lamps.filter((L) => sameRoom(L.room, roomName)).map((L) => L.handle); }
+  function lampsInRoom(roomName, w = HOME) { return lamps.filter((L) => L.world === w && sameRoom(L.room, roomName)).map((L) => L.handle); }
   const _lp = new THREE.Vector3();
   function manageLamps() {
     lampsDirty = false;
@@ -384,7 +395,9 @@ export async function boot() {
     const curFloor = playerFloor();
     activeCam.getWorldPosition(_lp);
     const scored = [];
+    const cw = curWorld();
     for (const L of lamps) {
+      if (L.world !== cw) { L.score = Infinity; continue; } // V10: lamps of other worlds stay off
       if (!L.floor) { try { const w = L.light.getWorldPosition(new THREE.Vector3()); L.floor = floorAt(w.x, w.y - 1.5, w.z); L.pos = w; } catch (_) { L.floor = 'main'; } }
       if (!L.pos) { L.pos = new THREE.Vector3(); }
       L.light.getWorldPosition(L.pos);
@@ -414,7 +427,7 @@ export async function boot() {
   let interDirty = true;
   function addInteractive(obj, opts = {}) {
     if (!obj) return null;
-    const e = { obj, label: opts.label, onUse: opts.onUse, hint: opts.hint, enabled: true };
+    const e = { obj, label: opts.label, onUse: opts.onUse, hint: opts.hint, enabled: true, world: opts.world || HOME }; // V10: per world
     interactives.push(e); interMap.set(obj, e); interDirty = true;
     return {
       get enabled() { return e.enabled; }, set enabled(v) { e.enabled = !!v; interDirty = true; },
@@ -424,9 +437,9 @@ export async function boot() {
 
   /* ---------------- update hooks */
   const updaters = [];
-  function onUpdate(fn) {
+  function onUpdate(fn, w) {
     if (typeof fn !== 'function') return () => {};
-    const u = { fn, errs: 0 };
+    const u = { fn, errs: 0, world: typeof w === 'string' ? w : HOME }; // V10: paused while another world is active ('*' = always)
     updaters.push(u);
     return () => { const i = updaters.indexOf(u); if (i >= 0) updaters.splice(i, 1); };
   }
@@ -447,10 +460,10 @@ export async function boot() {
     THREE, scene, renderer, camera, plan, quality,
     materials: {},
     envMap: envTex,
-    addCollider(box3) { return world.addBox(box3); },
-    addColliderFromObject(obj) { return world.addFromObject(obj); },
-    addDynamicCollider(obj) { return world.addDynamic(obj); },
-    addWalkable(mesh) { world.addWalkable(mesh); },
+    addCollider(box3) { return homeColl.addBox(box3); },
+    addColliderFromObject(obj) { return homeColl.addFromObject(obj); },
+    addDynamicCollider(obj) { return homeColl.addDynamic(obj); },
+    addWalkable(mesh) { homeColl.addWalkable(mesh); },
     addInteractive,
     onUpdate,
     tween: tweener.tween,
@@ -462,7 +475,7 @@ export async function boot() {
       if (o.he && !heOfKey[name]) heOfKey[name] = o.he;
       const fl = o.floor || floorAt((o.box.min.x + o.box.max.x) / 2, o.box.min.y, (o.box.min.z + o.box.max.z) / 2);
       const s = new THREE.Vector3(); o.box.getSize(s);
-      roomsReg.push({ key: name, name: disp, floor: fl, box: o.box.clone(), vol: s.x * s.y * s.z });
+      roomsReg.push({ key: name, name: disp, floor: fl, box: o.box.clone(), vol: s.x * s.y * s.z, world: o.world || HOME });
       roomsReg.sort((a, b) => a.vol - b.vol);
     },
     addPano(name, position, lookYawRad, opts) { const n = addPano(name, position, lookYawRad, opts); if (pano && pano.active) pano.rebuildList(); return n; },
@@ -476,6 +489,9 @@ export async function boot() {
     timeOfDay: () => todCur.night,
     // V2: bathroom mirror → Object3D (plane in local XY, reflective face +Z). Reflector on high (max 2), else polished chrome.
     makeMirror: (w, h, o) => render.makeMirror(w, h, o),
+    // V10 worlds (filled right after the nav controller): ctx.worlds.register / enterWorld / goHome / current
+    worlds: null,
+    enterWorld: (id, o) => (worlds ? worlds.enterWorld(id, o) : Promise.resolve(false)),
   };
 
   /* ================================================================ player */
@@ -483,6 +499,7 @@ export async function boot() {
   player.teleport(START.p, START.yaw);
   camera.position.set(HOUSE_C.x + 34, 26, HOUSE_C.z + 40); camera.lookAt(HOUSE_C);
   function playerFloor() {
+    if (!atHome()) return 'main';
     if (mode === 'pano' && pano.node) return pano.node.floor;
     const s = player.state;
     const r = roomAt(s.x, s.feet, s.z);
@@ -617,8 +634,63 @@ export async function boot() {
       scene, camera, renderer, canvas, plan, world, player, ctx, audio, isTouch, store,
       getMode: () => mode, getPano: () => pano, getPanoNodes: () => panoNodes,
       toast: (m, ms) => toast(m, ms), showHint: (m, ms) => showHint(m, ms),
+      isHome: () => atHome(), // V10: plan-based framing only in the house
+      getExtraNodes: () => [{ id: 'out:limo', x: LIMO_SPOT.curb.x, y: 0, z: LIMO_SPOT.curb.z, room: 'limo', he: '🚘 לימוזינה', hub: true }, { id: 'out:curb_w', x: LIMO_SPOT.x - LIMO_SPOT.length / 2 - 0.9, y: 0, z: LIMO_SPOT.curb.z + 0.1, room: 'frontwalk' }], // V10
     });
   } catch (e) { nav = null; reportError('ניווט', e); }
+
+  /* ================================================================ V10 worlds */
+  const worldLabels = { limo: 'לימוזינה', casino: 'קזינו', test: 'עולם בדיקה' };
+  let picker = null;
+  try {
+    worlds = createWorlds({
+      THREE, scene, ctx, player, homeColl, collision: world, createCollision: () => createWorld(),
+      refs: { sky, sun, hemi, stars }, render,
+      i18n: { t: i18nT, tr: i18nTr, extend: i18nExtend },
+      radio, openRadio: () => { try { radioUI && radioUI.openAt(); } catch (_) {} },
+      toast: (m, ms) => toast(m, ms), reportError, fade,
+      nextFrame: () => new Promise((r) => requestAnimationFrame(() => r())),
+      homeStart: START,
+      addInteractive, onUpdate, addLamp, lampsInRoom,
+      registerRoom: (name, o) => ctx.registerRoom(name, o),
+      buildGraph: (spec) => buildSimpleGraph(spec),
+      setGraph: (g) => { if (nav) nav.setGraph(g); },
+      beforeTravel: () => { try { nav && nav.stopGlide(); } catch (_) {} try { dpad && dpad.release(); } catch (_) {} keys.clear(); clearHover(); if (measuring) setMeasuring(false); },
+      homeAway: (away) => homeAway(away),
+      homeReturnYaw: (eye) => { const d = limoDoorWorld(); return Math.hypot(eye[0] - d.x, eye[2] - d.z) < 3.5 ? 0 : NaN; }, // stepping out of the limo → face the house
+      onWorld: (id, prev, W) => onWorldChanged(id, prev, W),
+      placePlayer: async (eye, yaw) => {
+        if (mode === 'walk') { player.teleport(eye, yaw); player.apply(); return; }
+        await setMode('walk', { teleport: { p: eye, yaw }, force: true, dur: 0.05 });
+      },
+    });
+    ctx.worlds = worlds;
+    worlds.registerModule('limo', './limo.js', { he: worldLabels.limo });
+    worlds.registerModule('casino', './casino.js', { he: worldLabels.casino });
+    worlds.registerModule('test', './world-test.js', { he: worldLabels.test }); // contract test world (not in the UI)
+  } catch (e) { worlds = null; reportError('עולמות', e); }
+  // leaving / returning to the house: pause its sound, TV, window lights, probes …
+  function homeAway(away) {
+    try { render.setAway(!!away); } catch (_) {}
+    modP && modP[2] && modP[2].then((m) => { try { m.ambient.setEnabled(!away); if (m.ambient.controller) m.ambient.controller.update(); } catch (_) {} }).catch(() => {});
+    if (away) { try { if (ctx.tv && ctx.tv.on) { ctx.tv.closePanel && ctx.tv.closePanel(); ctx.tv.power(false); } } catch (_) {} }
+    renderer.shadowMap.needsUpdate = true;
+  }
+  function onWorldChanged(id) {
+    const away = id !== HOME;
+    const b = document.body;
+    b.classList.toggle('world-away', away);
+    for (const c of [...b.classList]) if (c.startsWith('world-is-')) b.classList.remove(c);
+    b.classList.add('world-is-' + id);
+    const W = worlds && worlds.get(id);
+    const mm = away && W && W.res && W.res.minimap && Array.isArray(W.res.minimap.rooms) ? W.res.minimap : null;
+    try { minimap.setWorld(mm); } catch (_) {}
+    b.classList.toggle('world-nomap', away && !mm);
+    interDirty = true; lampsDirty = true; clearHover();
+    lastRoomName = ''; lastFloor = '';
+    renderer.shadowMap.needsUpdate = true;
+    try { picker && picker.refresh(); } catch (_) {}
+  }
 
   /* ================================================================ HUD / UI */
   const minimap = createMinimap($('minimap'), plan);
@@ -757,6 +829,7 @@ export async function boot() {
     if (busy && !opts.force) return;
     if (next === mode && !opts.force) return;
     if (!['walk', 'pano', 'dollhouse', 'plan'].includes(next)) return;
+    if (next !== 'walk' && !atHome()) { toast('זמין רק בבית', 1800); return; } // V10: 360 / dollhouse / plan exist only at the house
     busy = true;
     const prev = mode;
     pendingMode = next;
@@ -862,7 +935,7 @@ export async function boot() {
   let hover = null; // {entry, meshes:[{m, orig, now, cl}]}
   let hoverLabelT = 0;
   function pickInteractive(ndc) {
-    if (interDirty) { interObjs = interactives.filter((e) => e.enabled).map((e) => e.obj); interDirty = false; }
+    if (interDirty) { const cw = curWorld(); interObjs = interactives.filter((e) => e.enabled && e.world === cw).map((e) => e.obj); interDirty = false; }
     if (!interObjs.length) return null;
     irc.setFromCamera(ndc, camera);
     irc.near = 0; irc.far = 2.6;
@@ -870,7 +943,7 @@ export async function boot() {
     try { irc.intersectObjects(interObjs, true, ihits); } catch (_) { return null; }
     for (const h of ihits) {
       let o = h.object, e = null;
-      while (o) { e = interMap.get(o); if (e && e.enabled) break; e = null; o = o.parent; }
+      while (o) { e = interMap.get(o); if (e && e.enabled && e.world === curWorld()) break; e = null; o = o.parent; }
       if (!e) continue;
       // occlusion by static colliders (walls) between eye and hit
       world.query(irc.ray.origin.x, irc.ray.origin.z, 2.7, _near, false);
@@ -1269,7 +1342,7 @@ export async function boot() {
       // first entry through the front door → scanner
       const s = player.state;
       const inside = s.x > 0.2 && s.x < plan.W - 0.2 && s.z > 0.2 && s.z < plan.D - 0.15 && s.feet > plan.mainFloor - 0.3 && s.feet < plan.mainFloor + 0.5;
-      if (inside && !wasInside && !enteredHouse && s.z > plan.D - 2.5) { enteredHouse = true; runScan(); }
+      if (atHome() && inside && !wasInside && !enteredHouse && s.z > plan.D - 2.5) { enteredHouse = true; runScan(); }
       wasInside = inside;
     } else { look.x = 0; look.y = 0; }
 
@@ -1280,8 +1353,10 @@ export async function boot() {
     if (nav) try { nav.update(dt, t); } catch (e) { if (!frame._navErr) { frame._navErr = true; reportError('ניווט', e); } }
     tweener.update(dt);
     world.updateDynamic();
+    const cwU = curWorld();
     for (let i = 0; i < updaters.length; i++) {
       const u = updaters[i];
+      if (u.world !== cwU && u.world !== '*') continue;
       try { u.fn(dt, t); } catch (e) { u.errs++; if (u.errs === 1) reportError('onUpdate', e); if (u.errs > 20) { updaters.splice(i, 1); i--; } }
     }
     particles.update(dt);
@@ -1300,14 +1375,15 @@ export async function boot() {
     // V3 LOOK: inside the house the sun shadow only has to cover the house (+ long low-sun shadows): ±16 m instead of
     // ±30 m → ~3.5× more shadow-map texels for crisp window patches / mullion shadows on the floor
     {
-      const ins = (mode === 'walk' && floorAt(player.state.x, player.state.feet, player.state.z) !== 'outside') || (mode === 'pano' && pano.node && pano.node.floor !== 'outside');
+      const ins = !atHome() || (mode === 'walk' && floorAt(player.state.x, player.state.feet, player.state.z) !== 'outside') || (mode === 'pano' && pano.node && pano.node.floor !== 'outside');
       const half = ins ? 16 : 30;
       if (sc.right !== half) { sc.left = -half; sc.right = half; sc.top = half; sc.bottom = -half; sc.updateProjectionMatrix(); renderer.shadowMap.needsUpdate = true; }
     }
     // on-demand shadow map: re-centre / TOD / quality set needsUpdate elsewhere; here: while any core tween (house doors,
     // windows) runs, and otherwise at most ~4×/s for module-driven motion (drawers, appliance doors…). Pano mode drives
     // its own updates (static camera).
-    if (mode === 'walk') setInteriorCasters(floorAt(player.state.x, player.state.feet, player.state.z) !== 'outside');
+    if (!atHome()) { /* V10: another world — the house is hidden */ }
+    else if (mode === 'walk') setInteriorCasters(floorAt(player.state.x, player.state.feet, player.state.z) !== 'outside');
     else if (mode === 'pano' && pano.node) setInteriorCasters(pano.node.floor !== 'outside');
     else if (mode === 'dollhouse') setInteriorCasters(viewFloor !== 'all'); // all floors: main pass ≈450 → keep shadow pass small
     else if (mode === 'plan') setInteriorCasters(true);
@@ -1324,12 +1400,14 @@ export async function boot() {
     if (t - lastHud > 0.2) {
       lastHud = t;
       let name = '', fl = '';
-      if (mode === 'pano' && pano.node) { name = pano.node.he; fl = pano.node.floor; }
+      const AW = atHome() ? null : worlds && worlds.active;
+      if (AW) { const s = player.state; const r = roomAt(s.x, s.feet, s.z); name = r ? r.name : AW.he; fl = 'world:' + AW.id; } // V10
+      else if (mode === 'pano' && pano.node) { name = pano.node.he; fl = pano.node.floor; }
       else { const s = player.state; const r = roomAt(s.x, s.feet, s.z); name = r ? r.name : 'חוץ'; fl = r ? r.floor : floorAt(s.x, s.feet, s.z); }
       if (name !== lastRoomName || fl !== lastFloor) {
         lastRoomName = name; lastFloor = fl;
         roomNameEl && (roomNameEl.textContent = name);
-        floorNameEl && (floorNameEl.textContent = FLOOR_HE[fl] || '');
+        floorNameEl && (floorNameEl.textContent = AW ? AW.he : FLOOR_HE[fl] || '');
         if (fl === 'basement' && mode === 'walk' && !flashOn && !toggleFlash._hinted) { toggleFlash._hinted = true; showHint('טיפ: Q / F להדלקת פנס', 3500); }
       }
     }
@@ -1339,6 +1417,8 @@ export async function boot() {
       if (mode === 'pano' && pano.node) minimap.draw({ x: pano.node.p.x, z: pano.node.p.z, yaw: pano.yaw, floor: pano.node.floor, roomName: pano.node.he });
       else minimap.draw({ x: s.x, z: s.z, yaw: s.yaw, floor: lastFloor || 'outside', roomName: lastRoomName });
     }
+    if (worlds) worlds.update(dt, t); // V10: the active world's own update()
+    if (picker) try { picker.update(dt); } catch (e) { if (!frame._pkErr) { frame._pkErr = true; reportError('בחירת חדר', e); } }
     if (mode === 'plan' || pendingMode === 'plan') updatePlanLabels();
     measure.update(activeCam, window.innerWidth, window.innerHeight);
 
@@ -1397,6 +1477,79 @@ export async function boot() {
     return { off, kept };
   }
 
+  /* ================================================================ V10 room picker */
+  const PICK_HOME = [['main', ['living', 'kitchen', 'hall', 'bath1', 'bed1', 'bed2']], ['upper', ['landing', 'bed3', 'bath2', 'bed4']], ['basement', ['basement']], ['outside', ['frontyard', 'backyard', 'street', 'limo']]];
+  const OUT_KEY = { 'חצר קדמית': 'frontyard', 'חצר אחורית': 'backyard', 'רחוב Eakin Rd': 'street', porch: 'frontyard' };
+  const LIMO_HE = '🚘 לימוזינה', LIMO_BOARD_HE = '🚘 עלה ללימוזינה';
+  const pickHe = (k) => { const n = panoNodes.find((q) => q.id === k); return (n && n.he) || heOfKey[k] || k; };
+  function limoDist() { const s = player.state, c = LIMO_SPOT.curb; return Math.hypot(s.x - c.x, s.z - c.z) + Math.abs(s.feet) * 2; }
+  const nearLimo = () => atHome() && mode === 'walk' && limoDist() < 1.8;
+  function pickerGroups() {
+    if (!atHome()) {
+      const W = worlds && worlds.active; if (!W) return [];
+      const items = [{ key: '__home', he: '🏠 הביתה', cls: 'pk-home' }];
+      for (const r of W.rooms || []) if (r.pick) items.push({ key: r.key, he: r.he });
+      return [{ floor: 'world', label: W.he, items }];
+    }
+    const gs = PICK_HOME.map(([fl, ks]) => ({ floor: fl, label: FLOOR_HE[fl] || '', items: ks.map((k) => ({ key: k, he: k === 'limo' ? LIMO_HE : pickHe(k), cls: k === 'limo' ? 'pk-limo' : '' })) }));
+    // the floor you are on comes first (then the others in house order)
+    let here = null;
+    try {
+      if (mode === 'pano' && pano.node && pano.node.p) here = floorAt(pano.node.p.x, pano.node.p.y - 1.6, pano.node.p.z);
+      else { const s = player.state; here = floorAt(s.x, s.feet, s.z); }
+    } catch (_) { here = null; }
+    const i = gs.findIndex((g) => g.floor === here);
+    if (i > 0) gs.unshift(gs.splice(i, 1)[0]);
+    return gs;
+  }
+  function pickerCurrent() {
+    try {
+      const s = player.state;
+      if (!atHome()) { const r = roomAt(s.x, s.feet, s.z); return r ? r.key : null; }
+      if (mode === 'pano' && pano.node) { const id = pano.node.id; return OUT_KEY[id] || id; }
+      if (floorAt(s.x, s.feet, s.z) === 'outside' && Math.hypot(s.x - LIMO_SPOT.x, s.z - LIMO_SPOT.z) < 6.5) return 'limo';
+      const r = roomAt(s.x, s.feet, s.z); if (!r) return null;
+      return OUT_KEY[r.key] || r.key;
+    } catch (_) { return null; }
+  }
+  // tap a room → walk there along the nav graph (doors, stairs) and frame it; tap again / any move → stop
+  function pickRoom(key) {
+    audio.resume();
+    if (worlds && worlds.busy) return false;
+    if (key === '__home') return worlds && worlds.goHome();
+    if (mode === 'pano' && atHome()) {
+      if (key === 'limo') { const c = LIMO_SPOT.curb; return setMode('walk', { teleport: { p: [c.x, 1.6, c.z], yaw: LIMO_SPOT.boardYaw }, force: true }); }
+      if (pano.goToId) return pano.goToId(key);
+      return false;
+    }
+    if (mode !== 'walk' || !nav || !nav.graph) return false;
+    if (nav.glideKey === key) { nav.stopGlide('ההליכה בוטלה'); return false; }
+    if (!atHome()) {
+      const W = worlds.active, r = (W.rooms || []).find((q) => q.key === key); if (!r) return false;
+      const hub = nav.graph.hub && nav.graph.hub(key);
+      const c = hub ? { x: hub.x, y: hub.y, z: hub.z } : { x: (r.box.min.x + r.box.max.x) / 2, y: r.floorY, z: (r.box.min.z + r.box.max.z) / 2 };
+      return nav.walkTo(c, { key, label: r.he });
+    }
+    if (key === 'limo') {
+      if (nearLimo()) return worlds && worlds.enterWorld('limo');
+      const g = nav.graph.node('out:limo'), c = LIMO_SPOT.curb;
+      toast('הולכים אל ' + LIMO_HE, 1600);
+      return nav.walkTo(g ? { x: g.x, y: g.y, z: g.z } : { x: c.x, y: 0, z: c.z }, { key, label: LIMO_HE, arriveYaw: LIMO_SPOT.boardYaw, onArrive: () => showHint('הלימוזינה מחכה · הקישו על הדלת או על 🚘 כדי לעלות', 5200) });
+    }
+    const gn = nav.graph.node('pano:' + key), pn = panoNodes.find((q) => q.id === key);
+    if (!gn) return false;
+    toast('הולכים אל ' + pickHe(key), 1600);
+    return nav.walkTo({ x: gn.x, y: gn.y, z: gn.z }, { key, label: pickHe(key), arriveYaw: pn ? pn.camYaw : undefined });
+  }
+  try {
+    picker = createRoomPicker({
+      el: $('roomPicker'), getMode: () => mode, getGroups: pickerGroups, currentKey: pickerCurrent,
+      goingKey: () => (nav ? nav.glideKey : null), onPick: pickRoom,
+      labelOf: (k) => (k === 'limo' ? (nearLimo() ? LIMO_BOARD_HE : LIMO_HE) : null),
+    });
+  } catch (e) { picker = null; reportError('בחירת חדר', e); }
+  $('btnHome') && $('btnHome').addEventListener('click', (e) => { e.stopPropagation(); audio.resume(); worlds && worlds.goHome(); });
+
   /* ================================================================ load modules */
   const styles = createStyles(ctx); ctx.styles = styles; // V3 STYLE: list() works now; set() before init() is queued
   window.__tour = {
@@ -1407,12 +1560,16 @@ export async function boot() {
     get pathtraceActive() { return pano.photoreal; }, set pathtraceActive(v) { pano.photoreal = v; },
     perf: PERF, texCache: texCacheStats, // V6 PERF
     toast: (m, ms) => toast(m, ms), // V9: used by the renders viewer after "apply this style"
+    // V10: worlds + room picker
+    get worlds() { return worlds; }, enterWorld: (id, o) => (worlds ? worlds.enterWorld(id, o) : Promise.resolve(false)), get picker() { return picker; }, pickRoom,
+    get limoSpot() { return ctx.limoSpot || null; }, LIMO_SPOT, homeColl,
     // V9: where the visitor is now (renders viewer opens at this room): {mode, key, floor, x, z, node}
     roomInfo() {
       try {
         if (mode === 'pano' && pano.node) { const n = pano.node; return { mode, key: n.id, floor: n.floor, x: n.p.x, z: n.p.z, node: n.id }; }
         const s = player.state, r = roomAt(s.x, s.feet, s.z);
-        return { mode, key: r ? r.key : null, floor: r ? r.floor : floorAt(s.x, s.feet, s.z), x: s.x, z: s.z, node: null };
+        if (!atHome()) return { mode, key: r ? r.key : null, floor: null, x: s.x, z: s.z, node: null, world: curWorld() }; // V10
+        return { mode, key: r ? r.key : null, floor: r ? r.floor : floorAt(s.x, s.feet, s.z), x: s.x, z: s.z, node: null, world: HOME };
       } catch (_) { return { mode, key: null, floor: null, x: 0, z: 0, node: null }; }
     },
   };
@@ -1496,6 +1653,16 @@ export async function boot() {
   // intro flight (window.__tour.texCache shows progress). Second visits hit the cache and have nothing to do here.
   startTexUpgrades(scene, { delay: 3600 }).then(() => perfMark('textures-final')).catch(() => {});
   if (errors.length && $('errors')) showErrors();
+  // V10: the LIMO bot's parked model (js/limo.js → buildParked(ctx)) replaces the placeholder once the tour runs; a
+  // missing module just keeps the placeholder
+  setTimeout(() => {
+    import('./limo.js').then((m) => {
+      const bp = m && (m.buildParked || (m.default && m.default.buildParked));
+      if (m && m.I18N) { try { i18nExtend(m.I18N); } catch (_) {} }
+      if (typeof bp !== 'function' || !ctx.limoSpot) return;
+      return Promise.resolve(bp(ctx)).then((res) => { if (res && ctx.limoSpot.upgrade(res)) { renderer.shadowMap.needsUpdate = true; perfMark('limo-parked'); } });
+    }).catch((e) => console.info('[limo] parked model not available yet', (e && e.message) || e));
+  }, 2500);
   mode = 'intro';
   await setMode('dollhouse', { intro: true, force: true });
   if (mode === 'dollhouse') $('intro') && $('intro').classList.add('show');

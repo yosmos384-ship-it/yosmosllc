@@ -110,6 +110,22 @@ export function createWorld() {
   };
 }
 
+// V10 worlds: one collision world per "world" (home / limo / casino …). Core, the player and the nav controller all
+// talk to this facade; use(w) swaps the active set (colliders, dynamic colliders, walkables) in one step.
+export function createWorldSwitch(initial) {
+  let w = initial;
+  return {
+    get boxes() { return w.boxes; }, get dyn() { return w.dyn; }, get walk() { return w.walk; },
+    addBox: (b) => w.addBox(b), addFromObject: (o) => w.addFromObject(o), addDynamic: (o) => w.addDynamic(o),
+    updateDynamic: () => w.updateDynamic(), query: (x, z, r, out, d) => w.query(x, z, r, out, d),
+    addWalkable: (m) => w.addWalkable(m), refreshWalkables: () => w.refreshWalkables(),
+    groundAt: (x, z, a, b) => w.groundAt(x, z, a, b),
+    get hasWalkables() { return w.hasWalkables; },
+    use(n) { if (n && typeof n.query === 'function') w = n; return w; },
+    get active() { return w; },
+  };
+}
+
 export function createPlayer({ camera, world, start }) {
   const R = 0.25, EYE = 1.6, STEP = 0.4;
   const WALK_SPEED = 1.25, RUN_SPEED = 2.6; // m/s (V7 owner: slower walking; V2–V6 2.0 / 4.2)
@@ -180,8 +196,12 @@ export function createPlayer({ camera, world, start }) {
     st.pitch = Math.max(-1.45, Math.min(1.45, st.pitch - (inp.lookY || 0)));
     if (typeof inp.yawTo === 'number' && isFinite(inp.yawTo)) {
       let d = inp.yawTo - st.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
-      st.yaw += d * (1 - Math.exp(-(inp.yawRate || 4) * dt));
+      let step = d * (1 - Math.exp(-(inp.yawRate || 4) * dt));
+      if (inp.yawMax > 0) { const m = inp.yawMax * dt; if (step > m) step = m; else if (step < -m) step = -m; } // V10: natural turn speed
+      st.yaw += step;
     }
+    // V10: nav walks (room picker) level the view / look along the stairs
+    if (typeof inp.pitchTo === 'number' && isFinite(inp.pitchTo)) st.pitch += (Math.max(-1.45, Math.min(1.45, inp.pitchTo)) - st.pitch) * (1 - Math.exp(-(inp.pitchRate || 2) * dt));
     let f = inp.forward || 0, s = inp.strafe || 0;
     let l = Math.hypot(f, s); if (l > 1) { f /= l; s /= l; }
     const speed = inp.run ? RUN_SPEED : WALK_SPEED; // V7: ~38 % slower (was 2.0 / 4.2)

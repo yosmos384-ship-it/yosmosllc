@@ -283,11 +283,42 @@ body.touch.mode-walk #dpad, body.dpad-on.mode-walk #dpad{display:grid}
 body.touch.mode-walk #btnAct{display:flex}
 body:has(#intro.show) #dpad{display:none}
 #dpad{position:fixed;z-index:11;left:calc(var(--gut) + env(safe-area-inset-left,0px));bottom:calc(var(--gut) + env(safe-area-inset-bottom,0px));grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,54px);gap:3px;touch-action:none;-webkit-user-select:none;user-select:none}
+#dpad{pointer-events:none}#dpad button{pointer-events:auto} /* V10: the empty grid cells pass taps through (room picker / look) */
 #dpad button{width:54px;height:54px;border-radius:15px;background:rgba(14,19,28,.36);border:1px solid rgba(255,255,255,.24);color:rgba(255,255,255,.92);font-size:19px;line-height:1;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);touch-action:none;box-shadow:0 4px 14px rgba(0,0,0,.22);transition:background .12s,transform .12s}
 #dpad button.on{background:rgba(67,224,255,.62);color:var(--accent-ink);transform:scale(.95)}
 #dpad [data-d=f]{grid-column:2;grid-row:1}#dpad [data-d=l]{grid-column:1;grid-row:2}#dpad [data-d=r]{grid-column:3;grid-row:2}#dpad [data-d=b]{grid-column:2;grid-row:3}
 #btnAct{position:fixed;z-index:11;right:calc(var(--gut) + env(safe-area-inset-right,0px));bottom:calc(var(--gut) + 24px + env(safe-area-inset-bottom,0px));width:68px;height:68px;border-radius:50%;align-items:center;justify-content:center;font-weight:800;font-size:14px;background:linear-gradient(180deg,rgba(67,224,255,.82),rgba(30,170,210,.82));color:var(--accent-ink);box-shadow:0 8px 24px rgba(67,224,255,.3);touch-action:manipulation}
 body.touch.hovering #btnAct{box-shadow:0 0 0 4px rgba(255,255,255,.6),0 8px 24px rgba(67,224,255,.55)}
+
+/* ---------- V10: room picker (bottom strip: between the D-pad and "פעולה" on phones, bottom centre on desktop) ---------- */
+#roomPicker{position:fixed;z-index:12;bottom:calc(var(--gut) + env(safe-area-inset-bottom,0px));left:16px;display:none;padding:4px;border-radius:16px;max-width:calc(100vw - 2*var(--gut));background:var(--glass-strong)}
+#roomPicker.show{display:block}
+#roomPicker .pk-scroll{display:flex;align-items:center;gap:6px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;touch-action:pan-x;scroll-snap-type:x proximity;padding:0 2px}
+#roomPicker .pk-scroll::-webkit-scrollbar{display:none}
+.pk-grp{display:flex;align-items:center;gap:4px;flex:0 0 auto}
+.pk-grp+.pk-grp{padding-inline-start:6px;border-inline-start:1px solid var(--line-strong)}
+.pk-fl{flex:0 0 auto;font-size:9.5px;line-height:1.05;font-weight:700;color:var(--accent);max-width:46px;text-align:center;white-space:normal;letter-spacing:.2px;opacity:.9}
+.pk-chip{flex:0 0 auto;scroll-snap-align:center;min-height:40px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:650;white-space:nowrap;color:var(--text);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);transition:background .15s,border-color .15s}
+.pk-chip:hover{background:rgba(255,255,255,.14)}
+.pk-chip.on{background:rgba(67,224,255,.2);border-color:rgba(67,224,255,.85);color:#dffbff}
+.pk-chip.go{background:linear-gradient(180deg,rgba(67,224,255,.95),rgba(42,190,230,.95));color:var(--accent-ink);border-color:transparent;animation:pkgo 1.2s ease-in-out infinite}
+.pk-chip.pk-limo{border-color:rgba(242,198,109,.55);color:#ffe6a8}
+.pk-chip.pk-limo.on{background:rgba(242,198,109,.22);border-color:rgba(242,198,109,.95)}
+.pk-chip.pk-home{background:rgba(124,243,200,.16);border-color:rgba(124,243,200,.6)}
+@keyframes pkgo{50%{box-shadow:0 0 0 4px rgba(67,224,255,.25)}}
+body.touch .pk-chip{min-height:40px;padding:0 11px;font-size:12.5px}
+body.picker-lift.touch.mode-walk #btnAct{bottom:calc(var(--gut) + 60px + env(safe-area-inset-bottom,0px))}
+/* ---------- V10: worlds (limo / casino) ---------- */
+#btnHome{display:none}
+body.world-away #btnHome{display:flex}
+body.world-away #topbar .mode[data-mode=pano],body.world-away #topbar .mode[data-mode=dollhouse],body.world-away #topbar .mode[data-mode=plan]{display:none}
+#btnHome{background:linear-gradient(180deg,rgba(124,243,200,.9),rgba(70,200,160,.9));color:#04261b}
+body.world-away #quickFab,body.world-away #btnStyle,body.world-away .tv3d-layer,body.world-away #info{display:none!important}
+body.world-nomap #mapCard{display:none}
+#worldLoad{position:fixed;inset:0;z-index:31;display:none;align-items:center;justify-content:center;pointer-events:none}
+#worldLoad.show{display:flex}
+#worldLoad .wl-card{display:flex;align-items:center;gap:12px;padding:14px 20px;border-radius:16px;background:var(--glass-strong);border:1px solid var(--line);font-size:15px;font-weight:700}
+#worldLoad .wl-pct{font-variant-numeric:tabular-nums;color:#f2c66d;min-width:3ch}#worldLoad .wl-sub{font-weight:500;font-size:13px;opacity:.8}#worldLoad .wl-spin{width:22px;height:22px;border-radius:50%;border:3px solid rgba(242,198,109,.3);border-top-color:#f2c66d;animation:spin .8s linear infinite}
 
 /* ---------- intro (V6: compact card docked at the bottom-start corner — right edge in RTL — so the 3D scene shows) ---------- */
 #intro{position:fixed;z-index:14;inset-inline-start:calc(var(--gut) + env(safe-area-inset-right,0px));bottom:calc(var(--gut) + 62px + env(safe-area-inset-bottom,0px));
@@ -431,6 +462,7 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
   <button class="mode" data-mode="walk" title="הליכה בגוף ראשון (1)"><span class="ico">🚶</span><span><span data-i18n="mode.walk">הליכה</span><span class="lbl-long" data-i18n="mode.walk.long"> 3D</span></span></button>
   <button class="mode" data-mode="pano" title="סיור פנורמי 360° (2)"><span class="ico">◎</span><span>סיור 360°</span></button>
   <button class="mode" data-mode="dollhouse" title="סריקה / דולהאוס (3)"><span class="ico">⬡</span><span><span class="lbl-long" data-i18n="mode.doll.long">סריקה / </span><span data-i18n="mode.doll">דולהאוס</span></span></button>
+  <button id="btnHome" class="mode" title="⟵ חזרה הביתה"><span>⟵ חזרה הביתה</span></button>
   <button class="mode" data-mode="plan" title="תוכנית קומה (4)"><span class="ico">▦</span><span><span data-i18n="mode.plan">תוכנית</span><span class="lbl-long" data-i18n="mode.plan.long"> קומה</span></span></button>
 </nav>
 
@@ -496,6 +528,9 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
 <div id="panoTip"></div>
 <div id="ptOverlay" aria-label="הדמיה מציאותית"></div>
 
+<nav id="roomPicker" class="ui" aria-label="בחירת חדר" title="הקישו על חדר — הולכים אליו"></nav>
+<div id="worldLoad" aria-live="polite"><div class="wl-card"><span class="wl-spin" aria-hidden="true"></span><span class="wl-txt">טוען עולם…</span><span class="wl-pct" dir="ltr"></span><span class="wl-sub"></span></div></div>
+
 <div id="dpad" dir="ltr" role="group" aria-label="חצי תנועה">
   <button data-d="f" aria-label="קדימה">▲</button>
   <button data-d="l" aria-label="סיבוב שמאלה">◀</button>
@@ -530,6 +565,7 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
     <ul>
       <li><b>סיור 360°</b> — עמידה בנקודות קבועות, גרירה להסתכלות, טבעות על הרצפה למעבר בין נקודות, הורדת תמונה פנורמית.</li>
       <li><b>✨ הדמיה מציאותית</b> (במצב 360°) — רינדור במעקב קרניים של כל הסביבה; אפשר להסתכל מסביב בתוצאה ולהוריד PNG. <b>📷 הדמיה של המבט הנוכחי</b> — תמונה אחת ברזולוציה גבוהה.</li>
+      <li><b>סרגל החדרים</b> (בתחתית המסך בזמן הליכה) — הקישו על חדר ותלכו אליו לבד (הדלתות נפתחות, כולל מדרגות); הקשה נוספת או תנועה עוצרת. <b>🚘 לימוזינה</b> מוביל ללימוזינה שמחכה ליד המדרכה — הקישו על הדלת כדי לעלות; <b>⟵ חזרה הביתה</b> מחזיר לבית.</li>
       <li><b>🖼 הדמיות</b> (הכפתור הצהוב בפינה, בכל מצב) — הדמיות 360° מוכנות של כל סגנונות השיפוץ, נפתחות בחדר שבו אתם נמצאים ובסגנון הנוכחי. החליקו הצידה או ‹ › לחדר אחר; "✓ החל סגנון זה בסיור" מחליף את הסגנון וחוזר בדיוק לאותה נקודה.</li>
       <li><b>סריקה / דולהאוס</b> — מבט "בית בובות" מסתובב; סינון לפי קומה; לחיצה כפולה על רצפה נכנסת לשם.</li>
       <li><b>תוכנית קומה</b> — מבט מלמעלה; גרירה להזזה, גלגלת לזום, הקשה על חדר נכנסת אליו.</li>
@@ -608,6 +644,6 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
     .then((m) => m.boot())
     .catch((e) => fatal('טעינת מנוע התלת-ממד נכשלה (three.js / core.js) — בדקו חיבור לאינטרנט ורעננו', e));
 </script>
-<div id="ver-tag" style="position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));z-index:50;font:600 11px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.75);background:rgba(20,24,30,.45);padding:2px 8px;border-radius:9px;pointer-events:none">גרסה 9</div>
+<div id="ver-tag" style="position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));z-index:50;font:600 11px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.75);background:rgba(20,24,30,.45);padding:2px 8px;border-radius:9px;pointer-events:none">גרסה 10</div>
 </body>
 </html>

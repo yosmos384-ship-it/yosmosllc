@@ -250,7 +250,17 @@ export function createRender(env) {
   let insideK = 0; // eased 0..1
   let expInit = false;
   const _cp = new THREE.Vector3();
+  // V10 worlds: while the visitor is in another world (limo / casino) the house-specific parts pause: window lights
+  // off, no probe captures, no interior gating, no indoor / room exposure lift (optional fixed exposure per world)
+  const away = { on: false, exposure: null };
+  function setAway(on, o = {}) {
+    away.on = !!on; away.exposure = on && isFinite(o.exposure) ? +o.exposure : null;
+    for (const r of rects) r.L.visible = !away.on && quality() === 'high';
+    if (!away.on && interiorGroups) { for (const g of interiorGroups) g.visible = true; interiorHidden = false; } // gateExpensive re-evaluates next frame
+    expInit = false;
+  }
   function indoor(cam) {
+    if (away.on) return false;
     const m = mode();
     if (m !== 'walk' && m !== 'pano' && m !== 'transition') return false;
     cam.getWorldPosition(_cp);
@@ -270,7 +280,8 @@ export function createRender(env) {
     const ins = cam && cam.isPerspectiveCamera && indoor(cam) ? 1 : 0;
     const a = 1 - Math.exp(-3.0 * Math.min(0.1, dt || 0.016));
     insideK = expInit ? insideK + (ins - insideK) * a : ins;
-    const base = typeof t.exp === 'number' && isFinite(t.exp) ? t.exp : byNight(n, 1.0, 0.85, 0.75);
+    let base = typeof t.exp === 'number' && isFinite(t.exp) ? t.exp : byNight(n, 1.0, 0.85, 0.75);
+    if (away.on && away.exposure != null) base = away.exposure;
     const lift = lerp(1, byNight(n, ...LOOK.indoorLift), insideK);
     const rk = ins ? roomOf(_cp) : null, rTarget = rk ? byNight(n, ...LOOK.roomLift[rk]) : 1;
     roomK = expInit ? roomK + (rTarget - roomK) * a : rTarget;
@@ -404,7 +415,7 @@ export function createRender(env) {
   }
   const _wc = new THREE.Color();
   function updateWindowLights() {
-    if (!rects.length) return;
+    if (!rects.length || away.on) return;
     const n = nightNow();
     const lum = byNight(n, ...LOOK.window);
     if (n < 0.55) _wc.copy(C_DAY).lerp(C_EVE, n / 0.55); else _wc.copy(C_EVE).lerp(C_NIGHT, (n - 0.55) / 0.45);
@@ -630,7 +641,7 @@ export function createRender(env) {
     requestProbes._t = setTimeout(() => { for (const p of probes) p.dirty = true; probeQueue = probes.filter((p) => p.mats.size); }, delayMs);
   }
   function tickProbes() {
-    if (!probeQueue.length) return;
+    if (!probeQueue.length || away.on) return;
     // dollhouse "fade front" swaps exterior skins for 22 % opacity clones: a capture then would see the sky through
     // the walls → wait until the view filter is gone
     if (env.isViewFiltered && env.isViewFiltered()) { probeStats.skippedFiltered++; return; }
@@ -761,6 +772,7 @@ export function createRender(env) {
   const _gp = new THREE.Vector3();
   let interiorGroups = null, interiorHidden = false;
   function gateExpensive(cam) {
+    if (away.on) return;
     for (const M of mirrors) {
       if (!M.refl) continue;
       M.refl.getWorldPosition(_gp);
@@ -891,7 +903,7 @@ export function createRender(env) {
   }
 
   return {
-    ready, renderFrame, afterBuild, setQuality, makeMirror, captureView, requestProbes, hideHelpers,
+    ready, renderFrame, afterBuild, setQuality, makeMirror, captureView, requestProbes, hideHelpers, setAway, get away() { return away.on; },
     normalizeMaterials, applyEnv, lookStats, LOOK, toneGLSL: TONE_GLSL, gradeShader: GRADE_PASS,
     setOverride(fn) { override = typeof fn === 'function' ? fn : null; },
     get override() { return override; },

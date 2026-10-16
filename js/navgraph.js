@@ -318,6 +318,14 @@ export function buildNavGraph(plan, ctx = {}) {
     if (!hubOfRoom.has(k) && byId.get(id)) { byId.get(id).hub = true; hubOfRoom.set(k, byId.get(id)); }
   }
   if (!hubOfRoom.has('stairdn') && dnTop) hubOfRoom.set('stairdn', dnTop);
+  // V10: extra outdoor spots supplied by core (limo curb spot …): {id, x, y?, z, room?, he?, hub?}
+  for (const e of Array.isArray(ctx.extra) ? ctx.extra : []) {
+    if (!e || !isFinite(e.x) || !isFinite(e.z) || byId.has(e.id)) continue;
+    const room = e.room || e.id;
+    if (e.he && !heOf[room]) heOf[room] = e.he;
+    const n = addNode({ id: e.id, x: e.x, y: isFinite(e.y) ? e.y : 0, z: e.z, floor: 'outside', room, he: e.he || heOf[room], kind: 'out', hub: !!e.hub });
+    if (e.hub && !hubOfRoom.has(room)) hubOfRoom.set(room, n);
+  }
 
   /* ---------- validation: push nodes out of colliders, snap to the walkable surface */
   const rectOf = (n) => { if (n.floor === 'outside' || n.transit) return null; const r = ROOMS.find((q) => q.key === n.room); return r ? r.r : null; };
@@ -573,4 +581,166 @@ export function buildNavGraph(plan, ctx = {}) {
 }
 
 export function findPath(a, b, graph = _last) { return graph ? graph.findPath(a, b) : null; }
+
+// ------------------------------------------------------------------ V10: simple graph for other worlds
+// Same query API as buildNavGraph (what core-nav uses), for a world that is not the house (limo, casino, test world):
+//   buildSimpleGraph({ world, nodes:[{id, x, y (feet), z, room?, he?, hub?}], edges?:[[idA, idB], …],
+//                      rooms?:[{key, he, r:[x0,z0,x1,z1], y0?, y1?}], maxD? })
+// Without edges, every pair of nodes on the same level (|Δy| < 0.45) closer than maxD (default 14 m) with a clear
+// body-height corridor (and a walkable surface along it) is linked. Nodes are pushed out of colliders like the house
+// graph does. Every room without a node gets its centre as hub.
+export function buildSimpleGraph(o = {}) {
+  const world = o.world && typeof o.world.query === 'function' ? o.world : null;
+  const warnings = [];
+  const qOut = [];
+  const near = (x, z, r, dyn) => { if (!world) return []; try { return world.query(x, z, r, qOut, !!dyn); } catch (_) { return []; } };
+  const tall = (b) => b.max.y - b.min.y > 40;
+  function ground(x, z, feet) {
+    if (!world || !world.hasWalkables) return { ok: true, y: feet };
+    try { const g = world.groundAt(x, z, feet + 0.55, feet + 0.45); if (g.best === null || g.best === undefined) return { ok: false, y: feet }; return { ok: Math.abs(g.best - feet) < 0.45, y: g.best }; } catch (_) { return { ok: true, y: feet }; }
+  }
+  function blockedAt(x, feet, z, r = SPOT_R, dyn = false) {
+    const lo = feet + BODY_LO, hi = feet + BODY_HI;
+    for (const b of near(x, z, r + 0.05, dyn)) {
+      if (!(b.max.y > lo && b.min.y < hi) || tall(b)) continue;
+      const cx = clamp(x, b.min.x, b.max.x), cz = clamp(z, b.min.z, b.max.z);
+      if ((x - cx) * (x - cx) + (z - cz) * (z - cz) < r * r) return true;
+    }
+    return false;
+  }
+  function clearSeg(a, b, r = EDGE_R, dyn = false) {
+    const L = hyp(a.x, a.z, b.x, b.z); if (L < 1e-4) return true;
+    const lo = Math.min(a.y, b.y) + BODY_LO + 0.05, hi = Math.max(a.y, b.y) + BODY_HI;
+    for (const bx of near((a.x + b.x) / 2, (a.z + b.z) / 2, L / 2 + r + 0.1, dyn)) {
+      if (!(bx.max.y > lo && bx.min.y < hi) || tall(bx)) continue;
+      const inA = a.x > bx.min.x - r && a.x < bx.max.x + r && a.z > bx.min.z - r && a.z < bx.max.z + r;
+      const inB = b.x > bx.min.x - r && b.x < bx.max.x + r && b.z > bx.min.z - r && b.z < bx.max.z + r;
+      const e = inA || inB ? 0.02 : r;
+      if (segRect(a.x, a.z, b.x, b.z, bx.min.x - e, bx.min.z - e, bx.max.x + e, bx.max.z + e)) return false;
+    }
+    return true;
+  }
+  function stepOK(a, b, maxStep = 0.4) {
+    if (!world || !world.hasWalkables) return true;
+    const L = hyp(a.x, a.z, b.x, b.z), n = Math.max(1, Math.ceil(L / 0.3));
+    let prev = a.y;
+    for (let i = 1; i <= n; i++) {
+      const t = i / n, x = a.x + (b.x - a.x) * t, z = a.z + (b.z - a.z) * t;
+      let g; try { g = world.groundAt(x, z, prev + maxStep + 0.15, prev + maxStep); } catch (_) { return true; }
+      if (g.top !== null && g.top > prev + maxStep) return false;
+      if (g.best === null || prev - g.best > maxStep + 0.05) return false;
+      prev = g.best;
+    }
+    return Math.abs(prev - b.y) < maxStep + 0.05;
+  }
+  function freeAlong(p, dx, dz, maxD = 3.5, r = 0.1, dyn = true) {
+    const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+    let lo = 0, hi = maxD;
+    if (clearSeg(p, { x: p.x + dx * maxD, y: p.y, z: p.z + dz * maxD }, r, dyn)) return maxD;
+    for (let i = 0; i < 9; i++) { const m = (lo + hi) / 2; if (clearSeg(p, { x: p.x + dx * m, y: p.y, z: p.z + dz * m }, r, dyn)) lo = m; else hi = m; }
+    return lo;
+  }
+  const ROOMS = (o.rooms || []).filter((r) => r && r.r).map((r) => ({ key: String(r.key || r.he), he: r.he || String(r.key), r: r.r, y0: isFinite(r.y0) ? r.y0 : -1e9, y1: isFinite(r.y1) ? r.y1 : 1e9, area: (r.r[2] - r.r[0]) * (r.r[3] - r.r[1]) }));
+  ROOMS.sort((a, b) => a.area - b.area);
+  function roomRect(x, feet, z) { for (const r of ROOMS) if (x >= r.r[0] - 1e-3 && x <= r.r[2] + 1e-3 && z >= r.r[1] - 1e-3 && z <= r.r[3] + 1e-3 && feet + 0.8 >= r.y0 && feet + 0.8 <= r.y1) return r; return null; }
+  const heOf = {}; for (const r of ROOMS) heOf[r.key] = r.he;
+  const nodes = [], byId = new Map(), hubs = new Map();
+  function addNode(n0) {
+    if (!n0 || !isFinite(n0.x) || !isFinite(n0.z) || byId.has(String(n0.id))) return null;
+    const y = isFinite(n0.y) ? n0.y : 0;
+    const rr = n0.room ? null : roomRect(n0.x, y, n0.z);
+    const room = n0.room ? String(n0.room) : rr ? rr.key : 'world';
+    const n = { id: String(n0.id), x: n0.x, y, z: n0.z, ox: n0.x, oz: n0.z, room, he: n0.he || heOf[room] || room, floor: 'main', kind: n0.kind || 'room', hub: !!n0.hub, transit: false, links: [], idx: nodes.length };
+    nodes.push(n); byId.set(n.id, n);
+    if (n.he && !heOf[room]) heOf[room] = n.he;
+    return n;
+  }
+  for (const n of o.nodes || []) addNode(n);
+  for (const r of ROOMS) {
+    if (nodes.some((n) => n.room === r.key)) continue;
+    const y = isFinite(r.floorY) ? r.floorY : (nodes.length ? nodes[0].y : 0);
+    addNode({ id: 'room:' + r.key, x: (r.r[0] + r.r[2]) / 2, y, z: (r.r[1] + r.r[3]) / 2, room: r.key, he: r.he, hub: true });
+  }
+  for (const n of nodes) if (n.hub && !hubs.has(n.room)) hubs.set(n.room, n);
+  for (const n of nodes) if (!hubs.has(n.room)) hubs.set(n.room, n);
+  // validation: snap to the floor, step out of colliders
+  for (const n of nodes) {
+    try {
+      const g0 = ground(n.x, n.z, n.y); if (g0.ok) n.y = g0.y;
+      if (!blockedAt(n.x, n.y, n.z) && g0.ok) continue;
+      let done = false;
+      for (let rad = 0.1; rad <= 2.0 && !done; rad += 0.1) {
+        const k = Math.max(8, Math.round(rad * 24));
+        for (let i = 0; i < k; i++) {
+          const a = (i / k) * Math.PI * 2, x = n.ox + Math.cos(a) * rad, z = n.oz + Math.sin(a) * rad;
+          const g = ground(x, z, n.y); if (!g.ok || blockedAt(x, g.y, z)) continue;
+          n.x = x; n.z = z; n.y = g.y; n.moved = rad; done = true; break;
+        }
+      }
+      if (!done) { n.blocked = true; warnings.push('no clear spot near ' + n.id); }
+    } catch (e) { warnings.push('settle ' + n.id); }
+  }
+  const edges = [], adj = nodes.map(() => []), keys = new Set();
+  function addEdge(a, b, opt = {}) {
+    if (!a || !b || a === b) return null;
+    const k = a.idx < b.idx ? a.idx + ':' + b.idx : b.idx + ':' + a.idx; if (keys.has(k)) return null; keys.add(k);
+    const len = Math.hypot(b.x - a.x, (b.y - a.y) * 0.5, b.z - a.z);
+    const e = { a: a.idx, b: b.idx, pts: [{ x: a.x, y: a.y, z: a.z }, { x: b.x, y: b.y, z: b.z }], cost: len, length: len, door: null, stair: false, link: !!opt.link };
+    edges.push(e); adj[a.idx].push(e); adj[b.idx].push(e);
+    if (opt.link) { a.links.push(b.idx); b.links.push(a.idx); }
+    return e;
+  }
+  const maxD = o.maxD || 14;
+  if (Array.isArray(o.edges) && o.edges.length) {
+    for (const [ia, ib] of o.edges) addEdge(byId.get(String(ia)), byId.get(String(ib)), { link: true });
+  } else {
+    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      if (Math.abs(a.y - b.y) > 0.45 || hyp(a.x, a.z, b.x, b.z) > maxD) continue;
+      if (clearSeg(a, b, EDGE_R, false) && stepOK(a, b) && stepOK(b, a)) addEdge(a, b);
+    }
+  }
+  const toNode = (x) => (x == null ? null : typeof x === 'string' ? byId.get(x) : typeof x === 'number' ? nodes[x] : x.idx != null && nodes[x.idx] === x ? x : null);
+  function findPath(a0, b0) {
+    const A = toNode(a0), Bn = toNode(b0); if (!A || !Bn) return null;
+    const N = nodes.length, g = new Float64Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1), prevE = new Array(N), closed = new Uint8Array(N);
+    const h = (n) => Math.hypot(n.x - Bn.x, n.y - Bn.y, n.z - Bn.z), f = new Float64Array(N).fill(Infinity);
+    g[A.idx] = 0; f[A.idx] = h(A); const open = [A.idx];
+    while (open.length) {
+      let bi = 0; for (let i = 1; i < open.length; i++) if (f[open[i]] < f[open[bi]]) bi = i;
+      const u = open[bi]; open[bi] = open[open.length - 1]; open.pop();
+      if (u === Bn.idx) break; if (closed[u]) continue; closed[u] = 1;
+      for (const e of adj[u]) { const v = e.a === u ? e.b : e.a; if (closed[v]) continue; const ng = g[u] + e.cost; if (ng < g[v]) { g[v] = ng; f[v] = ng + h(nodes[v]); prev[v] = u; prevE[v] = e; open.push(v); } }
+    }
+    if (!isFinite(g[Bn.idx])) return null;
+    const ids = []; for (let v = Bn.idx; v !== -1; v = prev[v]) ids.push(v); ids.reverse();
+    const pts = ids.map((i) => ({ x: nodes[i].x, y: nodes[i].y, z: nodes[i].z }));
+    return { ids: ids.map((i) => nodes[i].id), nodes: ids.map((i) => nodes[i]), pts, doorAt: {}, length: g[Bn.idx], cost: g[Bn.idx] };
+  }
+  function nearest(p, opt = {}) {
+    const tol = opt.yTol != null ? opt.yTol : 0.6, list = [];
+    for (const n of nodes) { if (Math.abs(n.y - p.y) > tol) continue; const d = hyp(p.x, p.z, n.x, n.z); if (d > (opt.maxD || 1e9)) continue; list.push([d, n]); }
+    list.sort((a, b) => a[0] - b[0]);
+    for (const [, n] of list) { if (opt.los && !(clearSeg(p, n, opt.r != null ? opt.r : EDGE_R, !!opt.dyn) && stepOK(p, n))) continue; return n; }
+    return null;
+  }
+  function roomKeyAt(x, feet, z) { const r = roomRect(x, feet, z); return r ? r.key : null; }
+  function hub(room) { return hubs.get(room) || null; }
+  function neighborDests(room) {
+    const out = new Map();
+    for (const n of nodes) {
+      if (n.room !== room) continue;
+      for (const e of adj[n.idx]) { const m = nodes[e.a === n.idx ? e.b : e.a]; if (m.room === room) continue; const hb = hub(m.room) || m; if (!out.has(hb.id)) out.set(hb.id, { node: hb, room: m.room, he: hb.he || heOf[m.room], other: true }); }
+    }
+    return [...out.values()];
+  }
+  const graph = {
+    nodes, edges, byId, warnings, hubs, heOf, rooms: ROOMS, simple: true,
+    findPath, nearest, hub, roomKeyAt, floorOf: () => 'main', neighborDests, panoLinks: () => [], destFor: () => null,
+    clearSeg, blockedAt, freeAlong, stepOK, needStep: () => true, node: toNode,
+    get usesWorld() { return !!world; },
+    stats() { return { nodes: nodes.length, edges: edges.length, links: edges.filter((e) => e.link).length, dead: 0, moved: nodes.filter((n) => n.moved).map((n) => n.id), blocked: nodes.filter((n) => n.blocked).map((n) => n.id), warnings: warnings.slice() }; },
+  };
+  return graph;
+}
 export function lastNavGraph() { return _last; }

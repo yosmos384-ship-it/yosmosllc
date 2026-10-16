@@ -12,6 +12,7 @@ import { buildLandscape } from './exterior-landscape.js';
 import { buildHorizon } from './exterior-horizon.js';
 import { buildFences, buildMailbox, buildBins, buildAC, buildPoles, buildSigns, buildVehicles } from './exterior-props.js';
 import { setupAmbient } from './exterior-audio.js';
+import { buildLimoSpot } from './exterior-limo.js'; // V10: limousine parking spot + boarding trigger
 
 // 0 = day … 1 = night. Updated every frame from ctx.timeOfDay (number or function) when core provides it.
 export const nightUniform = { value: 0 };
@@ -108,6 +109,7 @@ export async function build(ctx) {
   step('poles', buildPoles);
   step('signs', buildSigns);
   step('vehicles', buildVehicles);
+  step('limo', () => { W.limo = buildLimoSpot(ctx, W); ctx.limoSpot = W.limo; }); // V10
   step('heroTrees', buildHeroTrees);
   step('backdrop', buildBackdrop);       // instanced mid trees (realistic) + far blob trees
   step('fences', buildFences);           // neighbours' chain link only (our lot has the cedar fence)
