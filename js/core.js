@@ -221,37 +221,7 @@ export async function boot() {
     renderer.shadowMap.needsUpdate = true;
     store('tod', name);
   }
-  /* V12 (owner): the tour opens at DUSK ("ערב"); once the visitor enters, the light changes by itself every 10 s
-     dusk → night → day → dusk … (each step a smooth 2 s transition). Tapping יום / ערב / לילה stops the cycle (manual
-     choice wins until refresh / "start over"); the ⏸ / ▶ "מחזור יום-לילה" button pauses / resumes it. It holds while
-     the intro card, the loading screen, 360 photoreal, the renders viewer, before / after, pool, another world (limo /
-     casino) or a hidden tab is on. Room-probe recaptures stay debounced to the end of each transition (core-render),
-     and on phones they are skipped while the cycle runs (getTod().auto). */
-  const TOD_CYCLE = ['evening', 'night', 'day'], TOD_HOLD = 10, TOD_STEP = 2;
-  const todCycle = { on: true, t: 0, steps: 0 };
-  function cycleHeld() {
-    const C = document.body.classList, it = $('intro');
-    return !todCycle.entered || (it && it.classList.contains('show')) || C.contains('loading') || C.contains('pt-running') || C.contains('pt-viewing') || C.contains('gallery-open')
-      || C.contains('sow-ba-open') || C.contains('pool-on') || C.contains('world-busy') || !atHome() || mode === 'intro' || document.hidden;
-  }
-  function cycleUI() {
-    const b = $('btnTodCycle'); if (!b) return;
-    b.classList.toggle('on', todCycle.on); b.setAttribute('aria-pressed', todCycle.on ? 'true' : 'false');
-    const ic = b.querySelector('.ico'); if (ic) ic.textContent = todCycle.on ? '⏸' : '▶';
-  }
-  function setCycle(on) { todCycle.on = !!on; todCycle.t = 0; cycleUI(); }
-  function cycleTick() {
-    // wall-clock time (a phone that drops frames still changes every 10 s), ≤ 1 s per tick (hidden tab / long frame)
-    const nowS = performance.now() / 1000, el = Math.min(1, Math.max(0, nowS - (todCycle.last || nowS))); todCycle.last = nowS;
-    if (!todCycle.on || todAnim || cycleHeld()) return;
-    todCycle.t += el;
-    if (todCycle.t < TOD_HOLD) return;
-    todCycle.t = 0; todCycle.steps++;
-    const i = TOD_CYCLE.indexOf(todName);
-    setTOD(TOD_CYCLE[(i + 1) % TOD_CYCLE.length], false, TOD_STEP);
-  }
   function updateTOD(dt) {
-    try { cycleTick(); } catch (_) {}
     if (!todAnim) return;
     const wNow = performance.now() / 1000, wdt = todAnim.w ? Math.min(0.25, wNow - todAnim.w) : dt; todAnim.w = wNow;
     todAnim.t += Math.max(dt, wdt); // V12: wall-clock pace (a 2 s step stays ~2 s on a slow phone)
@@ -483,7 +453,7 @@ export async function boot() {
     hemi, sky, roomEnv: envTex, // V3 LOOK: hemi scaled indoors, Sky swapped for a sky dome in probe captures, room fill env
     isViewFiltered: () => faded.size > 0, // V3 LOOK: no probe captures while dollhouse fade clones are active
     getQuality: () => quality, getMode: () => mode,
-    getTod: () => ({ name: todName, exp: todCur.exp, night: todCur.night, hemiI: todCur.hemiI, animating: !!todAnim, auto: todCycle.on && isTouch }),
+    getTod: () => ({ name: todName, exp: todCur.exp, night: todCur.night, hemiI: todCur.hemiI, animating: !!todAnim }),
     isTouch, toast: (m, ms) => toast(m, ms), reportError,
     isInteractive: (o) => interMap.has(o),
   });
@@ -868,7 +838,6 @@ export async function boot() {
     pendingMode = next;
     try {
       $('intro') && $('intro').classList.remove('show');
-      if (!opts.intro) todCycle.entered = true; // V12: the day / night cycle starts once the visitor is in the tour
       leaveMode(prev);
       mode = 'transition';
       setBodyMode(next);
@@ -1290,9 +1259,7 @@ export async function boot() {
 
   /* ---------------- buttons */
   for (const b of document.querySelectorAll('[data-mode]')) b.addEventListener('click', () => { audio.resume(); setMode(b.dataset.mode); });
-  for (const b of document.querySelectorAll('[data-tod]')) b.addEventListener('click', () => { setCycle(false); setTOD(b.dataset.tod); }); // V12: a manual choice stops the auto cycle
-  $('btnTodCycle') && $('btnTodCycle').addEventListener('click', (e) => { e.stopPropagation(); setCycle(!todCycle.on); toast(todCycle.on ? 'מחזור יום-לילה: פועל' : 'מחזור יום-לילה: מושהה', 1600); });
-  cycleUI();
+  for (const b of document.querySelectorAll('[data-tod]')) b.addEventListener('click', () => setTOD(b.dataset.tod));
   $('btnMeasure') && $('btnMeasure').addEventListener('click', () => setMeasuring(!measuring));
   $('btnMeasureClear') && $('btnMeasureClear').addEventListener('click', () => measure.clear());
   $('btnFlash') && $('btnFlash').addEventListener('click', () => toggleFlash());
@@ -1617,7 +1584,7 @@ export async function boot() {
   window.__tour = {
     styles, sow,
     radio, zoom, dpad, minimap, styleUI, guards, get framer() { return nav && nav.framer; }, // V3 UI
-    ctx, setMode, teleport, player, world, pano, scanner, setTOD, get tod() { return todName; }, get todCycle() { return { on: todCycle.on, t: todCycle.t, steps: todCycle.steps, held: cycleHeld(), hold: TOD_HOLD, step: TOD_STEP }; }, setTodCycle: setCycle, get mode() { return mode; }, panoNodes, lamps, render, pathtrace, nav,
+    ctx, setMode, teleport, player, world, pano, scanner, setTOD, get tod() { return todName; }, get mode() { return mode; }, panoNodes, lamps, render, pathtrace, nav,
     // photoreal 360 flag, unified: reads pathtrace.viewing (via pano.photoreal); setting it is a manual override for tests
     get pathtraceActive() { return pano.photoreal; }, set pathtraceActive(v) { pano.photoreal = v; },
     perf: PERF, texCache: texCacheStats, // V6 PERF
@@ -1700,7 +1667,7 @@ export async function boot() {
   for (const L of lamps) if (!L.optFloor) L.floor = null; // re-derive from final world positions
   try { manageLamps(); } catch (e) { reportError('תאורה', e); }
   try { scanner.prepare(quality === 'high' ? 14000 : 6000); } catch (_) {}
-  setTOD('evening', true); // V12: every load (and "start over" = reload) opens at dusk
+  // V12.1 (owner): every load and "start over" (= reload) starts at DAY (the default todCur); no automatic cycle
   try {
     if (renderer.compileAsync) await Promise.race([renderer.compileAsync(scene, camera), new Promise((r) => setTimeout(r, 8000))]);
     else renderer.compile(scene, camera);
@@ -1724,6 +1691,16 @@ export async function boot() {
       return Promise.resolve(bp(ctx)).then((res) => { if (res && ctx.limoSpot.upgrade(res)) { renderer.shadowMap.needsUpdate = true; perfMark('limo-parked'); } });
     }).catch((e) => console.info('[limo] parked model not available yet', (e && e.message) || e));
   }, 2500);
+  // V13 HELI: the 'heli' world (js/heli.js, lazy) + the parked helicopter on a pad in the back yard (buildParked adds
+  // itself to the scene; tap → "🚁 טיסה במסוק" → enterWorld('heli')). A missing module just means no helicopter.
+  try { worlds && worlds.registerModule('heli', './heli.js', { he: 'מסוק' }); } catch (_) {}
+  setTimeout(() => {
+    import('./heli.js').then((m) => {
+      if (m && m.I18N) { try { i18nExtend(m.I18N); } catch (_) {} }
+      if (!m || typeof m.buildParked !== 'function') return;
+      return Promise.resolve(m.buildParked(ctx)).then(() => { renderer.shadowMap.needsUpdate = true; perfMark('heli-parked'); });
+    }).catch((e) => console.info('[heli] parked helicopter not available', (e && e.message) || e));
+  }, 3200);
   mode = 'intro';
   await setMode('dollhouse', { intro: true, force: true });
   if (mode === 'dollhouse') $('intro') && $('intro').classList.add('show');

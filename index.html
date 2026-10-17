@@ -472,11 +472,10 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
   <button id="btnMore" class="tbtn glass" title="כלים" aria-label="כלים נוספים" aria-expanded="false"><span class="ico">⋯</span></button>
   <div id="toolsInner">
   <div class="seg glass" role="group" aria-label="יום / ערב / לילה">
-    <button data-tod="day" title="יום"><span class="ico">☀️</span>יום</button>
-    <button data-tod="evening" class="on" title="ערב"><span class="ico">🌇</span>ערב</button>
+    <button data-tod="day" class="on" title="יום"><span class="ico">☀️</span>יום</button>
+    <button data-tod="evening" title="ערב"><span class="ico">🌇</span>ערב</button>
     <button data-tod="night" title="לילה"><span class="ico">🌙</span>לילה</button>
   </div>
-  <button id="btnTodCycle" class="tbtn glass on" title="מחזור יום-לילה אוטומטי (השהיה / המשך)" aria-pressed="true"><span class="ico">⏸</span><span class="lbl">מחזור יום-לילה</span></button>
   <button id="btnMeasure" class="tbtn glass" title="מדידה (M)"><span class="ico">📏</span><span class="lbl">מדידה</span></button>
   <button id="btnFlash" class="tbtn glass" title="פנס (Q / F)"><span class="ico">🔦</span><span class="lbl">פנס</span></button>
   <button id="btnQuality" class="tbtn glass" title="איכות גרפיקה"><span class="ico">✦</span><span class="lbl">איכות גבוהה</span></button>
@@ -646,6 +645,6 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
     .then((m) => m.boot())
     .catch((e) => fatal('טעינת מנוע התלת-ממד נכשלה (three.js / core.js) — בדקו חיבור לאינטרנט ורעננו', e));
 </script>
-<div id="ver-tag" style="position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));z-index:50;font:600 11px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.75);background:rgba(20,24,30,.45);padding:2px 8px;border-radius:9px;pointer-events:none">גרסה 12</div>
+<div id="ver-tag" style="position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));z-index:50;font:600 11px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.75);background:rgba(20,24,30,.45);padding:2px 8px;border-radius:9px;pointer-events:none">גרסה 12.1</div>
 </body>
 </html>

@@ -46,12 +46,9 @@ export const DICT = {
   'גרסה 10': ['Version 10', 'Versión 10'],
   'גרסה 11': ['Version 11', 'Versión 11'],
   'גרסה 12': ['Version 12', 'Versión 12'],
+  'גרסה 12.1': ['Version 12.1', 'Versión 12.1'],
   // ---- V12: round floating buttons (the size of "פעולה") with a 1-line label
   'אקסל': ['Excel', 'Excel'],
-  'מחזור יום-לילה': ['Day-night cycle', 'Ciclo día-noche'],
-  'מחזור יום-לילה אוטומטי (השהיה / המשך)': ['Automatic day-night cycle (pause / resume)', 'Ciclo día-noche automático (pausar / reanudar)'],
-  'מחזור יום-לילה: פועל': ['Day-night cycle: on', 'Ciclo día-noche: activado'],
-  'מחזור יום-לילה: מושהה': ['Day-night cycle: paused', 'Ciclo día-noche: en pausa'],
   'פירוט': ['Details', 'Detalle'],
   'הקישו ליציאה': ['tap to exit', 'toca para salir'],
   // ---- V11: "📋 שיפוץ לפי האקסל" (scope-of-work mode: js/sow.js, js/sow-ui.js, js/sow-build.js)
