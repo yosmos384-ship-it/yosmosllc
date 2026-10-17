@@ -124,33 +124,25 @@ const CSS = `
   #gallery .gv-ba{min-height:44px;font-size:14px}
 }
 @media (max-height:520px){#gallery .gv-meta .gv-hint,#gallery .gv-meta .gv-desc{display:none}#gallery .gv-bot{gap:5px;padding-top:6px}#gallery .gv-chip{min-height:34px;padding:3px 9px}#gallery .gv-nav{top:36%}}
-/* V9: floating "🖼 הדמיות" + "🎨 סגנון" in every tour mode (thumb zone, bottom-right; placed by JS above whatever
-   occupies the bottom edge: the action button, the 360 bar, floor chips, the info line) */
-#quickFab{position:fixed;z-index:11;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:stretch;gap:8px;direction:ltr;transition:opacity .25s ease}
-#quickFab.qf-row{flex-direction:row-reverse;align-items:center}
+/* V12: the quick buttons ("🎨 סגנון", "📋 אקסל", "🧾 פירוט" in SOW mode) are ONE compact glass row centred right under
+   the top mode bar (between the minimap and "⋯"); placed by JS clear of the minimap, radio chip, "⋯" and the tools
+   column. Each segment is 34 px tall with a ≥ 44 px hit area (::before). The 🖼 renders button is gone (owner: "no need
+   for it") — the gallery stays in the ⋯ tools menu and in the SOW panel's before / after. */
+#quickFab{position:fixed;z-index:13;left:50%;top:calc(76px + env(safe-area-inset-top,0px));display:flex;flex-direction:row;align-items:center;gap:2px;padding:3px;border-radius:999px;background:rgba(12,16,24,.74);border:1px solid rgba(255,255,255,.13);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 6px 18px rgba(0,0,0,.28);transition:opacity .25s ease}
 #quickFab.qf-off{opacity:0;visibility:hidden;pointer-events:none}
-#quickFab>button{display:flex;align-items:center;justify-content:center;gap:7px;border-radius:999px;font-family:inherit;font-weight:800;white-space:nowrap;touch-action:manipulation;cursor:pointer}
-#btnRendersFab{min-height:52px;padding:0 18px;font-size:15.5px;color:#2a1a04;border:0;background:linear-gradient(180deg,#ffe4ad,#efb45a);box-shadow:0 8px 22px rgba(239,180,90,.38),0 0 0 1px rgba(255,255,255,.4) inset}
-#btnRendersFab:hover{background:linear-gradient(180deg,#fff0cc,#f5c070)}
-#btnRendersFab .qf-ico{font-size:19px;line-height:1}
-#btnStyleFab{min-height:46px;padding:0 16px;font-size:14px;color:var(--text,#eef3f8);background:rgba(12,16,24,.8);border:1px solid rgba(67,224,255,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 18px rgba(0,0,0,.3)}
-#btnStyleFab:hover{background:rgba(30,44,60,.9)}
-#btnStyleFab .qf-ico{font-size:17px;line-height:1}
-body:not(.has-styles) #btnStyleFab{display:none}
-#btnRendersFab.qf-pulse{animation:qfPulse 1.5s ease-out 6}
-@keyframes qfPulse{0%{box-shadow:0 0 0 0 rgba(255,214,140,.85),0 8px 22px rgba(239,180,90,.38)}75%{box-shadow:0 0 0 20px rgba(255,214,140,0),0 8px 22px rgba(239,180,90,.38)}100%{box-shadow:0 0 0 0 rgba(255,214,140,0),0 8px 22px rgba(239,180,90,.38)}}
-#quickFab .qf-tip{position:absolute;bottom:calc(100% + 12px);right:0;width:max-content;max-width:min(240px,calc(100vw - 40px));padding:10px 14px;border-radius:14px;background:#fff1d4;color:#2a1a04;font-size:14px;font-weight:700;line-height:1.3;box-shadow:0 10px 26px rgba(0,0,0,.42);display:none;cursor:pointer;direction:rtl;text-align:right}
-body.ltr #quickFab .qf-tip{direction:ltr;text-align:left}
-#quickFab .qf-tip::after{content:"";position:absolute;top:100%;right:30px;border:8px solid transparent;border-top-color:#fff1d4}
-#quickFab.qf-tipon .qf-tip{display:block;animation:qfTip .35s ease-out}
-@keyframes qfTip{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-#quickFab.qf-tipside .qf-tip{bottom:auto;top:2px;right:calc(100% + 12px)}
-#quickFab.qf-tipside .qf-tip::after{top:16px;right:-16px;border-top-color:transparent;border-left-color:#fff1d4}
-/* V9: while the tip bubble is up (≤ 3–9 s) a fading walk / 360 hint must not show through under it */
-body.qf-tipping #hint{opacity:0!important}
-/* phones: the transient #hint (walk / 360 tips) moves to the free left part of the bottom area, beside the buttons */
-body.qf-on #hint{max-width:calc(100vw - 2 * (28px + var(--qf-w,130px)))}
-@media (max-width:900px){body.qf-on #hint{left:calc(16px + env(safe-area-inset-left,0px));transform:translate(0,10px);max-width:calc(100vw - 44px - var(--qf-w,130px) - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px))}body.qf-on #hint.show{transform:translate(0,0)}}
+#quickFab>button{position:relative;flex:0 0 auto;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:5px;height:34px;min-height:0;padding:0 12px;margin:0;border-radius:999px;border:1px solid transparent;background:transparent;color:#eef3f8;font:700 12.5px/1 inherit;font-family:inherit;white-space:nowrap;touch-action:manipulation;cursor:pointer;transition:background .15s,border-color .15s}
+#quickFab>button::before{content:"";position:absolute;left:-1px;right:-1px;top:-6px;bottom:-6px}
+#quickFab>button:hover{background:rgba(255,255,255,.08)}
+#quickFab>button .qf-ico{font-size:15px;line-height:1}
+#quickFab>button .qf-lbl{max-width:84px;overflow:hidden;text-overflow:ellipsis;letter-spacing:.1px}
+#quickFab>button .qf-chk{display:none;font-size:12px;font-weight:900}
+#quickFab.qf-compact>button{padding:0 10px}
+#quickFab.qf-compact>button .qf-lbl{display:none}
+#btnStyleFab{color:#ffe2ad!important}
+#btnStyleFab .qf-ico{filter:saturate(1.1)}
+body:not(.has-styles) #btnStyleFab{display:none!important}
+/* toasts drop below the row while it is shown */
+body.qf-on #toast{top:calc(var(--qf-bot,104px) + 8px)}
 `;
 
 /* ============================================================================================ WebGL viewer */
@@ -550,10 +542,8 @@ export function installGallery(opts = {}) {
 
   /* ---------- entry buttons */
   const mk = (id, cls, html, title) => { const b = document.createElement('button'); b.id = id; b.type = 'button'; b.className = cls; b.innerHTML = html; b.title = title; b.setAttribute('aria-haspopup', 'dialog'); b.addEventListener('click', (e) => { e.stopPropagation(); open(); }); return b; };
-  const acts = document.querySelector('#panoActions .acts');
-  if (acts && !document.getElementById('btnGallery')) acts.insertBefore(mk('btnGallery', 'pt-idle', '🖼 ' + S.btn, S.btnTitle), acts.firstChild);
-  const row = document.getElementById('panoRow');
-  if (row && !document.getElementById('btnGalleryRow')) { const b = mk('btnGalleryRow', '', '🖼', S.btnTitle); b.setAttribute('aria-label', S.btn); const pm = document.getElementById('btnPanoMore'); row.insertBefore(b, pm ? pm.nextSibling : row.firstChild); }
+  // V12: the gallery has ONE entry in the tour UI — the ⋯ tools menu (phones) / tools column (desktop) — plus the SOW
+  // panel's before / after and the API (window.__gallery.open). The 360-bar, loader-card and floating 🖼 buttons are gone.
   const tools = document.getElementById('toolsInner');
   if (tools && !document.getElementById('btnGalleryTools')) {
     const b = mk('btnGalleryTools', 'tbtn glass', '<span class="ico">🖼</span><span class="lbl"></span>', S.btnTitle);
@@ -561,37 +551,29 @@ export function installGallery(opts = {}) {
     const after = document.getElementById('btnStyle');
     if (after && after.parentNode === tools) tools.insertBefore(b, after.nextSibling); else tools.appendChild(b);
   }
-  const card = document.querySelector('#loader .card');
-  if (card && !document.querySelector('#loader .gv-loadbtn')) { const b = mk('btnGalleryLoader', 'gv-loadbtn', '', S.btnTitle); b.textContent = '🖼 ' + S.loaderBtn; card.appendChild(b); }
-  /* ---------- V9: floating "🖼 הדמיות" + "🎨 סגנון" (walk, 360, dollhouse, plan) */
+  /* ---------- V12: the quick-button row under the mode bar: "🎨 סגנון" (+ sow-ui.js adds "🧾 פירוט" / "📋 אקסל") */
   function installFab() {
     if (document.getElementById('quickFab')) return null;
-    const box = document.createElement('div'); box.id = 'quickFab'; box.className = 'qf-off';
-    box.innerHTML = '<div class="qf-tip" role="status"></div>'
-      + '<button id="btnRendersFab" type="button" aria-haspopup="dialog"><span class="qf-ico" aria-hidden="true">🖼</span><span class="qf-lbl"></span></button>'
-      + '<button id="btnStyleFab" type="button" aria-haspopup="dialog"><span class="qf-ico" aria-hidden="true">🎨</span><span class="qf-lbl"></span></button>';
+    const box = document.createElement('div'); box.id = 'quickFab'; box.className = 'qf-off'; box.setAttribute('role', 'toolbar');
+    box.innerHTML = '<button id="btnStyleFab" type="button" aria-haspopup="dialog"><span class="qf-ico" aria-hidden="true">🎨</span><span class="qf-lbl"></span></button>';
     document.body.appendChild(box);
-    const tip = box.querySelector('.qf-tip'), bR = box.querySelector('#btnRendersFab'), bS = box.querySelector('#btnStyleFab');
-    tip.textContent = S.tip; bR.querySelector('.qf-lbl').textContent = S.btn; bR.title = S.fabTitle;
+    const bS = box.querySelector('#btnStyleFab');
     bS.querySelector('.qf-lbl').textContent = S.styleFab; bS.title = S.styleFabTitle;
-    const fs = { pulsed: false, tipT: 0, layout: '' };
-    const stopTip = () => { box.classList.remove('qf-tipon'); document.body.classList.remove('qf-tipping'); bR.classList.remove('qf-pulse'); clearTimeout(fs.tipT); };
-    bR.addEventListener('click', (e) => { e.stopPropagation(); stopTip(); open(); });
-    tip.addEventListener('click', (e) => { e.stopPropagation(); stopTip(); open(); });
+    const fs = { layout: '' };
     // 🎨 → the style picker sheet (the V3 panel). Its outside-tap handler closes it on pointerdown, so remember whether it
-    // was open before that (window capture runs first) to make the chip a toggle.
+    // was open before that (window capture runs first) to make the button a toggle.
     let wasOpen = false;
     window.addEventListener('pointerdown', (e) => { if (e.target instanceof Node && bS.contains(e.target)) { try { const u = tour() && tour().styleUI; wasOpen = !!(u && u.panel && u.panel.open); } catch (_) { wasOpen = false; } } }, true);
     bS.addEventListener('click', (e) => {
-      e.stopPropagation(); stopTip();
+      e.stopPropagation();
       const u = tour() && tour().styleUI; if (!u || !u.check || !u.check()) return;
       if (wasOpen) { u.panel.hide(); wasOpen = false; return; }
       u.render(); u.panel.show();
     });
-    // placement: bottom-right thumb zone, above any visible bottom element it would overlap horizontally; if the column
-    // would reach the top controls it becomes a row, then moves left of the tools column, else it hides
-    const BOTTOM = ['btnAct', 'panoUI', 'floorChips', 'info', 'measureBar', 'dpad'];
-    const TOP = ['tools', 'topbar', 'leftStack'];
+    // placement: centred under the top mode bar, inside the free gap between the left-side obstacles (minimap, radio
+    // chip) and the right-side ones ("⋯", tools column); labels drop to icons only if the gap is too narrow, and as a
+    // last resort the row moves down below the obstacles
+    const LEFT_RIGHT = ['mapCard', 'radioChip', 'btnMore', 'tools', 'btnHome'];
     const shown = (el) => { if (!el) return null; const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity < 0.05) return null; const r = el.getBoundingClientRect(); return r.width && r.height ? r : null; };
     const MODES = ['walk', 'pano', 'dollhouse', 'plan'];
     function tourMode() { const t = tour(); try { return t ? t.mode : ''; } catch (_) { return ''; } }
@@ -600,102 +582,46 @@ export function installGallery(opts = {}) {
       const m = tourMode();
       const hide = !MODES.includes(m) && !body.classList.contains('mode-transition') || body.classList.contains('loading') || body.classList.contains('tools-open')
         || body.classList.contains('gallery-open') || (intro && intro.classList.contains('show'));
-      if (hide) { box.classList.add('qf-off'); body.classList.remove('qf-on'); stopTip(); fs.layout = 'off'; return; }
-      const hintEl = document.getElementById('hint');
-      if (box.classList.contains('qf-tipon') && hintEl && hintEl.classList.contains('show')) { // a new walk / 360 hint wins
-        // a room tip cut short this way is shown again once the hint has gone
-        if (tip.dataset.room && fs.lastRoomTip === tip.dataset.room && seenRooms.has(tip.dataset.room)) { seenRooms.delete(tip.dataset.room); fs.roomTips = Math.max(0, (fs.roomTips || 0) - 1); if (!fs.roomTips) fs.tipShown = Math.max(0, (fs.tipShown || 0) - 1); }
-        stopTip();
-      }
-      const vh = window.innerHeight, vw = window.innerWidth;
-      const toolsR = shown(document.getElementById('tools'));
-      const cands = [['col', 0], ['row', 0]];
-      if (toolsR) { const rx = Math.max(0, vw - toolsR.left + 8 - 16); cands.push(['col', rx], ['row', rx]); }
+      if (hide) { box.classList.add('qf-off'); body.classList.remove('qf-on'); fs.layout = 'off'; return; }
+      const vw = window.innerWidth;
+      const tb = shown(document.getElementById('topbar'));
+      let top = tb ? tb.bottom + 8 : 16;
       box.classList.remove('qf-off');
-      for (const [lay, rx] of cands) {
-        box.classList.toggle('qf-row', lay === 'row');
-        box.style.right = rx ? `calc(${16 + rx}px + env(safe-area-inset-right,0px))` : '';
-        box.style.bottom = '';
-        const fr = box.getBoundingClientRect();
-        let need = vh - fr.bottom; // CSS base (16 px + safe area)
-        for (const id of BOTTOM) {
-          const r = shown(document.getElementById(id)); if (!r) continue;
-          if (r.right <= fr.left - 4 || r.left >= fr.right + 4 || r.top >= vh - 1) continue;
-          need = Math.max(need, vh - r.top + 10);
-        }
-        let topLim = 4;
-        for (const id of TOP) {
-          const r = shown(document.getElementById(id)); if (!r) continue;
-          if (r.right <= fr.left - 4 || r.left >= fr.right + 4) continue;
-          topLim = Math.max(topLim, r.bottom + 8);
-        }
-        const top = vh - need - fr.height;
-        if (top >= topLim && fr.left >= 4) {
-          box.style.bottom = Math.round(need) + 'px';
-          body.classList.add('qf-on'); body.style.setProperty('--qf-w', Math.round(fr.width + rx) + 'px');
-          box.classList.toggle('qf-tipside', vh < 560 || top - topLim < 64);
-          fs.layout = lay + (rx ? '@' + Math.round(rx) : '') + ' b' + Math.round(need);
-          maybeTip();
-          return;
+      for (let pass = 0; pass < 4; pass++) {
+        for (const compact of [false, true]) {
+          box.classList.toggle('qf-compact', compact);
+          box.style.top = Math.round(top) + 'px';
+          const w = box.getBoundingClientRect().width, h = box.getBoundingClientRect().height;
+          let L = 8, R = vw - 8, below = top;
+          for (const id of LEFT_RIGHT) {
+            const r = shown(document.getElementById(id)); if (!r) continue;
+            if (r.bottom <= top - 7 || r.top >= top + h + 7) continue; // hit area reaches 6 px above / below
+            below = Math.max(below, r.bottom + 8);
+            if (r.left + r.width / 2 < vw / 2) L = Math.max(L, r.right + 8); else R = Math.min(R, r.left - 8);
+          }
+          if (R - L >= w) {
+            const x = Math.max(L, Math.min(R - w, vw / 2 - w / 2));
+            box.style.left = Math.round(x) + 'px';
+            body.classList.add('qf-on'); body.style.setProperty('--qf-bot', Math.round(top + h) + 'px');
+            fs.layout = 'top' + (compact ? '-compact' : '') + ' y' + Math.round(top) + (pass ? ' (moved down)' : '');
+            return;
+          }
+          if (compact) top = below;
         }
       }
-      box.classList.add('qf-off'); body.classList.remove('qf-on'); box.style.right = ''; box.style.bottom = ''; fs.layout = 'off(no room)';
+      box.classList.add('qf-off'); body.classList.remove('qf-on'); fs.layout = 'off(no room)';
     }
-    // first-time discoverability: a pulse + "ראו הדמיות של כל סגנון שיפוץ" once the tour has started (in memory only:
-    // a refresh is a full reset, V8)
-    function maybeTip() {
-      if (fs.pulsed || !MODES.includes(tourMode())) return;
-      fs.pulsed = true;
-      let tries = 0;
-      const go = () => {
-        if (box.classList.contains('qf-off')) { fs.pulsed = false; return; }
-        if (fs.roomTips) return; // a room tip (below) already did the job
-        // not on top of a walk / 360 hint that is still showing (it fades after ~5 s)
-        const h = document.getElementById('hint'); if (h && h.classList.contains('show') && ++tries < 24) { setTimeout(go, 500); return; }
-        // starting in a room that has renders → the room tip is the first-time tip
-        if (roomTip()) return;
-        tip.textContent = S.tip; delete tip.dataset.room;
-        bR.classList.add('qf-pulse'); box.classList.add('qf-tipon'); document.body.classList.add('qf-tipping'); fs.tipShown = (fs.tipShown || 0) + 1;
-        fs.tipT = setTimeout(stopTip, 9000);
-      };
-      setTimeout(go, 900);
-    }
-    // V9: the first time (per page load) the visitor is in a room that has renders, a subtle 3-second bubble
-    // "יש הדמיות לחדר הזה · 🖼" above the button; tapping it opens the viewer at that room
-    const seenRooms = new Set();
-    function curRenderedRoom() {
-      const t = tour(); if (!t || !t.roomInfo || !st.manifest) return null;
-      let info = null; try { info = t.roomInfo(); } catch (_) { return null; }
-      if (!info || (info.mode !== 'walk' && info.mode !== 'pano') || !info.key) return null;
-      const sty = curTourStyle() || st.style || (st.manifest.styles && st.manifest.styles[0] && st.manifest.styles[0].id);
-      return item(sty, info.key) ? info.key : null;
-    }
-    function roomTip() {
-      if (box.classList.contains('qf-off') || body().classList.contains('gallery-open')) return false;
-      const h = document.getElementById('hint'); if (h && h.classList.contains('show')) return false; // after the walk / 360 hint
-      const k = curRenderedRoom(); if (!k || seenRooms.has(k)) return false;
-      seenRooms.add(k);
-      clearTimeout(fs.tipT);
-      tip.textContent = S.roomTip; tip.dataset.room = k;
-      box.classList.add('qf-tipon'); document.body.classList.add('qf-tipping');
-      if (!fs.roomTips) { bR.classList.add('qf-pulse'); fs.tipShown = (fs.tipShown || 0) + 1; fs.pulsed = true; }
-      fs.roomTips = (fs.roomTips || 0) + 1; fs.lastRoomTip = k;
-      fs.tipT = setTimeout(stopTip, 3000);
-      return true;
-    }
-    const body = () => document.body;
-    setInterval(() => { try { if (fs.pulsed) roomTip(); } catch (e) { /* tour not ready */ } }, 600);
     let raf = 0; const sched = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; try { place(); } catch (e) { console.warn('[gallery] fab', e); } }); };
     window.addEventListener('resize', sched); window.addEventListener('orientationchange', sched);
     try {
       new MutationObserver(sched).observe(document.body, { attributes: true, attributeFilter: ['class'] });
-      for (const id of ['intro', 'hint']) { const it = document.getElementById(id); if (it) new MutationObserver(sched).observe(it, { attributes: true, attributeFilter: ['class'] }); }
-      if (window.ResizeObserver) { const ro = new ResizeObserver(sched); for (const id of BOTTOM.concat(TOP)) { const e = document.getElementById(id); if (e) ro.observe(e); } }
+      const it = document.getElementById('intro'); if (it) new MutationObserver(sched).observe(it, { attributes: true, attributeFilter: ['class'] });
+      if (window.ResizeObserver) { const ro = new ResizeObserver(sched); for (const id of LEFT_RIGHT.concat(['topbar', 'quickFab'])) { const e = id === 'quickFab' ? box : document.getElementById(id); if (e) ro.observe(e); } }
     } catch (_) {}
-    setInterval(sched, 1000); // cheap safety net (mode getters, late-built panels)
+    setInterval(sched, 1000); // cheap safety net (mode getters, late-built panels, language changes)
     sched();
-    const showTip = (ms = 9000) => { clearTimeout(fs.tipT); tip.textContent = S.tip; delete tip.dataset.room; bR.classList.add('qf-pulse'); box.classList.add('qf-tipon'); document.body.classList.add('qf-tipping'); fs.tipT = setTimeout(stopTip, ms); }; // tests / screenshots
-    return { place, stopTip, showTip, roomTip, get layout() { return fs.layout; }, get tipShown() { return fs.tipShown || 0; }, get roomTips() { return fs.roomTips || 0; }, get lastRoomTip() { return fs.lastRoomTip || ''; }, get seenRooms() { return [...seenRooms]; }, el: box };
+    const noop = () => false;
+    return { place, stopTip: noop, showTip: noop, roomTip: noop, get layout() { return fs.layout; }, get tipShown() { return 0; }, get roomTips() { return 0; }, get lastRoomTip() { return ''; }, get seenRooms() { return []; }, el: box };
   }
   const fab = installFab();
   // warm the manifest in idle time so the first open is instant

@@ -102,6 +102,7 @@ export function createRoomPicker(env) {
     if (vis(dp)) for (const b of dp.querySelectorAll('button')) add(vis(b), 'dpad');
     for (const id of BAND_IDS) {
       let r = vis(document.getElementById(id));
+      if (!r && id === 'quickFab') { const q = document.getElementById(id); if (q && !q.classList.contains('qf-off')) { const qr = q.getBoundingClientRect(); if (qr.width && qr.height) r = qr; } } // V12: count it while it fades in too
       if (r && id === 'btnAct' && lifted) r = { left: r.left, right: r.right, top: r.top + LIFT_PX, bottom: r.bottom + LIFT_PX }; // where it sits un-lifted
       add(r, id);
     }

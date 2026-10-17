@@ -198,7 +198,7 @@ export async function boot() {
     sun.intensity = p.sunI; sun.color.copy(p.sunC);
     hemi.intensity = p.hemiI; hemi.color.copy(p.hemiSky); hemi.groundColor.copy(p.hemiGround);
     renderer.toneMappingExposure = p.exp;
-    scene.fog.color.copy(p.fog);
+    if (scene.fog) scene.fog.color.copy(p.fog); // V12: worlds (limo / casino / test) may run without fog while a transition ends
     stars.material.opacity = p.stars; stars.visible = p.stars > 0.01;
   }
   let envKApplied = -1;
@@ -209,20 +209,52 @@ export async function boot() {
     envKApplied = k;
     try { if (typeof render !== 'undefined' && render && render.applyEnv) render.applyEnv(); } catch (_) {}
   }
-  function setTOD(name, instant) {
+  function setTOD(name, instant, dur) {
     if (!TOD[name]) return;
     todName = name;
     for (const b of document.querySelectorAll('[data-tod]')) b.classList.toggle('on', b.dataset.tod === name);
     const from = { ...todCur, sunC: todCur.sunC.clone(), hemiSky: todCur.hemiSky.clone(), hemiGround: todCur.hemiGround.clone(), fog: todCur.fog.clone() };
-    todAnim = { from, to: TOD[name], t: instant ? 1.6 : 0, dur: 1.6, lastEnv: 0 };
+    const d = dur || 1.6;
+    todAnim = { from, to: TOD[name], t: instant ? d : 0, dur: d, lastEnv: 0 };
     for (const L of lamps) if (L.world === HOME) L.handle.set(name !== 'day');
     lampsDirty = true;
     renderer.shadowMap.needsUpdate = true;
     store('tod', name);
   }
+  /* V12 (owner): the tour opens at DUSK ("ערב"); once the visitor enters, the light changes by itself every 10 s
+     dusk → night → day → dusk … (each step a smooth 2 s transition). Tapping יום / ערב / לילה stops the cycle (manual
+     choice wins until refresh / "start over"); the ⏸ / ▶ "מחזור יום-לילה" button pauses / resumes it. It holds while
+     the intro card, the loading screen, 360 photoreal, the renders viewer, before / after, pool, another world (limo /
+     casino) or a hidden tab is on. Room-probe recaptures stay debounced to the end of each transition (core-render),
+     and on phones they are skipped while the cycle runs (getTod().auto). */
+  const TOD_CYCLE = ['evening', 'night', 'day'], TOD_HOLD = 10, TOD_STEP = 2;
+  const todCycle = { on: true, t: 0, steps: 0 };
+  function cycleHeld() {
+    const C = document.body.classList, it = $('intro');
+    return !todCycle.entered || (it && it.classList.contains('show')) || C.contains('loading') || C.contains('pt-running') || C.contains('pt-viewing') || C.contains('gallery-open')
+      || C.contains('sow-ba-open') || C.contains('pool-on') || C.contains('world-busy') || !atHome() || mode === 'intro' || document.hidden;
+  }
+  function cycleUI() {
+    const b = $('btnTodCycle'); if (!b) return;
+    b.classList.toggle('on', todCycle.on); b.setAttribute('aria-pressed', todCycle.on ? 'true' : 'false');
+    const ic = b.querySelector('.ico'); if (ic) ic.textContent = todCycle.on ? '⏸' : '▶';
+  }
+  function setCycle(on) { todCycle.on = !!on; todCycle.t = 0; cycleUI(); }
+  function cycleTick() {
+    // wall-clock time (a phone that drops frames still changes every 10 s), ≤ 1 s per tick (hidden tab / long frame)
+    const nowS = performance.now() / 1000, el = Math.min(1, Math.max(0, nowS - (todCycle.last || nowS))); todCycle.last = nowS;
+    if (!todCycle.on || todAnim || cycleHeld()) return;
+    todCycle.t += el;
+    if (todCycle.t < TOD_HOLD) return;
+    todCycle.t = 0; todCycle.steps++;
+    const i = TOD_CYCLE.indexOf(todName);
+    setTOD(TOD_CYCLE[(i + 1) % TOD_CYCLE.length], false, TOD_STEP);
+  }
   function updateTOD(dt) {
+    try { cycleTick(); } catch (_) {}
     if (!todAnim) return;
-    todAnim.t += dt;
+    const wNow = performance.now() / 1000, wdt = todAnim.w ? Math.min(0.25, wNow - todAnim.w) : dt; todAnim.w = wNow;
+    todAnim.t += Math.max(dt, wdt); // V12: wall-clock pace (a 2 s step stays ~2 s on a slow phone)
     const k = easings.inOutSine(Math.min(1, todAnim.t / todAnim.dur));
     const a = todAnim.from, b = todAnim.to;
     for (const key of Object.keys(b)) {
@@ -451,7 +483,7 @@ export async function boot() {
     hemi, sky, roomEnv: envTex, // V3 LOOK: hemi scaled indoors, Sky swapped for a sky dome in probe captures, room fill env
     isViewFiltered: () => faded.size > 0, // V3 LOOK: no probe captures while dollhouse fade clones are active
     getQuality: () => quality, getMode: () => mode,
-    getTod: () => ({ name: todName, exp: todCur.exp, night: todCur.night, hemiI: todCur.hemiI, animating: !!todAnim }),
+    getTod: () => ({ name: todName, exp: todCur.exp, night: todCur.night, hemiI: todCur.hemiI, animating: !!todAnim, auto: todCycle.on && isTouch }),
     isTouch, toast: (m, ms) => toast(m, ms), reportError,
     isInteractive: (o) => interMap.has(o),
   });
@@ -836,6 +868,7 @@ export async function boot() {
     pendingMode = next;
     try {
       $('intro') && $('intro').classList.remove('show');
+      if (!opts.intro) todCycle.entered = true; // V12: the day / night cycle starts once the visitor is in the tour
       leaveMode(prev);
       mode = 'transition';
       setBodyMode(next);
@@ -1257,7 +1290,9 @@ export async function boot() {
 
   /* ---------------- buttons */
   for (const b of document.querySelectorAll('[data-mode]')) b.addEventListener('click', () => { audio.resume(); setMode(b.dataset.mode); });
-  for (const b of document.querySelectorAll('[data-tod]')) b.addEventListener('click', () => setTOD(b.dataset.tod));
+  for (const b of document.querySelectorAll('[data-tod]')) b.addEventListener('click', () => { setCycle(false); setTOD(b.dataset.tod); }); // V12: a manual choice stops the auto cycle
+  $('btnTodCycle') && $('btnTodCycle').addEventListener('click', (e) => { e.stopPropagation(); setCycle(!todCycle.on); toast(todCycle.on ? 'מחזור יום-לילה: פועל' : 'מחזור יום-לילה: מושהה', 1600); });
+  cycleUI();
   $('btnMeasure') && $('btnMeasure').addEventListener('click', () => setMeasuring(!measuring));
   $('btnMeasureClear') && $('btnMeasureClear').addEventListener('click', () => measure.clear());
   $('btnFlash') && $('btnFlash').addEventListener('click', () => toggleFlash());
@@ -1540,7 +1575,32 @@ export async function boot() {
     const gn = nav.graph.node('pano:' + key), pn = panoNodes.find((q) => q.id === key);
     if (!gn) return false;
     toast('הולכים אל ' + pickHe(key), 1600);
+    // V12: arrive standing back near a corner, looking across the room (falls back to the 360 node)
+    const sp = frameSpot(key);
+    if (sp && nav.walkTo({ x: sp.x, y: sp.y, z: sp.z }, { key, label: pickHe(key), arriveYaw: sp.yaw })) { lastPick = { key, spot: true, yaw: sp.yaw }; return true; }
+    lastPick = { key, spot: false, yaw: pn ? pn.camYaw : NaN };
     return nav.walkTo({ x: gn.x, y: gn.y, z: gn.z }, { key, label: pickHe(key), arriveYaw: pn ? pn.camYaw : undefined });
+  }
+  // V12: the framed standing spot of a picker room (cached per key + aspect / FOV): the plan room around its 360 node,
+  // best corner / wall spot that is free on the nav graph → {x, y, z, yaw} | null
+  const spotCache = new Map();
+  let lastPick = null; // V12: {key, spot, yaw} of the last picker walk (tests)
+  function frameSpot(key) {
+    try {
+      if (!nav || !nav.framer || !nav.graph || !atHome()) return null;
+      const pn = panoNodes.find((q) => q.id === key); if (!pn) return null;
+      const ck = key + '|' + Math.round(zoom.defaultFov) + '|' + camera.aspect.toFixed(2);
+      if (spotCache.has(ck)) return spotCache.get(ck);
+      const rr = nav.framer.roomRect(pn.p.x, pn.floorY, pn.p.z);
+      let out = null;
+      if (rr) {
+        const g = nav.graph, fy = pn.floorY;
+        const f = nav.framer.frameRoom(rr.r, fy, { vfov: zoom.defaultFov, aspect: camera.aspect, ok: (x, z) => !(g.blockedAt && g.blockedAt(x, fy, z, 0.3, true)) });
+        if (f && isFinite(f.x)) out = { x: f.x, y: fy, z: f.z, yaw: f.yaw, room: rr.key };
+      }
+      spotCache.set(ck, out);
+      return out;
+    } catch (e) { return null; }
   }
   try {
     picker = createRoomPicker({
@@ -1557,13 +1617,13 @@ export async function boot() {
   window.__tour = {
     styles, sow,
     radio, zoom, dpad, minimap, styleUI, guards, get framer() { return nav && nav.framer; }, // V3 UI
-    ctx, setMode, teleport, player, world, pano, scanner, setTOD, get mode() { return mode; }, panoNodes, lamps, render, pathtrace, nav,
+    ctx, setMode, teleport, player, world, pano, scanner, setTOD, get tod() { return todName; }, get todCycle() { return { on: todCycle.on, t: todCycle.t, steps: todCycle.steps, held: cycleHeld(), hold: TOD_HOLD, step: TOD_STEP }; }, setTodCycle: setCycle, get mode() { return mode; }, panoNodes, lamps, render, pathtrace, nav,
     // photoreal 360 flag, unified: reads pathtrace.viewing (via pano.photoreal); setting it is a manual override for tests
     get pathtraceActive() { return pano.photoreal; }, set pathtraceActive(v) { pano.photoreal = v; },
     perf: PERF, texCache: texCacheStats, // V6 PERF
     toast: (m, ms) => toast(m, ms), // V9: used by the renders viewer after "apply this style"
     // V10: worlds + room picker
-    get worlds() { return worlds; }, enterWorld: (id, o) => (worlds ? worlds.enterWorld(id, o) : Promise.resolve(false)), get picker() { return picker; }, pickRoom,
+    get worlds() { return worlds; }, enterWorld: (id, o) => (worlds ? worlds.enterWorld(id, o) : Promise.resolve(false)), get picker() { return picker; }, pickRoom, frameSpot, get lastPick() { return lastPick; },
     get limoSpot() { return ctx.limoSpot || null; }, LIMO_SPOT, homeColl,
     // V9: where the visitor is now (renders viewer opens at this room): {mode, key, floor, x, z, node}
     roomInfo() {
@@ -1640,8 +1700,7 @@ export async function boot() {
   for (const L of lamps) if (!L.optFloor) L.floor = null; // re-derive from final world positions
   try { manageLamps(); } catch (e) { reportError('תאורה', e); }
   try { scanner.prepare(quality === 'high' ? 14000 : 6000); } catch (_) {}
-  const savedTod = store('tod');
-  if (savedTod && TOD[savedTod] && savedTod !== 'day') setTOD(savedTod, true);
+  setTOD('evening', true); // V12: every load (and "start over" = reload) opens at dusk
   try {
     if (renderer.compileAsync) await Promise.race([renderer.compileAsync(scene, camera), new Promise((r) => setTimeout(r, 8000))]);
     else renderer.compile(scene, camera);

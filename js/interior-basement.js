@@ -1,187 +1,66 @@
-// interior-basement.js — pool table with 2D ball physics, laundry pair, utility sink, furnace, water heater, panel, storage
+// interior-basement.js — pool table (V12: real 8-ball / 9-ball game, js/pool-*.js), laundry pair, utility sink, furnace, water heater, panel, storage
 import { THREE, PI, V3, Batch, hinged, drawer, waterFixture, basinWater, books, rng, clamp, luxOnly } from './interior-lib.js';
 import { bottle, glassCup } from './interior-kitchen.js';
 import { C as LX, soft, tube, bknob, rugLux, vase, bookStack, candle, artLux, sconce, tableLampLux } from './interior-lux.js';
 import { shaker } from './interior-lib.js';
+import { makeTable, rackPositions, BALL_R } from './pool-physics.js';
+import { buildTableTop, ballMaterial } from './pool-table.js';
 
-const BALL_COLS = [0xffffff, 0xf2c40f, 0x1f4fbf, 0xd0201b, 0x4b2a8a, 0xf07a10, 0x137a3a, 0x7a1a1a, 0x111111];
-
-function ballTexture(n) {
-  const c = document.createElement('canvas'); c.width = 128; c.height = 64;
-  const g = c.getContext('2d');
-  const stripe = n >= 9, col = '#' + new THREE.Color(BALL_COLS[stripe ? n - 8 : n]).getHexString();
-  g.fillStyle = stripe || n === 0 ? '#f7f5ee' : col; g.fillRect(0, 0, 128, 64);
-  if (stripe) { g.fillStyle = col; g.fillRect(0, 19, 128, 26); }
-  if (n > 0) for (const u of [32, 96]) {
-    g.fillStyle = '#f7f5ee'; g.beginPath(); g.ellipse(u, 32, 10, 9, 0, 0, PI * 2); g.fill();
-    g.fillStyle = '#111'; g.font = 'bold 12px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(n), u, 33);
-  } else { g.fillStyle = '#c62828'; g.beginPath(); g.arc(32, 32, 2, 0, PI * 2); g.fill(); }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
-}
-
-function buildPool(E, G, top, root, B0) {
-  const CX = 7.3, CZ = 4.55, PX = 0.559, PZ = 1.1175, R = 0.028575, SY = B0 + 0.79;
+// V12 POOL: the table is built from the physics geometry (js/pool-table.js + js/pool-physics.js); tapping it opens the
+// real 8-ball / 9-ball game (js/pool-game.js, loaded on first use). Physics runs only while the game is open.
+export function buildPool(E, G, top, root, B0) { // exported for tests/pool-harness.html
+  const CX = 7.3, CZ = 4.55, FT = 0.79, SY = B0 + FT;
+  const TB = makeTable(), R = BALL_R;
   const T = root.sub(CX, B0, CZ, 0);
   const MAH = 0x4a2416, FELT = 0x1d5a3c; // V2: deep green tournament cloth, dark walnut, brass
-  const OX = PX + 0.16, OZ = PZ + 0.16;
-  // legs + apron + bed
+  const OX = TB.W / 2 + 0.16, OZ = TB.L / 2 + 0.16;
+  // legs + apron (up to the rail underside)
   for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [-1, 0], [1, 0]]) {
     T.box('woodGloss', [0.14, 0.52, 0.14], [x * (OX - 0.14), 0.26, z * (OZ - 0.16)], MAH, { r: 0.02 });
     T.box('brass', [0.18, 0.05, 0.18], [x * (OX - 0.14), 0.025, z * (OZ - 0.16)], LX.brass, { r: 0.015 });
   }
-  T.box('woodGloss', [2 * OX - 0.06, 0.22, 2 * OZ - 0.06], [0, 0.63, 0], MAH, { r: 0.02, grain: 'h' });
-  T.box('felt', [2 * PX + 0.1, 0.03, 2 * PZ + 0.1], [0, 0.775, 0], FELT, { r: 0 });
-  // cushions (with pocket gaps)
-  const ch = 0.04, cw = 0.05;
+  // apron: an open skirt under the rails (the pocket cups hang inside it) + a lower frame
   for (const s of [-1, 1]) {
-    for (const [z0, z1] of [[-PZ + 0.085, -0.065], [0.065, PZ - 0.085]]) T.box('felt', [cw, ch, z1 - z0], [s * (PX + cw / 2), 0.79 + ch / 2, (z0 + z1) / 2], FELT, { r: 0.01 });
-    T.box('felt', [2 * PX - 0.17, ch, cw], [0, 0.79 + ch / 2, s * (PZ + cw / 2)], FELT, { r: 0.01 });
+    T.box('woodGloss', [0.07, 0.265, 2 * OZ - 0.06], [s * (OX - 0.065), 0.6525, 0], MAH, { r: 0.02, grain: 'h' });
+    T.box('woodGloss', [2 * OX - 0.06, 0.265, 0.07], [0, 0.6525, s * (OZ - 0.065)], MAH, { r: 0.02, grain: 'h' });
   }
-  // rail caps
-  const rw = 0.11, ry = 0.79 + 0.045;
-  for (const s of [-1, 1]) {
-    T.box('woodGloss', [rw, 0.05, 2 * OZ], [s * (PX + cw + rw / 2), ry - 0.025, 0], MAH, { r: 0.012 });
-    T.box('woodGloss', [2 * PX + 2 * cw, 0.05, rw], [0, ry - 0.025, s * (PZ + cw + rw / 2)], MAH, { r: 0.012 });
-    for (let i = 1; i < 4; i++) { if (i === 2) continue; T.sph('gloss', 0.007, [s * (PX + cw + rw / 2), ry, -PZ + i * PZ / 2], 0xf3efe2, { sy: 0.3, ws: 10, hs: 6 }); T.sph('gloss', 0.007, [s * (PX + cw + rw / 2), ry, i * PZ / 2], 0xf3efe2, { sy: 0.3, ws: 10, hs: 6 }); }
-    for (const x of [-PX / 2, 0, PX / 2]) T.sph('gloss', 0.007, [x, ry, s * (PZ + cw + rw / 2)], 0xf3efe2, { sy: 0.3, ws: 10, hs: 6 });
-  }
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) T.box('brass', [0.13, 0.008, 0.13], [sx * (PX + cw + rw / 2 - 0.01), ry + 0.004, sz * (PZ + cw + rw / 2 - 0.01)], LX.brass, { r: 0.003 });
-  const pockets = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([x, z]) => ({ x: x * (PX + 0.012), z: z * (PZ + 0.012), r: 0.062 }))
-    .concat([-1, 1].map((x) => ({ x: x * (PX + 0.035), z: 0, r: 0.056 })));
-  for (const p of pockets) {
-    T.cyl('matte', 0.068, 0.068, 0.012, [p.x, ry + 0.002, p.z], 0x0b0b0b, { seg: 24 });
-    T.lathe('matte', [[0.07, 0], [0.065, -0.06], [0.04, -0.13], [0, -0.14]], [p.x, 0.8, p.z], 0x141414, { seg: 16 });
-  }
-  T.sph('gloss', 0.004, [0, 0.7901, PZ / 2], 0xffffff, { sy: 0.2, ws: 8, hs: 4 });
-  T.sph('gloss', 0.004, [0, 0.7901, -PZ / 2], 0xffffff, { sy: 0.2, ws: 8, hs: 4 });
+  T.box('woodGloss', [2 * OX - 0.14, 0.1, 2 * OZ - 0.14], [0, 0.58, 0], MAH, { r: 0.01, grain: 'h' });
+  const tt = buildTableTop(T, TB, { top: FT, felt: FELT, wood: MAH });
+  try { if (E.M.felt && E.M.felt.normalScale) E.M.felt.normalScale.multiplyScalar(0.35); } catch (e) { } // V12: smoother worsted cloth (only the pool table uses 'felt')
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) T.box('brass', [0.13, 0.006, 0.13], [sx * (OX - 0.065), tt.railTop + 0.003, sz * (OZ - 0.065)], LX.brass, { r: 0.002 });
   T.solid(E, [2 * OX, 0.86, 2 * OZ], [0, 0.43, 0]);
-  // balls
-  const geo = new THREE.SphereGeometry(R, 24, 16);
+  // balls (numbered, lacquered)
+  const geo = new THREE.SphereGeometry(R, 32, 20);
   const balls = [];
   for (let n = 0; n < 16; n++) {
-    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: ballTexture(n), roughness: 0.1, metalness: 0 }));
-    m.castShadow = true; G.add(m);
-    balls.push({ n, m, x: 0, z: 0, vx: 0, vz: 0, on: true, sink: -1 });
+    const m = new THREE.Mesh(geo, ballMaterial(n, E.q)); m.name = 'pool-ball-' + n;
+    m.castShadow = true; G.add(m); balls.push(m);
   }
-  const RACK = [[1], [10, 2], [3, 8, 11], [12, 4, 13, 5], [6, 14, 7, 15, 9]];
-  const st = { moving: false, racked: true, lastClack: 0, cueBusy: false };
-  const placeBall = (b) => { b.m.position.set(CX + b.x, SY + R, CZ + b.z); };
-  const rack = () => {
-    const d = 2 * R + 0.0006;
-    balls.forEach((b) => { b.vx = b.vz = 0; b.on = true; b.sink = -1; b.m.visible = true; b.m.scale.setScalar(1); b.m.quaternion.identity(); });
-    RACK.forEach((row, k) => row.forEach((n, j) => { const b = balls[n]; b.x = (j - k / 2) * d; b.z = -PZ / 2 - k * d * 0.866; b.m.rotation.set(Math.random() * 6, Math.random() * 6, 0); placeBall(b); }));
-    const c = balls[0]; c.x = 0; c.z = PZ / 2; placeBall(c);
-    st.racked = true; st.moving = false;
+  const H = {
+    E, G, T: TB, CX, CZ, SY, R, balls, pendant: null, tableTop: tt,
+    toWorld(x, y, out = new THREE.Vector3()) { return out.set(CX + x, SY + R, CZ - y); },
+    /** static rack (game not running): 8-ball rack + cue ball on the head spot */
+    rackStatic(game = '8', seed = 1) {
+      for (const m of balls) { m.visible = false; m.scale.setScalar(1); }
+      for (const p of rackPositions(TB, game, seed)) { const m = balls[p.id]; m.visible = true; H.toWorld(p.x, p.y, m.position); m.rotation.set((p.id * 1.7) % 6, (p.id * 2.3) % 6, 0.4); }
+      balls[0].visible = true; H.toWorld(0, TB.headY, balls[0].position);
+    },
   };
-  rack();
-  // cue stick (animated during shots)
-  const cue = new THREE.Group(); cue.rotation.order = 'YXZ'; cue.visible = false; G.add(cue);
-  const stick = new THREE.Group(); cue.add(stick);
-  const cb = new Batch(); const L = 1.45;
-  cb.root.cyl('woodGloss', 0.0145, 0.0065, L, [0, 0, L / 2], 0xd6b07a, { rx: PI / 2, seg: 14 });
-  cb.root.cyl('woodGloss', 0.0146, 0.0148, 0.5, [0, 0, L - 0.25], 0x2a160c, { rx: PI / 2, seg: 14 });
-  cb.root.cyl('plastic', 0.0066, 0.0066, 0.012, [0, 0, 0.006], 0x2a62c9, { rx: PI / 2, seg: 10 });
-  cb.root.cyl('plastic', 0.0068, 0.0068, 0.02, [0, 0, 0.022], 0xf3efe2, { rx: PI / 2, seg: 10 });
-  cb.build(stick, E.M);
-  const shoot = async (dx, dz, speed) => {
-    if (st.cueBusy) return; st.cueBusy = true;
-    const c = balls[0];
-    cue.position.set(CX + c.x, SY + R, CZ + c.z);
-    cue.rotation.set(-0.07, Math.atan2(-dx, -dz), 0);
-    stick.position.z = 0.04; cue.visible = true;
-    await E.anim.to(stick.position, 'z', 0.24, 0.45, 'io');
-    await E.anim.to(stick.position, 'z', 0.012, 0.07, 'in');
-    E.snd.clack(cue, 0.8); E.snd.thud(cue, 0.3);
-    c.vx = dx * speed; c.vz = dz * speed; st.moving = true; st.racked = false;
-    E.anim.to(stick.position, 'z', 0.1, 0.3, 'out').then(() => { cue.visible = false; st.cueBusy = false; });
-  };
+  H.rackStatic('8', 7);
   const tableHit = new THREE.Mesh(new THREE.BoxGeometry(2 * OX, 0.12, 2 * OZ), new THREE.MeshBasicMaterial({ visible: false }));
   tableHit.position.set(CX, SY + 0.03, CZ); G.add(tableHit);
-  E.interact(tableHit, () => (st.moving || st.cueBusy ? 'הכדורים מתגלגלים…' : st.racked ? 'שבירה' : 'מכה'), () => {
-    if (st.moving || st.cueBusy) return;
-    if (st.racked) { shoot((Math.random() - 0.5) * 0.03, -1, 7.2); return; }
-    const c = balls[0];
-    const targets = balls.filter((b) => b.n && b.on);
-    if (!targets.length) { rack(); return; }
-    targets.sort((a, b) => Math.hypot(a.x - c.x, a.z - c.z) - Math.hypot(b.x - c.x, b.z - c.z));
-    const t = targets[Math.floor(Math.random() * Math.min(3, targets.length))];
-    let dx = t.x - c.x, dz = t.z - c.z; const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;
-    const a = (Math.random() - 0.5) * 0.06, ca = Math.cos(a), sa = Math.sin(a);
-    shoot(dx * ca - dz * sa, dx * sa + dz * ca, 2.6 + Math.random() * 2.2);
-  });
-  // physics
-  const inMouthSide = (z) => Math.abs(z) < 0.058 || Math.abs(z) > PZ - 0.07;
-  const inMouthEnd = (x) => Math.abs(x) > PX - 0.07;
-  const pocket = (b) => {
-    b.on = false; b.sink = 0; b.vx = b.vz = 0;
-    E.snd.tone(b.m, { freq: 190, freqEnd: 80, dur: 0.18, vol: 0.25 }); E.snd.burst(b.m, { dur: 0.12, type: 'lowpass', freq: 500, vol: 0.2 });
+  H.tableHit = tableHit;
+  let gameP = null, game = null;
+  const load = () => (gameP = gameP || import('./pool-game.js').then((m) => (game = m.createPoolGame(H))));
+  const api = {
+    get game() { return game; }, handle: H, load,
+    async open(o) { await load(); return game.open(o); },
+    close() { return game ? game.close() : Promise.resolve(); },
+    rack() { if (game) game.rerack(); else H.rackStatic('8', 1 + Math.floor(Math.random() * 1000)); },
   };
-  const ax = new THREE.Vector3(), dq = new THREE.Quaternion();
-  E.anim.tick((dtIn) => {
-    const dt = Math.min(dtIn, 1 / 30);
-    for (const b of balls) if (b.sink >= 0) {
-      b.sink += dt; const k = Math.min(1, b.sink / 0.3);
-      b.m.position.y = SY + R - k * 0.09; b.m.scale.setScalar(1 - k * 0.3);
-      if (k >= 1) { b.m.visible = false; b.sink = -1; }
-    }
-    if (!st.moving) return;
-    const sub = 8, h = dt / sub, e = 0.94, ec = 0.78, mn = 2 * R;
-    let t = E.anim.t;
-    for (let s = 0; s < sub; s++) {
-      for (const b of balls) if (b.on) { b.x += b.vx * h; b.z += b.vz * h; }
-      for (const b of balls) {
-        if (!b.on) continue;
-        for (const p of pockets) { const dx = b.x - p.x, dz = b.z - p.z; if (dx * dx + dz * dz < p.r * p.r) { pocket(b); break; } }
-        if (!b.on) continue;
-        let hitC = 0;
-        if (b.x > PX - R && !inMouthSide(b.z)) { b.x = 2 * (PX - R) - b.x; hitC = Math.abs(b.vx); b.vx = -Math.abs(b.vx) * ec; }
-        else if (b.x < -PX + R && !inMouthSide(b.z)) { b.x = 2 * (-PX + R) - b.x; hitC = Math.abs(b.vx); b.vx = Math.abs(b.vx) * ec; }
-        if (b.z > PZ - R && !inMouthEnd(b.x)) { b.z = 2 * (PZ - R) - b.z; hitC = Math.abs(b.vz); b.vz = -Math.abs(b.vz) * ec; }
-        else if (b.z < -PZ + R && !inMouthEnd(b.x)) { b.z = 2 * (-PZ + R) - b.z; hitC = Math.abs(b.vz); b.vz = Math.abs(b.vz) * ec; }
-        if (hitC > 0.4 && t - st.lastClack > 0.03) { st.lastClack = t; E.snd.thud(b.m, clamp(hitC / 6, 0.05, 0.4)); }
-        if (Math.abs(b.x) > PX + 0.05 || Math.abs(b.z) > PZ + 0.05) pocket(b);
-      }
-      for (let i = 0; i < 16; i++) {
-        const a = balls[i]; if (!a.on) continue;
-        for (let j = i + 1; j < 16; j++) {
-          const b = balls[j]; if (!b.on) continue;
-          const dx = b.x - a.x, dz = b.z - a.z, d2 = dx * dx + dz * dz;
-          if (d2 >= mn * mn || d2 < 1e-12) continue;
-          const d = Math.sqrt(d2), nx = dx / d, nz = dz / d;
-          const rel = (a.vx - b.vx) * nx + (a.vz - b.vz) * nz;
-          if (rel > 0) {
-            const imp = rel * (1 + e) / 2;
-            a.vx -= imp * nx; a.vz -= imp * nz; b.vx += imp * nx; b.vz += imp * nz;
-            if (t - st.lastClack > 0.022) { st.lastClack = t; E.snd.clack(a.m, clamp(rel / 3, 0.06, 1)); }
-          }
-          const ov = (mn - d) / 2; a.x -= nx * ov; a.z -= nz * ov; b.x += nx * ov; b.z += nz * ov;
-        }
-      }
-      t += h;
-    }
-    let any = false;
-    for (const b of balls) {
-      if (!b.on) continue;
-      const sp = Math.hypot(b.vx, b.vz);
-      if (sp > 0) {
-        const ns = Math.max(0, sp - (0.16 + 0.1 * sp) * dt);
-        if (ns < 0.012) { b.vx = b.vz = 0; } else { b.vx *= ns / sp; b.vz *= ns / sp; any = true; }
-        // rolling rotation
-        ax.set(b.vz, 0, -b.vx).normalize(); dq.setFromAxisAngle(ax, sp * dt / R); b.m.quaternion.premultiply(dq);
-      }
-      placeBall(b);
-    }
-    if (!any) {
-      st.moving = false;
-      const c = balls[0];
-      if (!c.on) { // respawn cue ball at head spot (find a free spot)
-        c.on = true; c.m.visible = true; c.m.scale.setScalar(1); c.x = 0; c.z = PZ / 2;
-        for (let k = 0; k < 20; k++) { if (balls.every((b) => !b.on || b === c || Math.hypot(b.x - c.x, b.z - c.z) > 2.2 * R)) break; c.x = (Math.random() - 0.5) * 0.6; }
-        placeBall(c);
-      }
-    }
-  });
-  return { rack };
+  try { E.ctx.pool = api; } catch (e) { }
+  E.interact(tableHit, () => (game && game.isOpen ? '' : '🎱 שחק ביליארד'), () => api.open());
+  return api;
 }
 
 function frontLoader(E, G, f, kind) {
@@ -306,6 +185,15 @@ export function buildBasement(E, G, top) {
   }
   for (const z of [-0.55, 0.55]) lf.cyl('brass', 0.003, 0.003, CEIL - ly - 0.28, [0, (CEIL + ly + 0.28) / 2, z], LX.brass, { seg: 4 });
   lb.build(lg, E.M, { shadow: false });
+  pool.handle.pendant = lg; // V12: hidden while the game looks straight down at the table
+  // V12 POOL: the billiard lamp really lights the table (one warm spot, no shadow map; always in the scene so turning
+  // it on never changes the light count → no shader recompiles). Follows the basement lights (the pendant glow).
+  const tl = new THREE.SpotLight(0xfff0dc, 0, 3.2, 1.0, 0.65, 2);
+  tl.name = 'pool-table-lamp'; tl.castShadow = false; tl.position.set(7.3, ly + 0.02, 4.55); tl.target.position.set(7.3, B0, 4.55);
+  lg.add(tl, tl.target); tl.target.updateMatrixWorld();
+  pool.handle.lamp = tl;
+  const TL_ON = 7;
+  E.anim.tick(() => { const on = !billM.isMaterial || billM.emissiveIntensity > 0; const v = on ? TL_ON : 0; if (tl.intensity !== v) tl.intensity = v; });
   // cue rack on east wall + triangle (rack balls)
   const CR = root.sub(9.019, B0, 6.25, -PI / 2);
   CR.box('woodGloss', [0.55, 0.12, 0.08], [0, 0.22, 0.04], 0x5a2614, { r: 0.01 });

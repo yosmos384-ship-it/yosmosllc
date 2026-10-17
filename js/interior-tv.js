@@ -1,16 +1,20 @@
-// interior-tv.js — V7 living-room TV: wall TV + a black remote on the coffee table + a channel panel with free,
-// official American live YouTube channels. Desktop: the live YouTube embed is an absolutely positioned <iframe>
-// projected onto the TV screen rectangle every frame (4 projected corners → CSS matrix3d homography); it is hidden
-// when the TV is off-screen, behind a wall (throttled raycast camera → screen centre), on another floor / outside,
-// or in dollhouse / plan / photoreal views (the stream keeps playing, quieter, like a real TV in another room).
-// Phones (coarse pointer): the player is docked as an interactive panel (iOS needs a tap on the player for sound).
-// Tapping the remote or the TV opens the channel panel (power, CH ▲▼, VOL −/+, mute, channel list).
+// interior-tv.js — living-room TV: wall TV + a black remote on the coffee table + free, official American live
+// YouTube channels.
+// V12: on ALL devices (phones included) the live YouTube embed is an absolutely positioned <iframe> projected onto
+// the TV screen rectangle every frame (4 projected corners → CSS matrix3d homography); it is hidden when the TV is
+// off-screen, behind a wall (throttled raycast camera → screen centre), on another floor / outside, or in dollhouse /
+// plan / photoreal views (the stream keeps playing, quieter, like a real TV in another room).
+// Tapping the TV or the remote turns the TV on with the last channel straight on the 3D screen and shows a COMPACT
+// remote bar at the bottom (⏻, CH▼/CH▲, −/🔇/+, "☰ רשימה" → small channel sheet); from far away the camera walks
+// smoothly to a sofa-side viewing spot (cancel by moving / looking). Autoplay-gated browsers (iOS, Safari, phones)
+// start muted (mute=1&playsinline=1&autoplay=1) with a "🔊 הקש לשמע" chip over the TV that unmutes via the
+// YouTube iframe API (postMessage unMute / setVolume).
 // Without a DOM (node tests) the TV keeps a pure state machine and the old in-house slideshow.
 // NOTE: only official free live channels are listed. Copyrighted shows (e.g. Seinfeld) have no legal free stream and
 // are deliberately not embedded or imitated.
 import { THREE, PI, Batch } from './interior-lib.js';
 import { getRadio } from './radio-engine.js';
-import { tr, getLang } from './i18n.js'; // V7: canvas text in the current language
+import { tr, getLang, extend } from './i18n.js'; // V7: canvas text in the current language
 
 const BRASS = 0xc9a356;
 
@@ -104,46 +108,77 @@ function screenCanvas() {
   return { tex, draw };
 }
 
-// ------------------------------------------------------------------ DOM: styles + panel + projected player
+// ------------------------------------------------------------------ V12 strings (merged into i18n via extend(); no i18n.js edit)
+export const TV_STRINGS = {
+  he: { list: 'רשימה', listTitle: 'רשימת ערוצים', sound: '🔊 הקש לשמע', soundAria: 'הקש לשמע', tapVideo: 'הקישו על המסך לשמע ▶',
+    closeRemote: 'סגור שלט', closeList: 'סגור רשימה', unmuteAria: 'בטל השתקה', toSofa: 'עובר לספה מול הטלוויזיה · הזיזו כדי לבטל' },
+  en: { list: 'List', listTitle: 'Channel list', sound: '🔊 Tap for sound', soundAria: 'Tap for sound', tapVideo: 'Tap the screen for sound ▶',
+    closeRemote: 'Close remote', closeList: 'Close list', unmuteAria: 'Unmute', toSofa: 'Moving to the sofa facing the TV · move to cancel' },
+  es: { list: 'Lista', listTitle: 'Lista de canales', sound: '🔊 Toca para sonido', soundAria: 'Toca para sonido', tapVideo: 'Toca la pantalla para el sonido ▶',
+    closeRemote: 'Cerrar control', closeList: 'Cerrar lista', unmuteAria: 'Activar sonido', toSofa: 'Yendo al sofá frente a la TV · muévete para cancelar' },
+};
+try { extend(TV_STRINGS); } catch (_) { }
+const S = TV_STRINGS.he;
+
+// ------------------------------------------------------------------ DOM: styles + compact remote bar + projected player
+// V12: the live channel is projected onto the 3D TV on ALL devices (phones included); the channel UI is a compact
+// remote bar docked at the bottom (above the D-pad / room picker), the list is a small sheet above the bar.
 const CSS = `
 .tv3d-layer{position:fixed;inset:0;pointer-events:none;z-index:4;overflow:hidden}
 .tv3d-box{position:absolute;left:0;top:0;width:640px;height:368px;transform-origin:0 0;background:#000;visibility:hidden;will-change:transform;backface-visibility:hidden}
 .tv3d-box iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;pointer-events:none}
+.tv3d-box.touchable iframe{pointer-events:auto}
 .tv3d-card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,#0d1420,#1d2a3c);color:#fff;font:600 30px/1.2 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;text-align:center;transition:opacity .6s ease;pointer-events:none}
 .tv3d-card small{font-size:19px;font-weight:500;opacity:.8}
 .tv3d-card .ch{position:absolute;top:16px;left:20px;font:700 20px monospace;opacity:.75}
 .tv3d-card .live{position:absolute;top:14px;right:18px;background:#d7263d;border-radius:4px;padding:3px 10px;font-size:16px}
 .tv3d-card.gone{opacity:0}
-.tv3d-box.dock{position:fixed;left:50%;top:auto;bottom:calc(84px + env(safe-area-inset-bottom,0px));width:min(92vw,560px);height:auto;aspect-ratio:16/9;transform:translateX(-50%)!important;visibility:visible;pointer-events:auto;z-index:31;border-radius:12px;overflow:visible;box-shadow:0 14px 40px rgba(0,0,0,.55)}
+.tv3d-box.dock{position:fixed;left:50%;top:auto;bottom:var(--tvdock-b,calc(84px + env(safe-area-inset-bottom,0px)));width:min(92vw,560px);height:auto;aspect-ratio:16/9;transform:translateX(-50%)!important;visibility:visible;pointer-events:auto;z-index:31;border-radius:12px;overflow:visible;box-shadow:0 14px 40px rgba(0,0,0,.55)}
 .tv3d-box.dock iframe{pointer-events:auto;border-radius:12px}
 .tv3d-box.dock .tv3d-card{border-radius:12px}
 .tv3d-undock{display:none}
 .tv3d-box.dock .tv3d-undock{display:flex;position:absolute;top:-38px;left:0;gap:6px}
 .tv3d-undock button{background:rgba(12,16,24,.86);border:1px solid rgba(255,255,255,.22);color:#eef3f8;border-radius:9px;padding:6px 11px;font:600 13px system-ui,sans-serif;cursor:pointer}
-#tvPanel{left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));width:min(310px,calc(100vw - 32px));max-height:min(70vh,560px);display:none;flex-direction:column;padding:10px;gap:8px;z-index:30;direction:rtl}
+.tv3d-sound{position:absolute;left:0;top:0;transform:translate(-50%,-100%);display:none;pointer-events:auto;white-space:nowrap;padding:7px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(10,14,22,.82);color:#fff;font:700 13.5px system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.45);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.tv3d-sound.show{display:block}
+.tv3d-sound.pulse{animation:tvpulse 1.6s ease-in-out infinite}
+@keyframes tvpulse{50%{box-shadow:0 0 0 6px rgba(67,224,255,.25),0 6px 18px rgba(0,0,0,.45)}}
+#tvPanel{left:0;right:0;margin-inline:auto;bottom:var(--tvbar-b,calc(16px + env(safe-area-inset-bottom,0px)));width:min(470px,calc(100vw - 32px));display:none;flex-direction:column;gap:6px;z-index:30;direction:rtl;pointer-events:none}
 #tvPanel.open{display:flex}
+#tvPanel>*{pointer-events:auto}
+#tvPanel .tvp-bar{direction:ltr;display:flex;align-items:center;gap:4px;padding:5px;border-radius:16px;background:linear-gradient(180deg,rgba(23,24,27,.92),rgba(12,13,15,.92));border:1px solid rgba(255,255,255,.1)}
+#tvPanel .tvp-bar button{flex:0 0 auto;min-width:34px;height:36px;padding:0 6px;border-radius:10px;background:#26282d;color:#e8ecf2;font-size:13.5px;font-weight:700;box-shadow:inset 0 -2px 0 rgba(0,0,0,.45);touch-action:manipulation}
+#tvPanel .tvp-bar button:active{transform:translateY(1px)}
+#tvPanel .tvp-bar .pw{background:#a3222a;color:#fff}
+#tvPanel .tvp-bar .pw.on{background:#2e7d4f}
+#tvPanel .tvp-bar .mu.need{background:#1f6f8b;color:#fff}
+#tvPanel .tvp-bar .ls{direction:rtl;padding:0 9px}
+#tvPanel .tvp-bar .ls.on{background:rgba(67,224,255,.28)}
+#tvPanel .tvp-now{flex:1 1 auto;min-width:0;font-size:11.5px;color:#cfd6df;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+#tvPanel .tvp-x{min-width:30px!important;background:rgba(255,255,255,.08)!important}
+@media (max-width:420px){#tvPanel .tvp-now{display:none}#tvPanel .tvp-bar{justify-content:space-between;gap:3px;padding:4px}#tvPanel .tvp-bar button{min-width:30px;padding:0 4px;font-size:12.5px}#tvPanel .tvp-bar .ls{padding:0 6px}#tvPanel .tvp-x{min-width:26px!important}}
+/* the centre aim label ("ערוצי טלוויזיה · … / הקש") would sit on the playing picture: hidden while the TV is watched */
+body.tv-aim #hoverLabel{display:none!important}
+#tvPanel .tvp-sheet{display:none;flex-direction:column;gap:6px;padding:8px;max-height:min(36vh,290px);border-radius:16px}
+#tvPanel.list .tvp-sheet{display:flex}
 #tvPanel .tvp-head{display:flex;align-items:center;gap:8px}
-#tvPanel .tvp-head b{font-size:14.5px}
-#tvPanel .tvp-now{flex:1;font-size:12px;color:var(--muted,#aab);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#tvPanel .tvp-x{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.08);font-size:15px}
-#tvPanel .tvp-remote{direction:ltr;display:grid;grid-template-columns:repeat(6,1fr);gap:5px;padding:7px;border-radius:12px;background:linear-gradient(180deg,#17181b,#0c0d0f);border:1px solid rgba(255,255,255,.08)}
-#tvPanel .tvp-remote button{height:38px;border-radius:10px;background:#26282d;color:#e8ecf2;font-size:14px;font-weight:700;box-shadow:inset 0 -2px 0 rgba(0,0,0,.45)}
-#tvPanel .tvp-remote button:active{transform:translateY(1px)}
-#tvPanel .tvp-remote .pw{background:#a3222a;color:#fff}
-#tvPanel .tvp-remote .pw.on{background:#2e7d4f}
-#tvPanel .tvp-list{overflow-y:auto;display:flex;flex-direction:column;gap:4px;min-height:80px}
-#tvPanel .tvp-list button{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:10px;text-align:right;background:rgba(255,255,255,.04)}
+#tvPanel .tvp-head b{flex:1;font-size:14px}
+#tvPanel .tvp-lx{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.08);font-size:14px}
+#tvPanel .tvp-list{overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:4px;min-height:60px}
+#tvPanel .tvp-list button{display:flex;align-items:center;gap:9px;padding:6px 9px;border-radius:10px;text-align:right;background:rgba(255,255,255,.04)}
 #tvPanel .tvp-list button.on{background:rgba(67,224,255,.18);box-shadow:inset 0 0 0 1px rgba(67,224,255,.55)}
 #tvPanel .tvp-list .n{font:700 12px monospace;opacity:.7;width:24px;text-align:center;direction:ltr}
 #tvPanel .tvp-list .t{display:flex;flex-direction:column;min-width:0}
 #tvPanel .tvp-list .t b{font-size:13px;direction:ltr;text-align:right}
 #tvPanel .tvp-list .t span{font-size:11.5px;color:var(--muted,#aab)}
-#tvPanel .tvp-foot{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11.5px;color:var(--muted,#aab)}
-#tvPanel .tvp-foot button,#tvPanel .tvp-foot a{padding:6px 9px;border-radius:9px;background:rgba(255,255,255,.08);color:var(--text,#eef);font-size:12px;text-decoration:none}
+#tvPanel .tvp-foot{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11px;color:var(--muted,#aab)}
+#tvPanel .tvp-foot button,#tvPanel .tvp-foot a{padding:5px 9px;border-radius:9px;background:rgba(255,255,255,.08);color:var(--text,#eef);font-size:12px;text-decoration:none}
 #tvPanel .tvp-note{flex-basis:100%;line-height:1.35}
 `;
 
 function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; }
+// bottom-docked controls the bar must sit above (phones: D-pad, "פעולה", room picker; desktop: room picker / chips)
+const BOTTOM_UI = '#dpad,#btnAct,#roomPicker,#floorChips,#panoUI';
 
 // ------------------------------------------------------------------ TV (wall-mounted, frame: wall face, facing +z)
 export function buildTV(E, G, f) {
@@ -164,8 +199,20 @@ export function buildTV(E, G, f) {
 
   const hasDOM = typeof document !== 'undefined' && !!document.body && typeof document.body.appendChild === 'function' && typeof window !== 'undefined';
   const coarse = (() => { try { return !!(ctx.isTouch || (window.matchMedia && matchMedia('(pointer: coarse)').matches)); } catch (_) { return false; } })();
-  const st = { on: false, idx: 1, t: 0, vol: 70, muted: false, panel: false, dock: coarse, loaded: false, loadT: 0, ducked: false,
-    visible: false, reason: 'off', transform: '', occluded: false, occT: 0, volSent: -1, volT: 0, att: 1 };
+  // V12: browsers that only autoplay a cross-origin YouTube embed MUTED (iOS / iPadOS, Safari, phones): start muted
+  // and show "🔊 הקש לשמע"; desktop Chrome / Edge / Firefox start with sound (the tap's user activation is enough).
+  const soundGate = (() => {
+    if (!hasDOM) return false;
+    try {
+      const ua = navigator.userAgent || '';
+      const ios = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+      const safari = /Safari\//.test(ua) && !/Chrome|Chromium|CriOS|Edg|Firefox|FxiOS|Android/.test(ua);
+      return coarse || ios || safari;
+    } catch (_) { return coarse; }
+  })();
+  const st = { on: false, idx: 1, t: 0, vol: 70, muted: false, panel: false, list: false, dock: false, loaded: false, loadT: 0, ducked: false,
+    visible: false, reason: 'off', transform: '', occluded: false, occT: 0, volSent: -1, volT: 0, att: 1,
+    autoMuted: false, unlocked: false, needTap: false, yt: null, chk: 0, barT: 0, barB: -1, touchable: false, chipKey: '', framing: false, lastFrame: null };
   const ch = () => TV_CHANNELS[st.idx];
   const live = () => st.on && !!ch().yt;
   let dom = null;
@@ -177,16 +224,29 @@ export function buildTV(E, G, f) {
   };
   if (hasDOM) { try { window.addEventListener('pagehide', () => duck(false)); } catch (_) { } }
 
-  const post = (func, args) => {
-    try { const w = dom && dom.ifr && dom.ifr.contentWindow; if (w) w.postMessage(JSON.stringify({ event: 'command', func, args: args || [] }), '*'); } catch (_) { }
-  };
+  const postRaw = (obj) => { try { const w = dom && dom.ifr && dom.ifr.contentWindow; if (w) w.postMessage(JSON.stringify(obj), '*'); } catch (_) { } };
+  const post = (func, args) => postRaw({ event: 'command', func, args: args || [] });
   const pushVolume = (force) => {
     if (!dom || !dom.ifr) return;
-    const v = st.muted ? 0 : Math.round(st.vol * st.att);
+    const silent = st.muted || st.autoMuted;
+    const v = silent ? 0 : Math.round(st.vol * st.att);
     if (!force && v === st.volSent) return;
     st.volSent = v;
-    if (st.muted) post('mute'); else { post('unMute'); post('setVolume', [v]); }
+    if (silent) post('mute'); else { post('unMute'); post('setVolume', [v]); }
   };
+  // YouTube iframe API events (onReady / infoDelivery {muted, volume, playerState}) after the 'listening' handshake
+  if (hasDOM) {
+    try {
+      window.addEventListener('message', (ev) => {
+        if (!dom || !dom.ifr || ev.source !== dom.ifr.contentWindow) return;
+        if (ev.origin && !/youtube(-nocookie)?\.com$/.test(String(ev.origin).replace(/:\d+$/, ''))) return;
+        let d = ev.data; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { return; } }
+        if (!d || typeof d !== 'object') return;
+        if (d.info && typeof d.info === 'object') st.yt = Object.assign(st.yt || {}, d.info);
+        else if (d.event === 'onReady') st.yt = st.yt || {};
+      });
+    } catch (_) { }
+  }
 
   // ---- DOM (lazy)
   function ensureDom() {
@@ -203,40 +263,72 @@ export function buildTV(E, G, f) {
       und.append(bTv, bCl); box.appendChild(und);
       bTv.addEventListener('click', () => api.dock(false));
       bCl.addEventListener('click', () => api.power(false));
-      if (coarse) und.removeChild(bTv); // phones: docked player only
+      // "🔊 הקש לשמע" chip, drawn over the TV (screen space, not warped, so it stays readable at any distance)
+      const chip = el('button', 'tv3d-sound'); chip.type = 'button'; chip.id = 'tvSound'; chip.textContent = S.sound; chip.dataset.src = S.sound; chip.setAttribute('aria-label', S.soundAria);
+      chip.addEventListener('click', (ev) => { ev.stopPropagation(); api.unmute(); });
+      for (const t of ['pointerdown', 'touchstart', 'mousedown']) chip.addEventListener(t, (ev) => ev.stopPropagation(), { passive: true });
+      layer.appendChild(chip);
       const stage = document.getElementById('stage');
       (stage && stage.parentNode ? stage.parentNode : document.body).insertBefore(layer, stage ? stage.nextSibling : null);
-      // panel
-      const p = el('div', 'glass ui'); p.id = 'tvPanel'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'שלט טלוויזיה');
-      p.innerHTML = '<div class="tvp-head"><b>📺 טלוויזיה</b><span class="tvp-now"></span><button type="button" class="tvp-x" aria-label="סגור">✕</button></div>' +
-        '<div class="tvp-remote">' +
-        '<button type="button" class="pw" data-k="pw" aria-label="הפעלה / כיבוי">⏻</button>' +
-        '<button type="button" data-k="chd" aria-label="ערוץ קודם">CH▼</button><button type="button" data-k="chu" aria-label="ערוץ הבא">CH▲</button>' +
-        '<button type="button" data-k="vd" aria-label="הנמך">−</button><button type="button" data-k="vu" aria-label="הגבר">+</button>' +
-        '<button type="button" data-k="mu" aria-label="השתק">🔇</button></div>' +
+      // compact remote bar (+ the channel list as a small sheet above it)
+      const p = el('div', 'ui'); p.id = 'tvPanel'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'שלט טלוויזיה');
+      p.innerHTML = '<div class="tvp-sheet glass"><div class="tvp-head"><b>📺 רשימת ערוצים</b><button type="button" class="tvp-lx" aria-label="סגור רשימה">✕</button></div>' +
         '<div class="tvp-list"></div>' +
         '<div class="tvp-foot"><button type="button" data-k="dock"></button><a target="_blank" rel="noopener" class="yt">YouTube ↗</a>' +
-        '<span class="tvp-note">שידורים חיים רשמיים וחינמיים מ-YouTube. אם ערוץ לא משדר כרגע — נסו ערוץ אחר.</span></div>';
+        '<span class="tvp-note">שידורים חיים רשמיים וחינמיים מ-YouTube. אם ערוץ לא משדר כרגע — נסו ערוץ אחר.</span></div></div>' +
+        '<div class="tvp-bar tvp-remote">' +
+        '<button type="button" class="pw" data-k="pw" aria-label="הפעלה / כיבוי">⏻</button>' +
+        '<button type="button" data-k="chd" aria-label="ערוץ קודם">CH▼</button>' +
+        '<span class="tvp-now"></span>' +
+        '<button type="button" data-k="chu" aria-label="ערוץ הבא">CH▲</button>' +
+        '<button type="button" data-k="vd" aria-label="הנמך">−</button>' +
+        '<button type="button" class="mu" data-k="mu" aria-label="השתק">🔇</button>' +
+        '<button type="button" data-k="vu" aria-label="הגבר">+</button>' +
+        '<button type="button" class="ls" data-k="ls" aria-label="רשימת ערוצים">☰ רשימה</button>' +
+        '<button type="button" class="tvp-x" aria-label="סגור שלט">✕</button></div>';
       document.body.appendChild(p);
       const list = p.querySelector('.tvp-list');
       TV_CHANNELS.forEach((c, i) => {
         const b = el('button', '', `<span class="n">${i}</span><span class="t"><b></b><span></span></span>`); b.type = 'button';
         b.querySelector('b').textContent = c.name; b.querySelector('.t span').textContent = c.he;
         b.dataset.i = String(i);
-        b.addEventListener('click', () => api.set(i));
+        b.addEventListener('click', () => { api.set(i); api.closeList(); });
         list.appendChild(b);
       });
       p.querySelector('.tvp-x').addEventListener('click', () => api.closePanel());
+      p.querySelector('.tvp-lx').addEventListener('click', () => api.closeList());
       p.addEventListener('click', (ev) => {
         const k = ev.target && ev.target.closest && ev.target.closest('[data-k]'); if (!k) return;
-        ({ pw: () => api.power(), chu: () => api.next(), chd: () => api.prev(), vu: () => api.volUp(), vd: () => api.volDown(), mu: () => api.mute(), dock: () => api.dock(!st.dock) })[k.dataset.k]?.();
+        ({ pw: () => api.power(), chu: () => api.next(), chd: () => api.prev(), vu: () => api.volUp(), vd: () => api.volDown(), mu: () => api.mute(), ls: () => api.toggleList(), dock: () => api.dock(!st.dock) })[k.dataset.k]?.();
       });
-      // keep key presses inside the panel from driving the walk controls
-      p.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') api.closePanel(); ev.stopPropagation(); });
-      window.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && st.panel) api.closePanel(); });
-      dom = { layer, box, card, panel: p, list, ifr: null };
+      // keep key presses / touches inside the remote from driving the walk / look controls
+      p.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { if (st.list) api.closeList(); else api.closePanel(); } ev.stopPropagation(); });
+      window.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && st.panel) { if (st.list) api.closeList(); else api.closePanel(); } });
+      window.addEventListener('resize', () => { st.barB = -1; placeBar(true); });
+      dom = { layer, box, card, panel: p, list, chip, ifr: null };
     } catch (e) { console.warn('[interior] tv dom', e); dom = null; }
     return dom;
+  }
+
+  // the bar sits just above whatever bottom-docked controls are visible (D-pad, "פעולה", room picker …)
+  function placeBar(force) {
+    if (!dom || !st.panel) return;
+    let lift = 0;
+    try {
+      const H = innerHeight;
+      for (const e of document.querySelectorAll(BOTTOM_UI)) {
+        const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) continue;
+        const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2 || r.top < H * 0.5 || r.top > H) continue;
+        lift = Math.max(lift, H - r.top);
+      }
+    } catch (_) { }
+    const b = Math.round(lift > 0 ? lift + 8 : 16);
+    if (!force && b === st.barB) return;
+    st.barB = b;
+    const v = b + 'px';
+    dom.panel.style.setProperty('--tvbar-b', lift > 0 ? v : 'calc(16px + env(safe-area-inset-bottom,0px))');
+    // a docked player (optional "נגן גדול") goes above the bar
+    try { const h = dom.panel.getBoundingClientRect().height || 46; dom.box.style.setProperty('--tvdock-b', (b + h + 10) + 'px'); } catch (_) { }
   }
 
   function setCard(text, sub) {
@@ -248,29 +340,61 @@ export function buildTV(E, G, f) {
     dom.card.classList.remove('gone');
   }
   function killPlayer() {
+    clearTimeout(st.chk);
     if (!dom || !dom.ifr) return;
     try { dom.ifr.src = 'about:blank'; } catch (_) { }
     try { dom.ifr.remove(); } catch (_) { }
-    dom.ifr = null; st.loaded = false; st.volSent = -1;
+    dom.ifr = null; st.loaded = false; st.volSent = -1; st.yt = null;
   }
-  function loadPlayer() {
+  function loadPlayer(o = {}) {
     if (!ensureDom()) return;
     killPlayer();
     const c = ch();
     setCard(c.name, 'טוען שידור חי… · ' + c.he);
+    // V12: on autoplay-gated browsers every (re)load starts muted so the stream autoplays on the TV; after the first
+    // "הקש לשמע" tap we try to keep sound (unMute after load; if the player refuses, it goes back to muted + chip)
+    st.autoMuted = soundGate && !o.sound;
+    st.needTap = false;
     const f2 = document.createElement('iframe');
     f2.title = c.name + ' — YouTube live';
     f2.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+    f2.setAttribute('playsinline', '');
     f2.referrerPolicy = 'strict-origin-when-cross-origin';
     let origin = ''; try { origin = location.origin && location.origin.startsWith('http') ? location.origin : ''; } catch (_) { }
-    f2.src = embedUrl(c, { mute: false, origin });
+    f2.src = embedUrl(c, { mute: st.autoMuted, origin });
+    f2.dataset.ch = c.id;
     f2.addEventListener('load', () => {
       st.loaded = true; st.loadT = 0;
-      setTimeout(() => { if (dom && dom.ifr === f2) { dom.card.classList.add('gone'); pushVolume(true); post('playVideo'); } }, 1200);
+      if (!dom || dom.ifr !== f2) return;
+      postRaw({ event: 'listening', id: 'tv3d', channel: 'widget' });
+      setTimeout(() => {
+        if (!dom || dom.ifr !== f2) return;
+        dom.card.classList.add('gone'); postRaw({ event: 'listening', id: 'tv3d', channel: 'widget' });
+        pushVolume(true); post('playVideo');
+        if (st.autoMuted && st.unlocked) tryUnmute(f2, false); // sound was unlocked on an earlier channel
+      }, 1200);
       setTimeout(() => { if (dom && dom.ifr === f2) pushVolume(true); }, 3000);
+      syncAll();
     });
     dom.box.insertBefore(f2, dom.card);
     dom.ifr = f2;
+  }
+  // ask the player for sound; 1.6 s later check what it reports. iOS may refuse (stays muted or pauses) → back to
+  // muted autoplay + the chip asks for a tap on the video itself (the iframe is touchable then). If the player never
+  // answers (API blocked), reload the channel with mute=0 inside the user's tap.
+  function tryUnmute(f2, fromTap) {
+    st.autoMuted = false; st.muted = false; st.needTap = false;
+    pushVolume(true); post('playVideo');
+    clearTimeout(st.chk);
+    st.chk = setTimeout(() => {
+      if (!dom || dom.ifr !== f2 || !st.on) return;
+      const y = st.yt;
+      if (!y) { if (fromTap) { loadPlayer({ sound: true }); syncAll(); } return; }
+      const refused = y.muted === true || (y.playerState !== undefined && y.playerState !== 1 && y.playerState !== 3 && y.playerState !== -1);
+      if (refused) { st.autoMuted = true; pushVolume(true); post('playVideo'); st.needTap = !!fromTap; }
+      syncAll();
+    }, 1600);
+    syncAll();
   }
   function applyScreen() {
     screen.material = st.on ? onM : E.M.screenOff;
@@ -287,36 +411,102 @@ export function buildTV(E, G, f) {
   function syncPanel() {
     if (!dom) return;
     const p = dom.panel, c = ch();
+    p.classList.toggle('open', st.panel);
+    p.classList.toggle('list', st.panel && st.list);
     p.querySelector('.tvp-now').textContent = st.on ? `CH ${st.idx} · ${c.name}` : 'כבויה';
     const pw = p.querySelector('.pw'); pw.classList.toggle('on', st.on);
-    p.querySelector('[data-k="mu"]').textContent = st.muted ? '🔈' : '🔇';
+    const mu = p.querySelector('[data-k="mu"]');
+    const need = live() && st.autoMuted;
+    mu.textContent = need ? '🔊' : (st.muted ? '🔈' : '🔇');
+    mu.classList.toggle('need', need);
+    mu.setAttribute('aria-label', need ? 'בטל השתקה' : 'השתק');
+    p.querySelector('.ls').classList.toggle('on', st.list);
     for (const b of dom.list.children) b.classList.toggle('on', st.on && +b.dataset.i === st.idx);
     const d = p.querySelector('[data-k="dock"]');
     d.textContent = st.dock ? 'הצג על הטלוויזיה' : 'נגן גדול ▶';
-    d.style.display = (!c.yt || coarse) ? 'none' : '';
+    d.style.display = !c.yt ? 'none' : '';
     const yt = p.querySelector('.yt');
     if (c.yt) { yt.href = watchUrl(c); yt.style.display = ''; } else yt.style.display = 'none';
   }
+  function syncChip() {
+    if (!dom) return;
+    const show = live() && (st.autoMuted || st.needTap) && (st.visible || st.dock);
+    const text = st.needTap ? S.tapVideo : S.sound;
+    if (dom.chip.dataset.src !== text) { dom.chip.textContent = text; dom.chip.dataset.src = text; }
+    dom.chip.classList.toggle('show', show);
+    dom.chip.classList.toggle('pulse', show && !st.needTap);
+    // the projected iframe takes touches (YouTube's own controls) only while the remote is open or a tap on the video is
+    // needed; otherwise touches fall through to the 3D view (look-drag / walk / tap the TV)
+    const touch = live() && !st.dock && (st.needTap || (st.panel && !st.list));
+    if (touch !== st.touchable) { st.touchable = touch; dom.box.classList.toggle('touchable', touch); }
+  }
+  function syncAll() { syncPanel(); syncChip(); }
   function refresh() {
     applyScreen();
     if (live()) {
-      if (!dom || !dom.ifr || dom.ifr.dataset.ch !== ch().id) { loadPlayer(); if (dom && dom.ifr) dom.ifr.dataset.ch = ch().id; }
+      if (!dom || !dom.ifr || dom.ifr.dataset.ch !== ch().id) loadPlayer();
       if (dom) dom.box.classList.toggle('dock', st.dock);
-    } else { killPlayer(); if (dom) { dom.box.classList.remove('dock'); dom.box.style.visibility = 'hidden'; } st.visible = false; }
+    } else { killPlayer(); if (dom) { dom.box.classList.remove('dock'); dom.box.style.visibility = 'hidden'; } st.visible = false; st.autoMuted = false; st.needTap = false; }
     duck(live());
-    syncPanel();
+    syncAll();
   }
+
+  // ---- V12: "good view" test + optional smooth walk to the sofa-side viewing spot (cancellable: any move / look)
+  const nav = () => { try { return (typeof window !== 'undefined' && window.__tour && window.__tour.nav) || ctx.nav || null; } catch (_) { return null; } };
+  function viewSpot() {
+    screen.updateWorldMatrix(true, false);
+    const c = new THREE.Vector3().applyMatrix4(screen.matrixWorld);
+    const n = new THREE.Vector3(0, 0, 1).transformDirection(screen.matrixWorld);
+    const r = new THREE.Vector3(1, 0, 0).transformDirection(screen.matrixWorld);
+    // 2.2 m out from the screen, 0.8 m to the side away from the coffee table / lounge chair (the smaller-z side)
+    const a = c.clone().addScaledVector(n, 2.2).addScaledVector(r, 0.8), b = c.clone().addScaledVector(n, 2.2).addScaledVector(r, -0.8);
+    const s = a.z < b.z ? a : b;
+    return { x: s.x, y: E.plan.mainFloor, z: s.z, yaw: Math.atan2(-(c.x - s.x), -(c.z - s.z)) };
+  }
+  function goodView() {
+    const cam = E.ctx.camera; if (!cam) return true;
+    let mode = ''; try { mode = E.ctx.mode || ''; } catch (_) { }
+    if (mode !== 'walk') return true; // only walk mode moves the camera
+    cam.getWorldPosition(camP); cam.updateMatrixWorld();
+    const inHouse = camP.x > 0 && camP.x < P.W && camP.z > 0 && camP.z < P.D;
+    const mainFl = camP.y > F0 - 0.2 && camP.y < P.mainCeil + 0.1;
+    if (!inHouse || !mainFl) return true; // other floors / outside: no automatic walk
+    screen.updateWorldMatrix(true, false);
+    cen.set(0, 0, 0).applyMatrix4(screen.matrixWorld);
+    nrm.set(0, 0, 1).transformDirection(screen.matrixWorld);
+    const d = camP.distanceTo(cen);
+    if (d > 4.6 || tmp.copy(camP).sub(cen).dot(nrm) < 0.4) return false;
+    tmp.copy(cen).applyMatrix4(cam.matrixWorldInverse.copy(cam.matrixWorld).invert());
+    if (tmp.z > -0.1) return false;
+    tmp.applyMatrix4(cam.projectionMatrix);
+    if (Math.abs(tmp.x) > 0.75 || Math.abs(tmp.y) > 0.75) return false;
+    return !occluded();
+  }
+  function frameTV() {
+    const N = nav(); if (!N || typeof N.walkTo !== 'function') return false;
+    let good = true; try { good = goodView(); } catch (_) { }
+    if (good) return false;
+    const s = viewSpot(); st.lastFrame = s;
+    let okk = false;
+    try { okk = !!N.walkTo({ x: s.x, y: s.y, z: s.z }, { key: 'tv', label: 'טלוויזיה', arriveYaw: s.yaw, onEnd: () => { st.framing = false; } }); } catch (_) { okk = false; }
+    st.framing = okk;
+    if (okk) { try { E.ctx.toast && E.ctx.toast(tr(S.toSofa), 2600); } catch (_) { } }
+    return okk;
+  }
+  const stopFraming = () => { try { const N = nav(); if (st.framing && N && N.glideKey === 'tv') N.stopGlide(); } catch (_) { } st.framing = false; };
 
   const api = {
     channels: TV_CHANNELS,
     get on() { return st.on; }, get idx() { return st.idx; }, get channel() { return ch(); }, get volume() { return st.vol; }, get muted() { return st.muted; },
-    get panelOpen() { return st.panel; }, get docked() { return st.dock; }, get hasDOM() { return hasDOM; },
-    get view() { return { visible: st.visible, reason: st.reason, transform: st.transform, docked: st.dock, loaded: st.loaded, src: dom && dom.ifr ? dom.ifr.src : '', att: st.att, volSent: st.volSent }; },
+    get panelOpen() { return st.panel; }, get listOpen() { return st.list; }, get docked() { return st.dock; }, get hasDOM() { return hasDOM; },
+    get autoMuted() { return st.autoMuted; }, get soundGate() { return soundGate; }, get framing() { return st.framing; }, get lastFrame() { return st.lastFrame; },
+    get view() { return { visible: st.visible, reason: st.reason, transform: st.transform, docked: st.dock, loaded: st.loaded, src: dom && dom.ifr ? dom.ifr.src : '', att: st.att, volSent: st.volSent, autoMuted: st.autoMuted, needTap: st.needTap, touchable: st.touchable, yt: st.yt }; },
     power(on) {
       const next = on === undefined ? !st.on : !!on;
       if (next === st.on) return api;
       st.on = next; st.t = 0; E.snd.click(screen, 0.6);
       if (st.on) { E.snd.tone(screen, { freq: 15600, dur: 0.4, vol: 0.01 }); E.snd.tone(screen, { freq: 523, dur: 0.25, vol: 0.06, delay: 0.1 }); E.snd.tone(screen, { freq: 784, dur: 0.35, vol: 0.06, delay: 0.3 }); }
+      else { stopFraming(); st.list = false; }
       refresh(); return api;
     },
     set(i) {
@@ -328,17 +518,28 @@ export function buildTV(E, G, f) {
     },
     next() { return api.set(st.idx + 1); },
     prev() { return api.set(st.idx - 1); },
-    volUp() { st.vol = Math.min(100, st.vol + 10); st.muted = false; pushVolume(true); syncPanel(); return api; },
-    volDown() { st.vol = Math.max(0, st.vol - 10); pushVolume(true); syncPanel(); return api; },
-    mute(v) { st.muted = v === undefined ? !st.muted : !!v; pushVolume(true); syncPanel(); return api; },
-    dock(v) { st.dock = coarse ? true : !!v; if (dom) dom.box.classList.toggle('dock', st.dock && live()); syncPanel(); return api; },
-    openPanel() { if (!ensureDom()) return false; st.panel = true; dom.panel.classList.add('open'); syncPanel(); return true; },
-    closePanel() { st.panel = false; if (dom) dom.panel.classList.remove('open'); return api; },
-    /** remote / TV tap: open the channel panel (turning the TV on if needed); headless: toggle power */
+    volUp() { st.vol = Math.min(100, st.vol + 10); st.muted = false; if (st.autoMuted && live()) return api.unmute(); pushVolume(true); syncAll(); return api; },
+    volDown() { st.vol = Math.max(0, st.vol - 10); pushVolume(true); syncAll(); return api; },
+    mute(v) {
+      if (st.autoMuted && live() && v !== true) return api.unmute(); // the mute key doubles as "הקש לשמע"
+      st.muted = v === undefined ? !st.muted : !!v; pushVolume(true); syncAll(); return api;
+    },
+    /** V12: "🔊 הקש לשמע" — the user's tap: unMute + setVolume via the YouTube iframe API (postMessage) */
+    unmute() { st.unlocked = true; if (dom && dom.ifr && live()) tryUnmute(dom.ifr, true); else { st.autoMuted = false; st.muted = false; syncAll(); } return api; },
+    dock(v) { st.dock = !!v; if (dom) dom.box.classList.toggle('dock', st.dock && live()); placeBar(true); syncAll(); return api; },
+    openPanel() { if (!ensureDom()) return false; st.panel = true; syncAll(); placeBar(true); return true; },
+    closePanel() { st.panel = false; st.list = false; if (dom) syncAll(); return api; },
+    openList() { if (!api.openPanel()) return false; st.list = true; syncAll(); try { const b = dom.list.querySelector('button.on'); if (b && b.scrollIntoView) b.scrollIntoView({ block: 'nearest' }); } catch (_) { } return true; },
+    closeList() { st.list = false; if (dom) syncAll(); return api; },
+    toggleList() { return st.list ? api.closeList() : api.openList(); },
+    /** walk to the sofa-side viewing spot when the TV is not in a good view (no-op otherwise / without nav) */
+    frame() { return frameTV(); },
+    /** remote / TV tap: TV on with the last channel straight on the 3D screen + the compact remote bar
+     *  (tap again = hide the bar, the TV keeps playing); headless: toggle power */
     tap() {
       if (!hasDOM) { api.power(); return api; }
-      if (!st.on) api.power(true);
-      if (st.panel) api.closePanel(); else api.openPanel();
+      if (!st.on) { api.power(true); api.openPanel(); frameTV(); return api; }
+      if (st.panel) api.closePanel(); else { api.openPanel(); if (!st.visible && !st.dock) frameTV(); }
       return api;
     },
     screen,
@@ -353,7 +554,9 @@ export function buildTV(E, G, f) {
   const tmp = new THREE.Vector3(), cen = new THREE.Vector3(), nrm = new THREE.Vector3(), camP = new THREE.Vector3(), occP = new THREE.Vector3(1e9, 0, 0);
   let ray = null, occTargets = null;
   const P = E.plan, F0 = P.mainFloor;
-  const hide = (reason) => { st.reason = reason; if (st.visible && dom) dom.box.style.visibility = 'hidden'; st.visible = false; };
+  let aimOn = false;
+  const aim = (v) => { if (v === aimOn || !hasDOM) return; aimOn = v; try { document.body.classList.toggle('tv-aim', v); } catch (_) { } };
+  const hide = (reason) => { st.reason = reason; if (st.visible && dom) dom.box.style.visibility = 'hidden'; st.visible = false; aim(false); syncChip(); };
   const visChain = (o) => { for (let p = o; p; p = p.parent) if (p.visible === false) return false; return true; };
   const occluded = () => {
     try {
@@ -373,9 +576,10 @@ export function buildTV(E, G, f) {
     return false;
   };
   E.anim.tick((dt) => {
-    if (!st.on) return;
+    if (!st.on) { aim(false); return; }
     st.t += dt;
     if (draw(drawArgs())) tex.needsUpdate = true;
+    if (st.panel) { st.barT -= dt; if (st.barT <= 0) { st.barT = 0.5; placeBar(false); } }
     if (!dom || !dom.ifr) return;
     const cam = E.ctx.camera; if (!cam) return;
     cam.getWorldPosition(camP);
@@ -386,7 +590,7 @@ export function buildTV(E, G, f) {
     const inLiving = inHouse && mainFl && camP.x > 5.43 && camP.z > 3.0;
     st.att = mode === 'dollhouse' || mode === 'plan' ? 0.3 : inLiving ? 1 : inHouse && mainFl ? 0.5 : 0.18;
     st.volT += dt; if (st.volT > 0.4) { st.volT = 0; pushVolume(false); }
-    if (st.dock) { st.reason = 'docked'; st.visible = false; return; }
+    if (st.dock) { st.reason = 'docked'; st.visible = false; aim(false); syncChip(); positionChip(null); return; }
     if (mode !== 'walk' && mode !== 'pano') return hide('mode');
     let photo = false; try { photo = !!(window.__tour && window.__tour.pathtraceActive); } catch (_) { }
     if (photo) return hide('photoreal');
@@ -417,9 +621,27 @@ export function buildTV(E, G, f) {
     const m = quadMatrix3d(640, 368, pts);
     if (!m) return hide('degenerate');
     if (m !== st.transform) { st.transform = m; dom.box.style.transform = m; }
-    if (!st.visible) { dom.box.style.visibility = 'visible'; st.visible = true; }
+    if (!st.visible) { dom.box.style.visibility = 'visible'; st.visible = true; syncChip(); }
     st.reason = 'projected';
+    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    aim(coarse && live() && Math.min(...xs) < cx && Math.max(...xs) > cx && Math.min(...ys) < cy && Math.max(...ys) > cy);
+    positionChip(pts);
   });
+  // chip: bottom-centre of the projected screen (screen space)
+  function positionChip(pts) {
+    if (!dom || !dom.chip.classList.contains('show')) return;
+    let x, y;
+    if (pts) {
+      x = (pts[0][0] + pts[1][0] + pts[2][0] + pts[3][0]) / 4;
+      const top = Math.min(pts[0][1], pts[1][1]), bot = Math.max(pts[2][1], pts[3][1]);
+      y = bot - Math.max(8, (bot - top) * 0.1);
+      x = Math.max(80, Math.min(innerWidth - 80, x)); y = Math.max(50, Math.min(innerHeight - 10, y));
+    } else {
+      try { const r = dom.box.getBoundingClientRect(); x = r.left + r.width / 2; y = r.bottom - 12; } catch (_) { return; }
+    }
+    const k = Math.round(x) + ',' + Math.round(y);
+    if (k !== st.chipKey) { st.chipKey = k; dom.chip.style.left = Math.round(x) + 'px'; dom.chip.style.top = Math.round(y) + 'px'; }
+  }
   return api;
 }
 

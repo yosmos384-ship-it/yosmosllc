@@ -1,6 +1,6 @@
 {
  "version": 7,
- "generated": "2026-10-16T06:47:05.421Z",
+ "generated": "2026-10-17T17:35:09.481Z",
  "size": [
   4096,
   2048
@@ -194,9 +194,9 @@
   "modern/bed1": {
    "full": "renders/modern/bed1.jpg",
    "sm": "renders/modern/bed1_sm.jpg",
-   "bytes": 544170,
-   "smBytes": 51368,
-   "yaw": null
+   "bytes": 535654,
+   "smBytes": 50913,
+   "yaw": 1.7453292519943295
   },
   "modern/bath1": {
    "full": "renders/modern/bath1.jpg",
@@ -243,9 +243,9 @@
   "classic/bed1": {
    "full": "renders/classic/bed1.jpg",
    "sm": "renders/classic/bed1_sm.jpg",
-   "bytes": 538873,
-   "smBytes": 51223,
-   "yaw": null
+   "bytes": 516898,
+   "smBytes": 49064,
+   "yaw": 1.7453292519943295
   },
   "classic/bath1": {
    "full": "renders/classic/bath1.jpg",
@@ -292,9 +292,9 @@
   "dark/bed1": {
    "full": "renders/dark/bed1.jpg",
    "sm": "renders/dark/bed1_sm.jpg",
-   "bytes": 502300,
-   "smBytes": 47762,
-   "yaw": null
+   "bytes": 455698,
+   "smBytes": 44549,
+   "yaw": 1.7453292519943295
   },
   "dark/bath1": {
    "full": "renders/dark/bath1.jpg",
@@ -341,9 +341,9 @@
   "mediterranean/bed1": {
    "full": "renders/mediterranean/bed1.jpg",
    "sm": "renders/mediterranean/bed1_sm.jpg",
-   "bytes": 584355,
-   "smBytes": 55271,
-   "yaw": null
+   "bytes": 551544,
+   "smBytes": 52829,
+   "yaw": 1.7453292519943295
   },
   "mediterranean/bath1": {
    "full": "renders/mediterranean/bath1.jpg",
@@ -390,9 +390,9 @@
   "japandi/bed1": {
    "full": "renders/japandi/bed1.jpg",
    "sm": "renders/japandi/bed1_sm.jpg",
-   "bytes": 576233,
-   "smBytes": 53640,
-   "yaw": null
+   "bytes": 559350,
+   "smBytes": 52072,
+   "yaw": 1.7453292519943295
   },
   "japandi/bath1": {
    "full": "renders/japandi/bath1.jpg",
@@ -521,7 +521,7 @@
    "yaw": 6.283185307179586
   }
  },
- "totalBytes": 28351165,
+ "totalBytes": 28214541,
  "renderLog": [
   {
    "style": "mediterranean",

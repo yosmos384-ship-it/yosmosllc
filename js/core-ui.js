@@ -153,17 +153,18 @@ export function toastFn(el) {
 }
 
 /* ============================================================================================ FOV */
-// Wider default vertical FOV on phones in portrait so more of the room is on screen; landscape phone 65; desktop 70.
+// Wider default vertical FOV on phones in portrait so more of the room is on screen. V12 (owner: "zoom out so more
+// details are seen everywhere"): portrait 92° (was 82 touch / 76), landscape phone 74° (was 65), desktop 75° (was 70).
 export function defaultFov(isTouch) {
   const w = window.innerWidth || 1280, h = window.innerHeight || 800;
-  if (h > w * 1.05) return isTouch ? 82 : 76;
-  if (isTouch && Math.min(w, h) < 620) return 65;
-  return 70;
+  if (h > w * 1.05) return 92;
+  if (isTouch && Math.min(w, h) < 620) return 74;
+  return 75;
 }
-// Walk-mode zoom: two-finger pinch on touch, wheel / trackpad pinch (ctrl+wheel) on desktop. Smooth FOV 35–95.
+// Walk-mode zoom: two-finger pinch on touch, wheel / trackpad pinch (ctrl+wheel) on desktop. Smooth FOV 35–105 (V12: was 95).
 // (360 mode keeps its own pinch / wheel handling in core-pano.js with the same range.)
 export function createZoom({ canvas, camera, getMode, isTouch, isBusy }) {
-  const MIN = 35, MAX = 95;
+  const MIN = 35, MAX = 105;
   const pts = new Map();
   let pinch0 = 0, fov0 = 70, lastPinchT = -1e9, pinched = false;
   const st = { target: defaultFov(isTouch), user: false };

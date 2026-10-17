@@ -38,7 +38,7 @@ export function createPano(env) {
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
 
   // V3: fov eases toward fovT (pinch / wheel / ctrl+wheel trackpad pinch), range FOV_MIN..FOV_MAX; default from env.defaultFov()
-  const FOV_MIN = 35, FOV_MAX = 95;
+  const FOV_MIN = 35, FOV_MAX = 105; // V12: max 105 (was 95)
   const defFov = () => { try { const f = env.defaultFov && env.defaultFov(); return isFinite(f) ? f : 75; } catch (_) { return 75; } };
   const st = { active: false, node: null, yaw: 0, pitch: 0, vyaw: 0, vpitch: 0, fov: 75, fovT: 75, auto: false, dragging: false, gliding: false, hover: null, lastMoveT: 0, photoreal: false };
   // ---- V2 nav: Street-View chevrons + floor cursor (shared look with walk mode, see core-nav.js)

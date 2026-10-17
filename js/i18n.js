@@ -37,6 +37,7 @@ export const DICT = {
   'יש להפעיל JavaScript כדי לצפות בסיור.': ['Please enable JavaScript to view the tour.', 'Activa JavaScript para ver el recorrido.'],
   'הדפדפן אינו תומך ב-WebGL': ['This browser does not support WebGL', 'Este navegador no admite WebGL'],
   'טעינת מנוע התלת-ממד נכשלה (three.js / core.js) — בדקו חיבור לאינטרנט ורעננו': ['The 3D engine failed to load (three.js / core.js) — check your connection and refresh', 'No se pudo cargar el motor 3D (three.js / core.js) — revisa tu conexión y recarga'],
+  'סיור בבית אחרי שיפוץ': ['Tour the renovated house', 'Recorre la casa remodelada'],
   'סיור בבית אחרי שיפוץ · או בחרו מצב בסרגל העליון': ['Tour the renovated house · or pick a mode at the top', 'Recorre la casa remodelada · o elige un modo arriba'],
   'סיור בבית אחרי שיפוץ · או בחרו מצב תצוגה בסרגל העליון': ['Tour the renovated house · or pick a view mode in the top bar', 'Recorre la casa remodelada · o elige un modo de vista en la barra superior'],
   'כניסה לסיור': ['Enter the tour', 'Entrar al recorrido'],
@@ -44,6 +45,15 @@ export const DICT = {
   'גרסה 9': ['Version 9', 'Versión 9'],
   'גרסה 10': ['Version 10', 'Versión 10'],
   'גרסה 11': ['Version 11', 'Versión 11'],
+  'גרסה 12': ['Version 12', 'Versión 12'],
+  // ---- V12: round floating buttons (the size of "פעולה") with a 1-line label
+  'אקסל': ['Excel', 'Excel'],
+  'מחזור יום-לילה': ['Day-night cycle', 'Ciclo día-noche'],
+  'מחזור יום-לילה אוטומטי (השהיה / המשך)': ['Automatic day-night cycle (pause / resume)', 'Ciclo día-noche automático (pausar / reanudar)'],
+  'מחזור יום-לילה: פועל': ['Day-night cycle: on', 'Ciclo día-noche: activado'],
+  'מחזור יום-לילה: מושהה': ['Day-night cycle: paused', 'Ciclo día-noche: en pausa'],
+  'פירוט': ['Details', 'Detalle'],
+  'הקישו ליציאה': ['tap to exit', 'toca para salir'],
   // ---- V11: "📋 שיפוץ לפי האקסל" (scope-of-work mode: js/sow.js, js/sow-ui.js, js/sow-build.js)
   'שיפוץ לפי האקסל': ['Scope-of-work rehab', 'Remodelación según presupuesto'],
   '📋 שיפוץ לפי האקסל': ['📋 Scope-of-work rehab', '📋 Remodelación según presupuesto'],
@@ -427,7 +437,7 @@ export const HELP = {
       <li><b>360° tour</b> — stand at fixed spots, drag to look, arrows on the floor move between spots, download a panorama.</li>
       <li><b>✨ Photoreal render</b> (in 360° mode) — a path-traced render of the whole surroundings; look around in the result and download a PNG. <b>📷 Render the current view</b> — a high-resolution image of what you see.</li>
       <li><b>Room bar</b> (bottom of the screen while walking) — tap a room and you walk there on your own (doors open, stairs included); tap it again or move to stop. <b>🚘 Limousine</b> takes you to the limousine waiting at the curb — tap its door to get in; <b>⟵ Back home</b> returns to the house.</li>
-      <li><b>🖼 Renders</b> (the yellow button in the corner, in every mode) — ready-made 360° renders of every renovation style; they open in the room you are in and in the current style. Swipe sideways or use ‹ › for another room; "✓ Apply this style in the tour" switches the style and returns you to exactly the same spot.</li>
+      <li><b>🖼 Renders</b> (in the ⋯ menu / the tools column) — ready-made 360° renders of every renovation style; they open in the room you are in and in the current style. Swipe sideways or use ‹ › for another room; "✓ Apply this style in the tour" switches the style and returns you to exactly the same spot.</li>
       <li><b>Scan / dollhouse</b> — a rotating "dollhouse" view; filter by floor; double-click a floor to go in.</li>
       <li><b>Floor plan</b> — a top view; drag to pan, wheel to zoom, tap a room to enter it.</li>
     </ul>
@@ -437,7 +447,7 @@ export const HELP = {
       <li><b>Day / evening / night</b> — at night the lights in the house switch on automatically; the wall switches still work.</li>
       <li><b>📻 Hits radio</b> — on your first tap the live broadcast of WNCI 97.9 FM Columbus, Ohio starts. Tap the 📻 chip for play / stop, volume and the list of US hits stations (Top 40). A station that does not answer is skipped to the next one automatically.</li>
       <li><b>📺 TV</b> — tap the remote on the coffee table or the screen for live US channels.</li>
-      <li><b>🎨 Renovation style</b> (also the 🎨 Style button next to 🖼 Renders) — switch the renovation options (materials and colours) live, even while walking or in 360°.</li>
+      <li><b>🎨 Renovation style</b> (also the 🎨 Style button in the row under the top bar) — switch the renovation options (materials and colours) live, even while walking or in 360°.</li>
       <li><b>⟲ Start over</b> — back to the very beginning (refreshing the page does the same).</li>
       <li><b>The small map</b> — tap it to enlarge it for a moment.</li>
       <li><b>📏 Measure</b> — mark two points to get the distance in metres and feet-inches. <kbd>Esc</kbd> clears.</li>
@@ -463,7 +473,7 @@ export const HELP = {
       <li><b>Recorrido 360°</b> — puntos fijos, arrastra para mirar, flechas en el piso para pasar de un punto a otro, descarga de panorámica.</li>
       <li><b>✨ Render fotorrealista</b> (en modo 360°) — render con trazado de rayos de todo el entorno; puedes mirar alrededor y descargar un PNG. <b>📷 Render de la vista actual</b> — imagen en alta resolución de lo que ves.</li>
       <li><b>Barra de estancias</b> (abajo, al caminar) — toca una estancia y caminas hasta allí solo (las puertas se abren, escaleras incluidas); tócala de nuevo o muévete para parar. <b>🚘 Limusina</b> te lleva a la limusina que espera junto a la acera — toca su puerta para subir; <b>⟵ Volver a casa</b> regresa a la casa.</li>
-      <li><b>🖼 Renders</b> (el botón amarillo de la esquina, en todos los modos) — renders 360° listos de todos los estilos de remodelación; se abren en la estancia donde estás y en el estilo actual. Desliza de lado o usa ‹ › para otra estancia; "✓ Aplicar este estilo en el recorrido" cambia el estilo y te devuelve exactamente al mismo punto.</li>
+      <li><b>🖼 Renders</b> (en el menú ⋯ / la columna de herramientas) — renders 360° listos de todos los estilos de remodelación; se abren en la estancia donde estás y en el estilo actual. Desliza de lado o usa ‹ › para otra estancia; "✓ Aplicar este estilo en el recorrido" cambia el estilo y te devuelve exactamente al mismo punto.</li>
       <li><b>Escaneo / casa de muñecas</b> — vista giratoria tipo maqueta; filtro por planta; doble clic en un piso para entrar.</li>
       <li><b>Plano de planta</b> — vista desde arriba; arrastra para desplazar, rueda para zoom, toca una habitación para entrar.</li>
     </ul>
@@ -473,7 +483,7 @@ export const HELP = {
       <li><b>Día / tarde / noche</b> — de noche las luces de la casa se encienden solas; los apagadores siguen funcionando.</li>
       <li><b>📻 Radio de éxitos</b> — con tu primer toque empieza la transmisión en vivo de WNCI 97.9 FM de Columbus, Ohio. Toca el chip 📻 para reproducir / detener, el volumen y la lista de estaciones de éxitos de EE. UU. (Top 40). Si una estación no responde, se pasa sola a la siguiente.</li>
       <li><b>📺 TV</b> — toca el control remoto en la mesa de centro o la pantalla para ver canales en vivo de EE. UU.</li>
-      <li><b>🎨 Estilo de remodelación</b> (también el botón 🎨 Estilo junto a 🖼 Renders) — cambia las opciones de remodelación (materiales y colores) en tiempo real, también caminando o en 360°.</li>
+      <li><b>🎨 Estilo de remodelación</b> (también el botón 🎨 Estilo en la fila bajo la barra superior) — cambia las opciones de remodelación (materiales y colores) en tiempo real, también caminando o en 360°.</li>
       <li><b>⟲ Empezar de nuevo</b> — vuelve al inicio (recargar la página hace lo mismo).</li>
       <li><b>El mapa pequeño</b> — tócalo para ampliarlo un momento.</li>
       <li><b>📏 Medir</b> — marca dos puntos para obtener la distancia en metros y pies-pulgadas. <kbd>Esc</kbd> borra.</li>

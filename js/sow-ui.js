@@ -1,7 +1,8 @@
 // sow-ui.js — V11 UI for "📋 שיפוץ לפי האקסל" (js/sow.js does the 3D work):
-//  · a small pill "📋 שיפוץ לפי האקסל" in the floating button column (#quickFab, under 🖼 / 🎨 — gallery.js places the
-//    column clear of every other control). Tap = SOW mode on / off. While on, the pill is a badge
-//    "מצב: שיפוץ לפי האקסל · $59,000" (tap again = off) and a second pill "📋 פירוט השיפוץ" opens the panel.
+//  · a segment "📋 אקסל" in the V12 quick-button row under the mode bar (#quickFab, after 🎨 — gallery.js places the
+//    row clear of every other control). Tap = SOW mode on / off. While on, it is green with a
+//    small ✓ (the "מצב: שיפוץ לפי האקסל · $59,000" info is in its title / aria-label and the panel header) and a
+//    second segment "🧾 פירוט" opens the panel.
 //  · the panel (#sowPanel): every budgeted line item with its USD amount, the $59,000 total and the "not in scope
 //    (stays as-is)" list; tapping a line walks to the room (room picker walk) and highlights its object. Sticky ✕.
 //  · before / after (#sowBA): the real walkthrough-video frame of the room (renders/before/<room>.jpg) vs the SOW render
@@ -21,24 +22,21 @@ export const BA_VIEW = {
 const fmt = (n) => '$' + Math.round(n).toLocaleString('en-US');
 
 const CSS = `
-#quickFab>#btnSowFab{min-height:44px;padding:0 14px;font-size:13.5px;color:#fff6e3;background:rgba(14,18,26,.82);border:1px solid rgba(255,196,96,.75);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 18px rgba(0,0,0,.3)}
-#btnSowFab:hover{background:rgba(40,34,20,.9)}
-#btnSowFab .qf-ico{font-size:16px;line-height:1}
-#btnSowFab .sow-badge{display:none;flex-direction:column;align-items:flex-start;line-height:1.15;text-align:start}
-#btnSowFab .sow-badge small{font-size:11.5px;font-weight:700;opacity:.9}
-body.sow-on #quickFab>#btnSowFab{background:linear-gradient(180deg,#7cf3c8,#3fcf9e);color:#05261b;border-color:rgba(255,255,255,.5);box-shadow:0 8px 22px rgba(63,207,158,.35)}
-body.sow-on #btnSowFab .sow-off{display:none}
-body.sow-on #btnSowFab .sow-badge{display:flex}
+#quickFab>#btnSowFab{color:#fff6e3}
+body.sow-on #quickFab>#btnSowFab{background:linear-gradient(180deg,#7cf3c8,#3fcf9e);color:#05261b;border-color:rgba(255,255,255,.45);box-shadow:0 3px 12px rgba(63,207,158,.35)}
+body.sow-on #quickFab>#btnSowFab .qf-chk{display:inline}
 body.sow-on #quickFab>#btnStyleFab{display:none}
 body.sow-busy #quickFab>#btnSowFab{opacity:.7;cursor:progress}
-#quickFab>#btnSowPanel{display:none;min-height:44px;padding:0 14px;font-size:13.5px;color:#05261b;background:#e9fff6;border:1px solid rgba(63,207,158,.8);box-shadow:0 6px 18px rgba(0,0,0,.25)}
+#quickFab>#btnSowPanel{display:none;color:#bff8e4}
 body.sow-on #quickFab>#btnSowPanel{display:flex}
 #sowPanel{position:fixed;inset:0;z-index:58;display:none;align-items:flex-end;justify-content:center;background:rgba(4,8,14,.45)}
 #sowPanel.show{display:flex}
 #sowPanel .sp-card{position:relative;width:min(560px,100vw);max-height:min(86vh,860px);overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:#0f1520;color:#eef3f8;border-radius:18px 18px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.5);padding:0 0 calc(14px + env(safe-area-inset-bottom,0px))}
 @media (min-width:901px){#sowPanel{align-items:center}#sowPanel .sp-card{border-radius:18px}}
 #sowPanel .sp-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:14px 16px 10px;background:#0f1520;border-bottom:1px solid rgba(255,255,255,.08)}
-#sowPanel .sp-head b{font-size:17px;flex:1}
+#sowPanel .sp-head .sp-tt{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+#sowPanel .sp-head b{font-size:17px}
+#sowPanel .sp-head .sp-mode{font-size:12.5px;font-weight:700;color:#7cf3c8}
 #sowPanel .sp-x{flex:0 0 auto;width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font-size:20px;cursor:pointer}
 #sowPanel .sp-sub{padding:8px 16px 4px;font-size:13px;color:#b9c6d4;line-height:1.4}
 #sowPanel .sp-list{list-style:none;margin:0;padding:4px 10px}
@@ -88,18 +86,24 @@ export function installSowUI() {
   function mountPill() {
     const box = document.getElementById('quickFab'); if (!box || document.getElementById('btnSowFab')) return !!box;
     pill = document.createElement('button'); pill.id = 'btnSowFab'; pill.type = 'button'; pill.setAttribute('aria-pressed', 'false');
-    pill.title = 'שיפוץ לפי תקציב המלווה (Scope of Work): הבית האמיתי + רק מה שבתקציב';
-    pill.innerHTML = '<span class="sow-off"><span class="qf-ico" aria-hidden="true">📋</span> <span class="lbl"></span></span><span class="sow-badge"><span class="b1"></span><small class="b2"></small></span>';
-    pill.querySelector('.lbl').textContent = 'שיפוץ לפי האקסל';
-    pill.querySelector('.b1').textContent = 'מצב: שיפוץ לפי האקסל';
-    pill.querySelector('.b2').textContent = fmt(59000) + ' · ✕';
+    // V12: a compact segment 📋 + "אקסל"; SOW on = green + a small ✓, the "$59,000" mode info lives in its title /
+    // aria-label and in the panel header (no wide badge any more)
+    pill.innerHTML = '<span class="qf-ico" aria-hidden="true">📋</span><span class="qf-lbl"></span><span class="qf-chk" aria-hidden="true">✓</span>';
+    pill.querySelector('.qf-lbl').textContent = 'אקסל';
     pPanel = document.createElement('button'); pPanel.id = 'btnSowPanel'; pPanel.type = 'button'; pPanel.setAttribute('aria-haspopup', 'dialog');
-    pPanel.innerHTML = '<span class="qf-ico" aria-hidden="true">📋</span> <span class="lbl"></span>';
-    pPanel.querySelector('.lbl').textContent = 'פירוט השיפוץ';
-    box.appendChild(pPanel); box.appendChild(pill);
+    pPanel.innerHTML = '<span class="qf-ico" aria-hidden="true">🧾</span><span class="qf-lbl"></span>';
+    pPanel.querySelector('.qf-lbl').textContent = 'פירוט';
+    pPanel.title = 'פירוט השיפוץ'; pPanel.setAttribute('aria-label', 'פירוט השיפוץ');
+    labelPill(false);
+    box.appendChild(pill); box.appendChild(pPanel); // V12 row order (reading direction): 🎨 סגנון · 📋 אקסל · 🧾 פירוט
     pill.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
     pPanel.addEventListener('click', (e) => { e.stopPropagation(); openPanel(); });
     return true;
+  }
+  function labelPill(on) {
+    if (!pill) return;
+    const t = on ? 'מצב: שיפוץ לפי האקסל · ' + fmt(59000) + ' · הקישו ליציאה' : 'שיפוץ לפי תקציב המלווה (Scope of Work): הבית האמיתי + רק מה שבתקציב';
+    pill.title = t; pill.setAttribute('aria-label', on ? t : 'שיפוץ לפי האקסל');
   }
   if (!mountPill()) { const iv = setInterval(() => { if (mountPill()) clearInterval(iv); }, 300); }
   async function toggle() {
@@ -116,7 +120,7 @@ export function installSowUI() {
   function sync() {
     const S = sow(), on = !!(S && S.on);
     document.body.classList.toggle('sow-on', on);
-    if (pill) pill.setAttribute('aria-pressed', on ? 'true' : 'false');
+    if (pill) { pill.setAttribute('aria-pressed', on ? 'true' : 'false'); labelPill(on); }
     try { const t = tour(); t && t.styleUI && t.styleUI.render && t.styleUI.render(); } catch (_) { }
   }
   const hook = setInterval(() => { const S = sow(); if (S && S.onChange) { clearInterval(hook); S.onChange(() => { sync(); if (!S.on) closePanel(); }); } }, 400);
@@ -127,9 +131,10 @@ export function installSowUI() {
     if (panel) return panel;
     const S = sow();
     panel = document.createElement('div'); panel.id = 'sowPanel'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true');
-    panel.innerHTML = '<div class="sp-card"><div class="sp-head"><b></b><button class="sp-x" type="button">✕</button></div><div class="sp-sub"></div><ul class="sp-list"></ul><div class="sp-total"><span class="t"></span><span class="am"></span></div><h4></h4><div class="sp-out"></div><button class="sp-ba" type="button"></button></div>';
+    panel.innerHTML = '<div class="sp-card"><div class="sp-head"><span class="sp-tt"><b></b><small class="sp-mode"></small></span><button class="sp-x" type="button">✕</button></div><div class="sp-sub"></div><ul class="sp-list"></ul><div class="sp-total"><span class="t"></span><span class="am"></span></div><h4></h4><div class="sp-out"></div><button class="sp-ba" type="button"></button></div>';
     document.body.appendChild(panel);
     panel.querySelector('.sp-head b').textContent = '📋 פירוט השיפוץ';
+    panel.querySelector('.sp-head .sp-mode').textContent = 'מצב: שיפוץ לפי האקסל · ' + fmt(S ? S.total : 59000);
     const x = panel.querySelector('.sp-x'); x.setAttribute('aria-label', 'סגור'); x.title = 'סגור';
     panel.querySelector('.sp-sub').textContent = 'תקציב השיפוץ של המלווה (Scope of Work). הקישו על שורה כדי ללכת לחדר ולראות את הפריט.';
     const ul = panel.querySelector('.sp-list');

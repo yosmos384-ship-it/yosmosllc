@@ -342,12 +342,16 @@ export function createFramer({ world, plan, isHome }) {
   function frameRoom(rect, feet, o = {}) {
     const r = rect.r || rect, [x0, z0, x1, z1] = r;
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, ix = Math.min(0.6, (x1 - x0) / 3), iz = Math.min(0.6, (z1 - z0) / 3);
-    const cands = [[cx, cz], [x0 + ix, z0 + iz], [x1 - ix, z0 + iz], [x0 + ix, z1 - iz], [x1 - ix, z1 - iz], [cx, z0 + iz], [cx, z1 - iz], [x0 + ix, cz], [x1 - ix, cz]];
+    // V12: stand BACK — corners (looking across the diagonal) are preferred, then wall midpoints, the middle last
+    // (score = covered area × weight); o.ok(x, z) can veto a spot (e.g. not reachable on the nav graph)
+    const cands = [[cx, cz, 0.8], [x0 + ix, z0 + iz, 1.15], [x1 - ix, z0 + iz, 1.15], [x0 + ix, z1 - iz, 1.15], [x1 - ix, z1 - iz, 1.15], [cx, z0 + iz, 1], [cx, z1 - iz, 1], [x0 + ix, cz, 1], [x1 - ix, cz, 1]];
     let best = null;
-    for (const [x, z] of cands) {
+    for (const [x, z, wgt] of cands) {
       if (!freeAt(x, feet, z)) continue;
+      if (o.ok && !o.ok(x, z)) continue;
       const f = frameYaw({ x, feet, z }, Object.assign({}, o, { rect: { r } }));
-      if (!best || f.area > best.area * 1.04) best = { x, z, feet, yaw: f.yaw, area: f.area };
+      const sc = f.area * wgt;
+      if (!best || sc > best.score * 1.04) best = { x, z, feet, yaw: f.yaw, area: f.area, score: sc };
     }
     if (!best) { const f = frameYaw({ x: cx, feet, z: cz }, Object.assign({}, o, { rect: { r } })); best = { x: cx, z: cz, feet, yaw: f.yaw, area: f.area }; }
     return best;

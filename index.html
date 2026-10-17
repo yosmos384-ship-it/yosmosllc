@@ -320,15 +320,16 @@ body.world-nomap #mapCard{display:none}
 #worldLoad .wl-card{display:flex;align-items:center;gap:12px;padding:14px 20px;border-radius:16px;background:var(--glass-strong);border:1px solid var(--line);font-size:15px;font-weight:700}
 #worldLoad .wl-pct{font-variant-numeric:tabular-nums;color:#f2c66d;min-width:3ch}#worldLoad .wl-sub{font-weight:500;font-size:13px;opacity:.8}#worldLoad .wl-spin{width:22px;height:22px;border-radius:50%;border:3px solid rgba(242,198,109,.3);border-top-color:#f2c66d;animation:spin .8s linear infinite}
 
-/* ---------- intro (V6: compact card docked at the bottom-start corner — right edge in RTL — so the 3D scene shows) ---------- */
+/* ---------- intro (V6: compact card docked at the bottom-start corner — right edge in RTL — so the 3D scene shows;
+   V12: even smaller — one-line title + one short subtitle, the "or pick a mode in the top bar" hint is only a tooltip) ---------- */
 #intro{position:fixed;z-index:14;inset-inline-start:calc(var(--gut) + env(safe-area-inset-right,0px));bottom:calc(var(--gut) + 62px + env(safe-area-inset-bottom,0px));
-  display:flex;align-items:center;gap:10px;width:max-content;max-width:min(244px,calc(100vw - 2*var(--gut) - 40px));padding:8px;padding-inline-start:12px;
-  background:var(--glass-strong);border-radius:16px;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .5s,transform .5s}
+  display:flex;align-items:center;gap:8px;width:max-content;max-width:min(210px,calc(100vw - 2*var(--gut) - 40px));padding:5px;padding-inline-start:10px;
+  background:var(--glass-strong);border-radius:14px;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .5s,transform .5s}
 #intro.show{opacity:1;transform:none;pointer-events:auto}
 #intro .in-txt{display:flex;flex-direction:column;min-width:0;flex:1 1 auto;line-height:1.2}
-#intro h1{margin:0;font-size:14px;font-weight:800;letter-spacing:.2px;direction:ltr;text-align:right;white-space:nowrap}
-#intro p{margin:2px 0 0;color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-#btnEnter{flex:0 0 auto;min-height:44px;padding:0 14px;border-radius:999px;font-size:14px;font-weight:800;white-space:nowrap;background:linear-gradient(180deg,#5ff0ff,#22bfe6);color:var(--accent-ink);box-shadow:0 6px 18px rgba(67,224,255,.35);transition:transform .15s}
+#intro h1{margin:0;font-size:13px;font-weight:800;letter-spacing:.2px;direction:ltr;text-align:right;white-space:nowrap}
+#intro p{margin:1px 0 0;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#btnEnter{flex:0 0 auto;min-height:44px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:800;white-space:nowrap;background:linear-gradient(180deg,#5ff0ff,#22bfe6);color:var(--accent-ink);box-shadow:0 6px 18px rgba(67,224,255,.35);transition:transform .15s}
 #btnEnter:hover{transform:scale(1.03)}
 body:has(#intro.show) #info{display:none}
 
@@ -471,10 +472,11 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
   <button id="btnMore" class="tbtn glass" title="כלים" aria-label="כלים נוספים" aria-expanded="false"><span class="ico">⋯</span></button>
   <div id="toolsInner">
   <div class="seg glass" role="group" aria-label="יום / ערב / לילה">
-    <button data-tod="day" class="on" title="יום"><span class="ico">☀️</span>יום</button>
-    <button data-tod="evening" title="ערב"><span class="ico">🌇</span>ערב</button>
+    <button data-tod="day" title="יום"><span class="ico">☀️</span>יום</button>
+    <button data-tod="evening" class="on" title="ערב"><span class="ico">🌇</span>ערב</button>
     <button data-tod="night" title="לילה"><span class="ico">🌙</span>לילה</button>
   </div>
+  <button id="btnTodCycle" class="tbtn glass on" title="מחזור יום-לילה אוטומטי (השהיה / המשך)" aria-pressed="true"><span class="ico">⏸</span><span class="lbl">מחזור יום-לילה</span></button>
   <button id="btnMeasure" class="tbtn glass" title="מדידה (M)"><span class="ico">📏</span><span class="lbl">מדידה</span></button>
   <button id="btnFlash" class="tbtn glass" title="פנס (Q / F)"><span class="ico">🔦</span><span class="lbl">פנס</span></button>
   <button id="btnQuality" class="tbtn glass" title="איכות גרפיקה"><span class="ico">✦</span><span class="lbl">איכות גבוהה</span></button>
@@ -540,7 +542,7 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
 <button id="btnAct" aria-label="פעולה">פעולה</button>
 
 <div id="intro" class="glass" role="region" aria-label="3351 Eakin Rd — כניסה לסיור">
-  <div class="in-txt"><h1>3351 Eakin Rd</h1><p title="סיור בבית אחרי שיפוץ · או בחרו מצב תצוגה בסרגל העליון">סיור בבית אחרי שיפוץ · או בחרו מצב בסרגל העליון</p></div>
+  <div class="in-txt" title="סיור בבית אחרי שיפוץ · או בחרו מצב תצוגה בסרגל העליון"><h1>3351 Eakin Rd</h1><p>סיור בבית אחרי שיפוץ</p></div>
   <button id="btnEnter">כניסה לסיור</button>
 </div>
 
@@ -566,7 +568,7 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
       <li><b>סיור 360°</b> — עמידה בנקודות קבועות, גרירה להסתכלות, טבעות על הרצפה למעבר בין נקודות, הורדת תמונה פנורמית.</li>
       <li><b>✨ הדמיה מציאותית</b> (במצב 360°) — רינדור במעקב קרניים של כל הסביבה; אפשר להסתכל מסביב בתוצאה ולהוריד PNG. <b>📷 הדמיה של המבט הנוכחי</b> — תמונה אחת ברזולוציה גבוהה.</li>
       <li><b>סרגל החדרים</b> (בתחתית המסך בזמן הליכה) — הקישו על חדר ותלכו אליו לבד (הדלתות נפתחות, כולל מדרגות); הקשה נוספת או תנועה עוצרת. <b>🚘 לימוזינה</b> מוביל ללימוזינה שמחכה ליד המדרכה — הקישו על הדלת כדי לעלות; <b>⟵ חזרה הביתה</b> מחזיר לבית.</li>
-      <li><b>🖼 הדמיות</b> (הכפתור הצהוב בפינה, בכל מצב) — הדמיות 360° מוכנות של כל סגנונות השיפוץ, נפתחות בחדר שבו אתם נמצאים ובסגנון הנוכחי. החליקו הצידה או ‹ › לחדר אחר; "✓ החל סגנון זה בסיור" מחליף את הסגנון וחוזר בדיוק לאותה נקודה.</li>
+      <li><b>🖼 הדמיות</b> (בתפריט ⋯ / בעמודת הכלים) — הדמיות 360° מוכנות של כל סגנונות השיפוץ, נפתחות בחדר שבו אתם נמצאים ובסגנון הנוכחי. החליקו הצידה או ‹ › לחדר אחר; "✓ החל סגנון זה בסיור" מחליף את הסגנון וחוזר בדיוק לאותה נקודה.</li>
       <li><b>סריקה / דולהאוס</b> — מבט "בית בובות" מסתובב; סינון לפי קומה; לחיצה כפולה על רצפה נכנסת לשם.</li>
       <li><b>תוכנית קומה</b> — מבט מלמעלה; גרירה להזזה, גלגלת לזום, הקשה על חדר נכנסת אליו.</li>
     </ul>
@@ -576,7 +578,7 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
       <li><b>יום / ערב / לילה</b> — בלילה האורות בבית נדלקים אוטומטית; מתגי הקיר עדיין עובדים.</li>
       <li><b>📻 רדיו להיטים</b> — בהקשה הראשונה באתר מתחיל שידור חי של WNCI 97.9 FM מקולומבוס, אוהיו. הקישו על השבב 📻 להפעלה / עצירה, לעוצמה ולרשימת תחנות הלהיטים מארה״ב (Top 40). תחנה שלא עונה — עוברים אוטומטית לתחנת הלהיטים הבאה.</li>
       <li><b>📺 טלוויזיה</b> — הקישו על השלט שעל שולחן הסלון או על המסך לערוצים חיים מארה״ב.</li>
-      <li><b>🎨 סגנון שיפוץ</b> (גם הכפתור 🎨 סגנון שליד 🖼 הדמיות) — החלפת אפשרויות השיפוץ (חומרים וצבעים) בזמן אמת, גם תוך כדי הליכה או ב-360°.</li>
+      <li><b>🎨 סגנון שיפוץ</b> (גם הכפתור 🎨 סגנון בשורה שמתחת לסרגל העליון) — החלפת אפשרויות השיפוץ (חומרים וצבעים) בזמן אמת, גם תוך כדי הליכה או ב-360°.</li>
       <li><b>⟲ התחלה מחדש</b> — חזרה להתחלה ממש (גם רענון הדף עושה את אותו הדבר).</li>
       <li><b>המפה הקטנה</b> — הקישו עליה כדי להגדיל לרגע.</li>
       <li><b>📏 מדידה</b> — סמנו שתי נקודות כדי לקבל מרחק במטרים וברגל-אינץ׳. <kbd>Esc</kbd> מנקה.</li>
@@ -644,6 +646,6 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
     .then((m) => m.boot())
     .catch((e) => fatal('טעינת מנוע התלת-ממד נכשלה (three.js / core.js) — בדקו חיבור לאינטרנט ורעננו', e));
 </script>
-<div id="ver-tag" style="position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));z-index:50;font:600 11px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.75);background:rgba(20,24,30,.45);padding:2px 8px;border-radius:9px;pointer-events:none">גרסה 11</div>
+<div id="ver-tag" style="position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));z-index:50;font:600 11px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.75);background:rgba(20,24,30,.45);padding:2px 8px;border-radius:9px;pointer-events:none">גרסה 12</div>
 </body>
 </html>

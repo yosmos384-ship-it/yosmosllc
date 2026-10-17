@@ -654,7 +654,7 @@ export function createRender(env) {
     const t = tod();
     if (lastTodName === null) { lastTodName = t.name; todWasAnim = !!t.animating; return; }
     if (t.name !== lastTodName) { lastTodName = t.name; todWasAnim = true; }
-    if (todWasAnim && !t.animating) { todWasAnim = false; requestProbes(450); applyEnv(); }
+    if (todWasAnim && !t.animating) { todWasAnim = false; if (!t.auto) requestProbes(450); else probeStats.skippedAuto = (probeStats.skippedAuto || 0) + 1; applyEnv(); } // V12: phones skip recaptures during the auto day / night cycle
   }
 
   /* ---------------------------------------------------------------- material sanity pass */
