@@ -315,6 +315,9 @@ body.world-away #topbar .mode[data-mode=pano],body.world-away #topbar .mode[data
 #btnHome{background:linear-gradient(180deg,rgba(124,243,200,.9),rgba(70,200,160,.9));color:#04261b}
 body.world-away #quickFab,body.world-away #btnStyle,body.world-away .tv3d-layer,body.world-away #info{display:none!important}
 body.world-nomap #mapCard{display:none}
+/* V13: the helicopter has its own camera bar / radio / map credits → only the compact 'back home' button stays */
+body.world-is-heli #topbar .mode:not(#btnHome),body.world-is-heli #btnMore,body.world-is-heli #radioChip,body.world-is-heli #ver-tag{display:none!important}
+body.world-is-heli #topbar{left:50%;right:auto;transform:translateX(-50%);padding:4px}
 #worldLoad{position:fixed;inset:0;z-index:31;display:none;align-items:center;justify-content:center;pointer-events:none}
 #worldLoad.show{display:flex}
 #worldLoad .wl-card{display:flex;align-items:center;gap:12px;padding:14px 20px;border-radius:16px;background:var(--glass-strong);border:1px solid var(--line);font-size:15px;font-weight:700}
@@ -645,6 +648,6 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
     .then((m) => m.boot())
     .catch((e) => fatal('טעינת מנוע התלת-ממד נכשלה (three.js / core.js) — בדקו חיבור לאינטרנט ורעננו', e));
 </script>
-<div id="ver-tag" style="position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));z-index:50;font:600 11px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.75);background:rgba(20,24,30,.45);padding:2px 8px;border-radius:9px;pointer-events:none">גרסה 12.1</div>
+<div id="ver-tag" style="position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));z-index:50;font:600 11px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.75);background:rgba(20,24,30,.45);padding:2px 8px;border-radius:9px;pointer-events:none">גרסה 13</div>
 </body>
 </html>

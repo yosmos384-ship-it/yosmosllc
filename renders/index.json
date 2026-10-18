@@ -1,6 +1,6 @@
 {
  "version": 7,
- "generated": "2026-10-17T17:35:09.481Z",
+ "generated": "2026-10-18T05:33:25.438Z",
  "size": [
   4096,
   2048
@@ -208,9 +208,9 @@
   "modern/bed3": {
    "full": "renders/modern/bed3.jpg",
    "sm": "renders/modern/bed3_sm.jpg",
-   "bytes": 411486,
-   "smBytes": 41340,
-   "yaw": 1.3962634015954636
+   "bytes": 496630,
+   "smBytes": 47090,
+   "yaw": 1.48352986419518
   },
   "modern/bath2": {
    "full": "renders/modern/bath2.jpg",
@@ -257,9 +257,9 @@
   "classic/bed3": {
    "full": "renders/classic/bed3.jpg",
    "sm": "renders/classic/bed3_sm.jpg",
-   "bytes": 368436,
-   "smBytes": 38435,
-   "yaw": 1.3962634015954636
+   "bytes": 500713,
+   "smBytes": 49695,
+   "yaw": 1.48352986419518
   },
   "classic/bath2": {
    "full": "renders/classic/bath2.jpg",
@@ -306,9 +306,9 @@
   "dark/bed3": {
    "full": "renders/dark/bed3.jpg",
    "sm": "renders/dark/bed3_sm.jpg",
-   "bytes": 374848,
-   "smBytes": 38369,
-   "yaw": 1.3962634015954636
+   "bytes": 393119,
+   "smBytes": 40982,
+   "yaw": 1.48352986419518
   },
   "dark/bath2": {
    "full": "renders/dark/bath2.jpg",
@@ -355,9 +355,9 @@
   "mediterranean/bed3": {
    "full": "renders/mediterranean/bed3.jpg",
    "sm": "renders/mediterranean/bed3_sm.jpg",
-   "bytes": 426202,
-   "smBytes": 42750,
-   "yaw": null
+   "bytes": 420492,
+   "smBytes": 42779,
+   "yaw": 1.48352986419518
   },
   "mediterranean/bath2": {
    "full": "renders/mediterranean/bath2.jpg",
@@ -439,9 +439,9 @@
   "industrial/bed1": {
    "full": "renders/industrial/bed1.jpg",
    "sm": "renders/industrial/bed1_sm.jpg",
-   "bytes": 504094,
-   "smBytes": 49253,
-   "yaw": null
+   "bytes": 465856,
+   "smBytes": 44653,
+   "yaw": 1.7453292519943295
   },
   "industrial/bath1": {
    "full": "renders/industrial/bath1.jpg",
@@ -521,7 +521,7 @@
    "yaw": 6.283185307179586
   }
  },
- "totalBytes": 28214541,
+ "totalBytes": 28421337,
  "renderLog": [
   {
    "style": "mediterranean",
@@ -697,7 +697,7 @@
   {
    "style": "classic",
    "node": "bed3",
-   "yaw": 1.3962634015954636,
+   "yaw": 1.48352986419518,
    "totalMs": 484439,
    "faceMs": [
     160450,
@@ -754,7 +754,7 @@
   {
    "style": "dark",
    "node": "bed3",
-   "yaw": 1.3962634015954636,
+   "yaw": 1.48352986419518,
    "totalMs": 484258,
    "faceMs": [
     140604,
@@ -811,7 +811,7 @@
   {
    "style": "modern",
    "node": "bed3",
-   "yaw": 1.3962634015954636,
+   "yaw": 1.48352986419518,
    "totalMs": 484394,
    "faceMs": [
     139205,

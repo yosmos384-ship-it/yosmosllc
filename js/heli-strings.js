@@ -1,0 +1,195 @@
+// heli-strings.js — V13 HELI: UI strings {he, en, es} (registered with i18n at build time; i18n.js is not edited).
+// Every key exists in all three tables (tests check the key sets match). Placeholders: {0} {1}.
+// Place names: poi_<id> (he / en / es) for the 16 tour places in data/heli-area.json; the type labels kind_<kind>
+// and the one-sentence captions cap_<id> are translated. Other OSM labels stay as OSM spells them (proper nouns).
+// say_* lines are spoken by the pilot voice (heli-audio.js → speechSynthesis in the active language); keep them short.
+// English uses US spelling (the tour is in Columbus, Ohio); Spanish is neutral / Mexican (the 🇲🇽 switcher).
+export const HELI_STRINGS = {
+  he: {
+    world: 'מסוק', board: '🚁 טיסה במסוק', boardShort: 'טיסה במסוק',
+    viewIn: '🎥 מבט מבפנים', viewOut: '🚁 מבט על המסוק', viewTop: '🗺 מבט מלמעלה', seatFront: 'מושב קדמי', seatCabin: 'תא נוסעים',
+    manual: '🕹 הטסה ידנית', auto: '🛬 טייס אוטומטי', takeoff: '▶ המראה', home: '⟵ חזרה הביתה', flyHome: '🏠 טוס הביתה ונחת',
+    next: '⏭', prev: '⏮', pause: '⏸', play: '▶', speed: '×{0}', radio: '📻 רדיו', radioNext: '⏭📻',
+    aNext: 'היעד הבא', aPrev: 'היעד הקודם', aPause: 'השהיית הסיור', aPlay: 'המשך הסיור', aSpeed: 'מהירות הסיור', aRadioNext: 'התחנה הבאה',
+    aStickL: 'ידית שמאל: עלייה, ירידה וסיבוב', aStickR: 'ידית ימין: כיוון הטיסה', aViews: 'בחירת מבט', aCard: 'כרטיס הסיור',
+    welcome: 'ברוכים הבאים על הסיפון! חגרו חגורות — ממריאים בעוד רגע', pilotHi: 'שלום, אני הטייסת שלכם היום. יוצאים לסיור מעל השכונה!',
+    takingOff: 'ממריאים…', landing: 'נוחתים בבית', landed: 'נחתנו בבית ✓', tourDone: 'הסיור הסתיים — נחתנו בחצר', nextStop: 'היעד הבא: {0}',
+    manualOn: 'הטסה ידנית — ההגאים בידיים שלכם', autoOn: 'טייס אוטומטי — ממשיכים בסיור', autoHome: 'טייס אוטומטי — חוזרים הביתה',
+    hintKeys: 'W/S קדימה·אחורה · A/D הטיה · Q/E סיבוב · רווח/Shift עלייה·ירידה', hintTouch: 'שמאל: עלייה/ירידה + סיבוב · ימין: כיוון הטיסה',
+    edge: 'הגעתם לגבול אזור הסיור', bump: 'זהירות — קרוב מדי למבנה!', loading: 'טוען את העיר…', detail: 'משפר את צילומי האוויר…',
+    kmh: 'קמ"ש', alt: 'גובה', hdg: 'כיוון', m: 'מ׳', ft: 'רגל', stop: 'עצירה {0}/{1}', tour: 'סיור בעיר', of: 'מתוך',
+    attr: 'צילום אוויר: USGS / USDA NAIP · מפה: © OpenStreetMap contributors (ODbL) · גבהים: USGS 3DEP',
+    // sound + pilot voice (heli-audio.js)
+    sound: '🔊 צליל', soundOn: 'צליל המסוק פועל', soundOff: 'צליל המסוק מושתק', mute: '🔇 השתק', unmute: '🔊 בטל השתקה',
+    voice: '🗣 קול הטייסת', voiceOn: 'קול הטייסת פועל', voiceOff: 'קול הטייסת כבוי', noVoice: 'אין בדפדפן קול דיבור בשפה הזו — מוצגות כתוביות בלבד',
+    tapSound: '🔊 הקישו להפעלת הצליל', engineStart: 'מתניעים מנועים…', doorOpen: 'הדלת נפתחת', doorClose: 'הדלת נסגרת',
+    say_start: 'מתניעים. בעוד רגע ממריאים לסיור מעל השכונה.', say_takeoff: 'ממריאים. שבו בנוח ותיהנו מהנוף.',
+    say_home: 'מסיימים את הסיור וחוזרים הביתה.', say_landing: 'מתחילים בגישה לנחיתה בחצר.', say_landed: 'נחתנו בבית. תודה שטסתם איתנו!',
+    say_poi: '{0}. {1}', say_next: 'היעד הבא: {0}.',
+    // heli-ui.js short labels / hints / HUD (v13-strings-needed.md)
+    viewInS: 'בפנים', viewOutS: 'בחוץ', viewTopS: 'מפה', camBar: 'מצלמה',
+    dragLook: 'גררו כדי להסתכל סביב · הקישו שוב למושב אחר', dragOrbit: 'גררו כדי להקיף את המסוק · גלגלת למרחק', topHint: 'מבט מלמעלה, צפון למעלה · גלגלת לגובה',
+    spd: 'מהירות', altS: 'גובה', aglS: 'מעל הקרקע', hdgS: 'כיוון', nextPoi: 'היעד הבא', nowPoi: 'מקיפים עכשיו', nearPoi: 'המקום הקרוב', homeDest: 'הבית — 3351 Eakin Rd', km: 'ק״מ',
+    manualS: 'ידני', autoS: 'אוטומטי', flyHomeS: 'הביתה', radioS: 'רדיו',
+    stickL: 'גובה · סיבוב', stickR: 'כיוון טיסה', up: 'עלייה', down: 'ירידה', fwd: 'קדימה', back: 'אחורה',
+    // cockpit radio (heli-audio.js heliRadio → heli-ui / avionics)
+    radioTitle: 'רדיו המסוק', radioOff: 'הרדיו כבוי', radioConnecting: 'מתחבר…', radioHits: 'להיטים', radioUnavail: 'השידור לא זמין כרגע', radioBackup: 'רדיו גיבוי',
+    radioOnMsg: '📻 הרדיו מתנגן באוזניות', radioOffMsg: '📻 הרדיו כובה', aRadio: 'הפעלה / כיבוי רדיו', aRadioPrev: 'התחנה הקודמת', radioPrev: '⏮📻',
+    kind_school: 'בית ספר', kind_park: 'פארק', kind_hospital: 'בית חולים', kind_casino: 'קזינו', kind_shopping: 'מרכז קניות', kind_library: 'ספרייה',
+    kind_river: 'נהר', kind_downtown: 'מרכז העיר', kind_cemetery: 'בית עלמין', kind_civic: 'מוסד ציבורי', kind_sports: 'ספורט', kind_golf: 'גולף', kind_home: 'הבית',
+    prog_terrain: 'מכין שטח', prog_buildings: 'בונה בניינים', prog_trees: 'שותל עצים', prog_imagery: 'טוען צילומי אוויר', prog_imagery2: 'צילומי אוויר',
+    // the 16 tour places (data/heli-area.json → tour[].id)
+    poi_home: 'הבית — 3351 Eakin Rd',
+    poi_bishop_ready: 'תיכון בישופ רדי', poi_franklin_heights: 'תיכון פרנקלין הייטס', poi_big_run: 'פארק ביג ראן', poi_westgate: 'פארק ווסטגייט',
+    poi_wilson_road: 'פארק ווילסון רוד', poi_casino: 'הקזינו', poi_lincoln_village: 'מרכז הקניות לינקולן וילג׳', poi_doctors_hospital: 'בית החולים דוקטורס',
+    poi_west_high: 'תיכון ווסט', poi_westmoor: 'פארק ווסטמור', poi_hilltop_library: 'ספריית הילטופ', poi_rhodes: 'פארק רודס',
+    poi_scioto: 'נהר הסיוטו', poi_downtown: 'מרכז העיר קולומבוס', poi_hilltonia: 'פארק הילטוניה', poi_briggs: 'תיכון בריגס',
+    cap_home: '3351 Eakin Rd — הבית. מתכוננים לנחיתה בחצר האחורית.',
+    cap_bishop_ready: 'תיכון קתולי במערב קולומבוס, כמה דקות נסיעה מהבית.',
+    cap_franklin_heights: 'תיכון ציבורי גדול עם מגרשי ספורט ואצטדיון.',
+    cap_big_run: 'פארק ירוק לאורך נחל ביג ראן — שבילים, עצים ומדשאות פתוחות.',
+    cap_westgate: 'פארק שכונתי גדול עם עצים בוגרים ומגרשי משחק.',
+    cap_wilson_road: 'פארק עירוני עם שבילי הליכה ומתקני ספורט.',
+    cap_casino: 'מתחם בידור גדול עם חניונים ענקיים — בולט מאוד מהאוויר.',
+    cap_lincoln_village: 'מרכז קניות שכונתי בצד המערבי של העיר.',
+    cap_doctors_hospital: 'בית חולים קהילתי המשרת את מערב קולומבוס.',
+    cap_west_high: 'תיכון ציבורי ותיק בלב שכונת הילטופ.',
+    cap_westmoor: 'פארק צמוד לבתי ספר — לב קהילתי של השכונה.',
+    cap_hilltop_library: 'הספרייה הציבורית של שכונת הילטופ.',
+    cap_rhodes: 'פארק על המדרון היורד לעמק נהר הסיוטו.',
+    cap_scioto: 'נהר הסיוטו — העורק הכחול של קולומבוס, זורם אל מרכז העיר.',
+    cap_downtown: 'קו הרקיע של מרכז העיר קולומבוס, בירת אוהיו.',
+    cap_hilltonia: 'פארק שכונתי קטן ליד חטיבת הביניים הילטוניה.',
+    cap_briggs: 'תיכון ציבורי בדרום-מערב השכונה.',
+  },
+  en: {
+    world: 'Helicopter', board: '🚁 Helicopter flight', boardShort: 'Helicopter flight',
+    viewIn: '🎥 Inside view', viewOut: '🚁 Helicopter view', viewTop: '🗺 Top-down view', seatFront: 'Front seat', seatCabin: 'Cabin',
+    manual: '🕹 Fly manually', auto: '🛬 Autopilot', takeoff: '▶ Take off', home: '⟵ Back home', flyHome: '🏠 Fly home & land',
+    next: '⏭', prev: '⏮', pause: '⏸', play: '▶', speed: '×{0}', radio: '📻 Radio', radioNext: '⏭📻',
+    aNext: 'Next stop', aPrev: 'Previous stop', aPause: 'Pause the tour', aPlay: 'Resume the tour', aSpeed: 'Tour speed', aRadioNext: 'Next station',
+    aStickL: 'Left stick: climb, descend and turn', aStickR: 'Right stick: flight direction', aViews: 'Choose a view', aCard: 'Tour card',
+    welcome: 'Welcome aboard! Fasten your seat belts — we take off in a moment', pilotHi: 'Hi, I’m your pilot today. Let’s tour the neighborhood from above!',
+    takingOff: 'Taking off…', landing: 'Landing at home', landed: 'Landed at home ✓', tourDone: 'Tour complete — we landed in the yard', nextStop: 'Next stop: {0}',
+    manualOn: 'Manual flight — you have the controls', autoOn: 'Autopilot — resuming the tour', autoHome: 'Autopilot — flying home',
+    hintKeys: 'W/S forward·back · A/D bank · Q/E turn · Space/Shift up·down', hintTouch: 'Left: up/down + turn · Right: flight direction',
+    edge: 'You’ve reached the edge of the tour area', bump: 'Careful — too close to a building!', loading: 'Loading the city…', detail: 'Sharpening the aerial imagery…',
+    kmh: 'km/h', alt: 'Alt', hdg: 'Hdg', m: 'm', ft: 'ft', stop: 'Stop {0}/{1}', tour: 'City tour', of: 'of',
+    attr: 'Imagery: USGS / USDA NAIP · Map: © OpenStreetMap contributors (ODbL) · Elevation: USGS 3DEP',
+    sound: '🔊 Sound', soundOn: 'Helicopter sound on', soundOff: 'Helicopter sound muted', mute: '🔇 Mute', unmute: '🔊 Unmute',
+    voice: '🗣 Pilot voice', voiceOn: 'Pilot voice on', voiceOff: 'Pilot voice off', noVoice: 'Your browser has no speech voice for this language — captions only',
+    tapSound: '🔊 Tap to turn on the sound', engineStart: 'Starting the engines…', doorOpen: 'Door opening', doorClose: 'Door closing',
+    say_start: 'Starting up. We’ll lift off in a moment for a tour over the neighborhood.', say_takeoff: 'Taking off. Sit back and enjoy the view.',
+    say_home: 'That wraps up the tour — heading home.', say_landing: 'Beginning our approach to land in the yard.', say_landed: 'We’re home. Thanks for flying with us!',
+    say_poi: '{0}. {1}', say_next: 'Next stop: {0}.',
+    viewInS: 'Inside', viewOutS: 'Outside', viewTopS: 'Map', camBar: 'Camera',
+    dragLook: 'Drag to look around · tap again to switch seats', dragOrbit: 'Drag to orbit the helicopter · scroll to zoom', topHint: 'Top-down, north up · scroll to change height',
+    spd: 'Speed', altS: 'Altitude', aglS: 'above ground', hdgS: 'Heading', nextPoi: 'Next stop', nowPoi: 'Circling now', nearPoi: 'Nearest place', homeDest: 'Home — 3351 Eakin Rd', km: 'km',
+    manualS: 'Manual', autoS: 'Autopilot', flyHomeS: 'Home', radioS: 'Radio',
+    stickL: 'Height · turn', stickR: 'Direction', up: 'Up', down: 'Down', fwd: 'Fwd', back: 'Back',
+    radioTitle: 'Helicopter radio', radioOff: 'Radio off', radioConnecting: 'Connecting…', radioHits: 'Hits', radioUnavail: 'Stream unavailable right now', radioBackup: 'Backup radio',
+    radioOnMsg: '📻 Radio playing in your headset', radioOffMsg: '📻 Radio off', aRadio: 'Radio on / off', aRadioPrev: 'Previous station', radioPrev: '⏮📻',
+    kind_school: 'School', kind_park: 'Park', kind_hospital: 'Hospital', kind_casino: 'Casino', kind_shopping: 'Shopping center', kind_library: 'Library',
+    kind_river: 'River', kind_downtown: 'Downtown', kind_cemetery: 'Cemetery', kind_civic: 'Public building', kind_sports: 'Sports', kind_golf: 'Golf', kind_home: 'Home',
+    prog_terrain: 'Preparing the terrain', prog_buildings: 'Building the city', prog_trees: 'Planting trees', prog_imagery: 'Loading aerial imagery', prog_imagery2: 'Aerial imagery',
+    poi_home: 'Home — 3351 Eakin Rd',
+    poi_bishop_ready: 'Bishop Ready High School', poi_franklin_heights: 'Franklin Heights High School', poi_big_run: 'Big Run Park', poi_westgate: 'Westgate Park',
+    poi_wilson_road: 'Wilson Road Park', poi_casino: 'The casino', poi_lincoln_village: 'Lincoln Village Plaza', poi_doctors_hospital: 'Doctors Hospital',
+    poi_west_high: 'West High School', poi_westmoor: 'Westmoor Park', poi_hilltop_library: 'Hilltop Library', poi_rhodes: 'Rhodes Park',
+    poi_scioto: 'Scioto River', poi_downtown: 'Downtown Columbus', poi_hilltonia: 'Hilltonia Park', poi_briggs: 'Briggs High School',
+    cap_home: '3351 Eakin Rd — home. Getting ready to land in the back yard.',
+    cap_bishop_ready: 'A Catholic high school in west Columbus, a few minutes’ drive from the house.',
+    cap_franklin_heights: 'A large public high school with sports fields and a stadium.',
+    cap_big_run: 'A green park along Big Run creek — trails, trees and open lawns.',
+    cap_westgate: 'A large neighborhood park with mature trees and playing fields.',
+    cap_wilson_road: 'A city park with walking trails and sports facilities.',
+    cap_casino: 'A big entertainment complex with huge parking lots — easy to spot from the air.',
+    cap_lincoln_village: 'A neighborhood shopping center on the city’s west side.',
+    cap_doctors_hospital: 'A community hospital serving west Columbus.',
+    cap_west_high: 'A long-standing public high school in the heart of the Hilltop.',
+    cap_westmoor: 'A park right next to schools — a community hub for the neighborhood.',
+    cap_hilltop_library: 'The public library of the Hilltop neighborhood.',
+    cap_rhodes: 'A park on the slope that runs down to the Scioto River valley.',
+    cap_scioto: 'The Scioto River — Columbus’s blue artery, flowing toward downtown.',
+    cap_downtown: 'The skyline of downtown Columbus, the capital of Ohio.',
+    cap_hilltonia: 'A small neighborhood park by Hilltonia Middle School.',
+    cap_briggs: 'A public high school in the southwest of the neighborhood.',
+  },
+  es: {
+    world: 'Helicóptero', board: '🚁 Vuelo en helicóptero', boardShort: 'Vuelo en helicóptero',
+    viewIn: '🎥 Vista interior', viewOut: '🚁 Vista del helicóptero', viewTop: '🗺 Vista cenital', seatFront: 'Asiento delantero', seatCabin: 'Cabina de pasajeros',
+    manual: '🕹 Pilotar a mano', auto: '🛬 Piloto automático', takeoff: '▶ Despegar', home: '⟵ Volver a casa', flyHome: '🏠 Volver y aterrizar',
+    next: '⏭', prev: '⏮', pause: '⏸', play: '▶', speed: '×{0}', radio: '📻 Radio', radioNext: '⏭📻',
+    aNext: 'Siguiente parada', aPrev: 'Parada anterior', aPause: 'Pausar el recorrido', aPlay: 'Reanudar el recorrido', aSpeed: 'Velocidad del recorrido', aRadioNext: 'Siguiente estación',
+    aStickL: 'Palanca izquierda: subir, bajar y girar', aStickR: 'Palanca derecha: dirección de vuelo', aViews: 'Elegir vista', aCard: 'Tarjeta del recorrido',
+    welcome: '¡Bienvenidos a bordo! Abróchense los cinturones — despegamos en un momento', pilotHi: 'Hola, soy su piloto de hoy. ¡Vamos a recorrer el barrio desde el aire!',
+    takingOff: 'Despegando…', landing: 'Aterrizando en casa', landed: 'Aterrizamos en casa ✓', tourDone: 'Recorrido terminado — aterrizamos en el patio', nextStop: 'Próxima parada: {0}',
+    manualOn: 'Vuelo manual — los controles son suyos', autoOn: 'Piloto automático — seguimos con el recorrido', autoHome: 'Piloto automático — volvemos a casa',
+    hintKeys: 'W/S adelante·atrás · A/D inclinar · Q/E girar · Espacio/Shift subir·bajar', hintTouch: 'Izquierda: subir/bajar + girar · Derecha: dirección de vuelo',
+    edge: 'Llegó al límite de la zona del recorrido', bump: '¡Cuidado — demasiado cerca de un edificio!', loading: 'Cargando la ciudad…', detail: 'Mejorando las fotos aéreas…',
+    kmh: 'km/h', alt: 'Alt', hdg: 'Rumbo', m: 'm', ft: 'ft', stop: 'Parada {0}/{1}', tour: 'Recorrido por la ciudad', of: 'de',
+    attr: 'Imágenes: USGS / USDA NAIP · Mapa: © OpenStreetMap contributors (ODbL) · Elevación: USGS 3DEP',
+    sound: '🔊 Sonido', soundOn: 'Sonido del helicóptero activado', soundOff: 'Sonido del helicóptero silenciado', mute: '🔇 Silenciar', unmute: '🔊 Activar sonido',
+    voice: '🗣 Voz de la piloto', voiceOn: 'Voz de la piloto activada', voiceOff: 'Voz de la piloto desactivada', noVoice: 'Su navegador no tiene voz para este idioma — solo subtítulos',
+    tapSound: '🔊 Toque para activar el sonido', engineStart: 'Arrancando los motores…', doorOpen: 'Abriendo la puerta', doorClose: 'Cerrando la puerta',
+    say_start: 'Arrancamos. En un momento despegamos para recorrer el barrio.', say_takeoff: 'Despegamos. Póngase cómodo y disfrute la vista.',
+    say_home: 'Terminamos el recorrido y volvemos a casa.', say_landing: 'Iniciamos la aproximación para aterrizar en el patio.', say_landed: 'Llegamos a casa. ¡Gracias por volar con nosotros!',
+    say_poi: '{0}. {1}', say_next: 'Próxima parada: {0}.',
+    viewInS: 'Dentro', viewOutS: 'Fuera', viewTopS: 'Mapa', camBar: 'Cámara',
+    dragLook: 'Arrastre para mirar alrededor · toque otra vez para cambiar de asiento', dragOrbit: 'Arrastre para girar alrededor del helicóptero · rueda para acercar', topHint: 'Vista cenital, norte arriba · rueda para cambiar la altura',
+    spd: 'Velocidad', altS: 'Altitud', aglS: 'sobre el suelo', hdgS: 'Rumbo', nextPoi: 'Próxima parada', nowPoi: 'Sobrevolando ahora', nearPoi: 'Lugar más cercano', homeDest: 'La casa — 3351 Eakin Rd', km: 'km',
+    manualS: 'Manual', autoS: 'Piloto auto', flyHomeS: 'A casa', radioS: 'Radio',
+    stickL: 'Altura · giro', stickR: 'Dirección', up: 'Subir', down: 'Bajar', fwd: 'Avanzar', back: 'Atrás',
+    radioTitle: 'Radio del helicóptero', radioOff: 'Radio apagada', radioConnecting: 'Conectando…', radioHits: 'Éxitos', radioUnavail: 'La transmisión no está disponible ahora', radioBackup: 'Radio de respaldo',
+    radioOnMsg: '📻 La radio suena en sus audífonos', radioOffMsg: '📻 Radio apagada', aRadio: 'Encender / apagar la radio', aRadioPrev: 'Estación anterior', radioPrev: '⏮📻',
+    kind_school: 'Escuela', kind_park: 'Parque', kind_hospital: 'Hospital', kind_casino: 'Casino', kind_shopping: 'Centro comercial', kind_library: 'Biblioteca',
+    kind_river: 'Río', kind_downtown: 'Centro de la ciudad', kind_cemetery: 'Cementerio', kind_civic: 'Edificio público', kind_sports: 'Deportes', kind_golf: 'Golf', kind_home: 'Casa',
+    prog_terrain: 'Preparando el terreno', prog_buildings: 'Construyendo la ciudad', prog_trees: 'Plantando árboles', prog_imagery: 'Cargando fotos aéreas', prog_imagery2: 'Fotos aéreas',
+    poi_home: 'La casa — 3351 Eakin Rd',
+    poi_bishop_ready: 'Preparatoria Bishop Ready', poi_franklin_heights: 'Preparatoria Franklin Heights', poi_big_run: 'Parque Big Run', poi_westgate: 'Parque Westgate',
+    poi_wilson_road: 'Parque Wilson Road', poi_casino: 'El casino', poi_lincoln_village: 'Plaza Lincoln Village', poi_doctors_hospital: 'Hospital Doctors',
+    poi_west_high: 'Preparatoria West', poi_westmoor: 'Parque Westmoor', poi_hilltop_library: 'Biblioteca de Hilltop', poi_rhodes: 'Parque Rhodes',
+    poi_scioto: 'Río Scioto', poi_downtown: 'Centro de Columbus', poi_hilltonia: 'Parque Hilltonia', poi_briggs: 'Preparatoria Briggs',
+    cap_home: '3351 Eakin Rd — la casa. Preparando el aterrizaje en el patio trasero.',
+    cap_bishop_ready: 'Una preparatoria católica en el oeste de Columbus, a pocos minutos en auto de la casa.',
+    cap_franklin_heights: 'Una gran preparatoria pública con campos deportivos y un estadio.',
+    cap_big_run: 'Un parque verde junto al arroyo Big Run — senderos, árboles y amplias áreas de césped.',
+    cap_westgate: 'Un gran parque de barrio con árboles maduros y canchas de juego.',
+    cap_wilson_road: 'Un parque municipal con senderos para caminar e instalaciones deportivas.',
+    cap_casino: 'Un gran complejo de entretenimiento con enormes estacionamientos — muy visible desde el aire.',
+    cap_lincoln_village: 'Un centro comercial de barrio en el lado oeste de la ciudad.',
+    cap_doctors_hospital: 'Un hospital comunitario que atiende al oeste de Columbus.',
+    cap_west_high: 'Una preparatoria pública con mucha historia en el corazón de Hilltop.',
+    cap_westmoor: 'Un parque junto a varias escuelas — un punto de encuentro del barrio.',
+    cap_hilltop_library: 'La biblioteca pública del barrio Hilltop.',
+    cap_rhodes: 'Un parque en la ladera que baja hacia el valle del río Scioto.',
+    cap_scioto: 'El río Scioto — la arteria azul de Columbus, que fluye hacia el centro.',
+    cap_downtown: 'El horizonte del centro de Columbus, la capital de Ohio.',
+    cap_hilltonia: 'Un pequeño parque de barrio junto a la secundaria Hilltonia.',
+    cap_briggs: 'Una preparatoria pública en el suroeste del barrio.',
+  },
+};
+// tour-place type icons
+export const KIND_ICON = { school: '🏫', park: '🌳', hospital: '🏥', casino: '🎰', shopping: '🛍', library: '📚', river: '🌊', downtown: '🏙', cemetery: '🕊', civic: '🏛', sports: '🏟', golf: '⛳', home: '🏠' };
+// speechSynthesis / <html lang> tags per UI language
+export const SPEECH_LANG = { he: 'he-IL', en: 'en-US', es: 'es-MX' };
+
+// helpers (pure): the display name of a tour place in language L (poi_<id> → data "he" for Hebrew → OSM name)
+export function poiName(poi, L) {
+  if (!poi) return '';
+  const T = HELI_STRINGS[L] || HELI_STRINGS.he;
+  const k = 'poi_' + poi.id;
+  if (T[k]) return T[k];
+  return (L === 'he' && poi.he) || poi.name || '';
+}
+// one string in language L with {0} {1} args (falls back to Hebrew, then the key)
+export function heliText(L, key, ...args) {
+  const T = HELI_STRINGS[L] || HELI_STRINGS.he;
+  const s = T[key] != null ? T[key] : HELI_STRINGS.he[key] != null ? HELI_STRINGS.he[key] : key;
+  return String(s).replace(/\{(\d)\}/g, (_, i) => (args[+i] != null ? String(args[+i]) : ''));
+}
+// the pilot's short guide line for a tour place: "<name>. <one-sentence caption>"
+export function poiGuideLine(poi, L) {
+  if (!poi) return '';
+  return heliText(L, 'say_poi', poiName(poi, L), heliText(L, 'cap_' + poi.id)).replace(/\.\s*\./g, '.');
+}

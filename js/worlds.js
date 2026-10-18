@@ -140,6 +140,25 @@ export function createWorlds(env) {
       throw e;
     }
   }
+  // V13: free a built world (GPU + JS heap): the world's own dispose() first, then a generic sweep of what is left in its
+  // group; the world is rebuilt by build() on the next enterWorld().
+  function unloadWorld(W) {
+    try { W.res && typeof W.res.dispose === 'function' && W.res.dispose(); } catch (e) { console.warn('[worlds] dispose', W.id, e); }
+    try {
+      if (W.group) {
+        scene.remove(W.group);
+        const texs = new Set();
+        W.group.traverse((o) => {
+          try { if (o.geometry && o.geometry.dispose) o.geometry.dispose(); } catch (_) {}
+          const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+          for (const m of ms) { try { for (const k in m) { const v = m[k]; if (v && v.isTexture) texs.add(v); } m.dispose(); } catch (_) {} }
+          try { if (o.isLight && o.shadow && o.shadow.map) o.shadow.dispose(); } catch (_) {}
+        });
+        for (const t of texs) { try { t.dispose(); } catch (_) {} }
+      }
+    } catch (e) { console.warn('[worlds] unload', W.id, e); }
+    W.built = false; W.building = null; W.res = null; W.group = null; W.coll = null; W.graph = null; W.rooms = []; W.wctx = null; W.updErr = false;
+  }
   function spawnOf(W) {
     const s = W.res && W.res.spawn; if (!s) return null;
     const p = s.pos || s.position || s;
@@ -241,6 +260,8 @@ export function createWorlds(env) {
       } else {
         if (P.group) P.group.visible = false;
         restoreEnv();
+        // V13: a heavy world (res.unloadOnExit) is torn down while the screen is faded out and rebuilt on the next visit
+        if (P.res && (P.res.unloadOnExit || P.def.unloadOnExit)) unloadWorld(P);
       }
       // ---- activate
       cur = id;

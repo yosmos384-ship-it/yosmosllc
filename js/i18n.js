@@ -47,6 +47,7 @@ export const DICT = {
   'גרסה 11': ['Version 11', 'Versión 11'],
   'גרסה 12': ['Version 12', 'Versión 12'],
   'גרסה 12.1': ['Version 12.1', 'Versión 12.1'],
+  'גרסה 13': ['Version 13', 'Versión 13'],
   // ---- V12: round floating buttons (the size of "פעולה") with a 1-line label
   'אקסל': ['Excel', 'Excel'],
   'פירוט': ['Details', 'Detalle'],

@@ -111,14 +111,19 @@ function screenCanvas() {
 // ------------------------------------------------------------------ V12 strings (merged into i18n via extend(); no i18n.js edit)
 export const TV_STRINGS = {
   he: { list: 'רשימה', listTitle: 'רשימת ערוצים', sound: '🔊 הקש לשמע', soundAria: 'הקש לשמע', tapVideo: 'הקישו על המסך לשמע ▶',
-    closeRemote: 'סגור שלט', closeList: 'סגור רשימה', unmuteAria: 'בטל השתקה', toSofa: 'עובר לספה מול הטלוויזיה · הזיזו כדי לבטל' },
+    closeRemote: 'סגור שלט', closeList: 'סגור רשימה', unmuteAria: 'בטל השתקה', toSofa: 'עובר לספה מול הטלוויזיה · הזיזו כדי לבטל',
+    aimOn: 'ערוצי טלוויזיה · {0}', aimOff: 'הדלק טלוויזיה · ערוצים', remoteOn: 'שלט טלוויזיה · {0}', remoteOff: 'שלט טלוויזיה · ערוצים חיים' },
   en: { list: 'List', listTitle: 'Channel list', sound: '🔊 Tap for sound', soundAria: 'Tap for sound', tapVideo: 'Tap the screen for sound ▶',
-    closeRemote: 'Close remote', closeList: 'Close list', unmuteAria: 'Unmute', toSofa: 'Moving to the sofa facing the TV · move to cancel' },
+    closeRemote: 'Close remote', closeList: 'Close list', unmuteAria: 'Unmute', toSofa: 'Moving to the sofa facing the TV · move to cancel',
+    aimOn: 'TV channels · {0}', aimOff: 'Turn on TV · channels', remoteOn: 'TV remote · {0}', remoteOff: 'TV remote · live channels' },
   es: { list: 'Lista', listTitle: 'Lista de canales', sound: '🔊 Toca para sonido', soundAria: 'Toca para sonido', tapVideo: 'Toca la pantalla para el sonido ▶',
-    closeRemote: 'Cerrar control', closeList: 'Cerrar lista', unmuteAria: 'Activar sonido', toSofa: 'Yendo al sofá frente a la TV · muévete para cancelar' },
+    closeRemote: 'Cerrar control', closeList: 'Cerrar lista', unmuteAria: 'Activar sonido', toSofa: 'Yendo al sofá frente a la TV · muévete para cancelar',
+    aimOn: 'Canales de TV · {0}', aimOff: 'Encender TV · canales', remoteOn: 'Control de la TV · {0}', remoteOff: 'Control de la TV · canales en vivo' },
 };
 try { extend(TV_STRINGS); } catch (_) { }
 const S = TV_STRINGS.he;
+// a TV string in the current language (TV_STRINGS key, {0} = a channel name)
+const TS = (k, a) => { const L = getLang(); const T = TV_STRINGS[L] || TV_STRINGS.he; return String(T[k] != null ? T[k] : TV_STRINGS.he[k]).replace('{0}', a != null ? a : ''); };
 
 // ------------------------------------------------------------------ DOM: styles + compact remote bar + projected player
 // V12: the live channel is projected onto the 3D TV on ALL devices (phones included); the channel UI is a compact
@@ -157,7 +162,7 @@ const CSS = `
 #tvPanel .tvp-now{flex:1 1 auto;min-width:0;font-size:11.5px;color:#cfd6df;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
 #tvPanel .tvp-x{min-width:30px!important;background:rgba(255,255,255,.08)!important}
 @media (max-width:420px){#tvPanel .tvp-now{display:none}#tvPanel .tvp-bar{justify-content:space-between;gap:3px;padding:4px}#tvPanel .tvp-bar button{min-width:30px;padding:0 4px;font-size:12.5px}#tvPanel .tvp-bar .ls{padding:0 6px}#tvPanel .tvp-x{min-width:26px!important}}
-/* the centre aim label ("ערוצי טלוויזיה · … / הקש") would sit on the playing picture: hidden while the TV is watched */
+/* the centre aim label (TV_STRINGS.aimOn / aimOff, "TV channels · …") would sit on the playing picture: hidden while the TV is watched */
 body.tv-aim #hoverLabel{display:none!important}
 #tvPanel .tvp-sheet{display:none;flex-direction:column;gap:6px;padding:8px;max-height:min(36vh,290px);border-radius:16px}
 #tvPanel.list .tvp-sheet{display:flex}
@@ -547,7 +552,7 @@ export function buildTV(E, G, f) {
   try { ctx.tv = api; } catch (_) { }
   try { if (typeof window !== 'undefined') { window.__tourTV = api; if (window.__tour) window.__tour.tv = api; } } catch (_) { }
 
-  E.interact(screen, () => (st.on ? 'ערוצי טלוויזיה · ' + ch().name : 'הדלק טלוויזיה · ערוצים'), () => api.tap());
+  E.interact(screen, () => (st.on ? TS('aimOn', ch().name) : TS('aimOff')), () => api.tap());
 
   // ---- per frame: screen canvas + projected player
   const corners = [new THREE.Vector3(-SW / 2, SH / 2, 0), new THREE.Vector3(SW / 2, SH / 2, 0), new THREE.Vector3(SW / 2, -SH / 2, 0), new THREE.Vector3(-SW / 2, -SH / 2, 0)];
@@ -669,6 +674,6 @@ export function buildRemote(E, G, F, tv) {
   const hit = new THREE.Mesh(new THREE.BoxGeometry(L + 0.06, 0.06, Wd + 0.06), new THREE.MeshBasicMaterial({ visible: false }));
   hit.name = 'tv-remote-hit';
   F.place(hit, [0, 0.03, 0]); G.add(hit);
-  E.interact(hit, () => (tv && tv.on ? 'שלט טלוויזיה · ' + tv.channel.name : 'שלט טלוויזיה · ערוצים חיים'), () => { E.snd.click(hit, 0.4); if (tv) tv.tap(); });
+  E.interact(hit, () => (tv && tv.on ? TS('remoteOn', tv.channel.name) : TS('remoteOff')), () => { E.snd.click(hit, 0.4); if (tv) tv.tap(); });
   return hit;
 }
