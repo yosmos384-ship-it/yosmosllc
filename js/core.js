@@ -18,6 +18,7 @@ import { createSow } from './sow.js'; // V11: "📋 שיפוץ לפי האקסל
 import { onLangChange, register as i18nRegister, getLang, t as i18nT, tr as i18nTr, extend as i18nExtend } from './i18n.js'; // V7: languages (he / en / es)
 import { createWorlds, HOME } from './worlds.js'; // V10: worlds (home / limo / casino …)
 import { createRoomPicker } from './core-picker.js'; // V10: room picker bar
+import { createHeliWalk } from './core-heliwalk.js'; // V13.1: "🚁 סיור במסוק" — walk around the house to the helicopter and board
 import { buildSimpleGraph } from './navgraph.js'; // V10: nav graphs for other worlds
 import { LIMO_SPOT, limoDoorWorld } from './exterior-limo.js'; // V10: limousine parking spot (home world)
 import { initTexCache, startTexUpgrades, texCacheStats } from './tex-cache.js'; // V6 PERF: IndexedDB texture cache + progressive textures
@@ -513,12 +514,28 @@ export async function boot() {
   const orbit = new OrbitControls(camera, canvas);
   orbit.enabled = false;
   orbit.enableDamping = true; orbit.dampingFactor = 0.08;
-  orbit.minDistance = 5; orbit.maxDistance = 70;
+  orbit.minDistance = 5; orbit.maxDistance = 80; // V13.1: 70 → 80 (portrait opening view at 74 m)
   orbit.maxPolarAngle = Math.PI * 0.49;
   orbit.target.copy(HOUSE_C);
   orbit.autoRotateSpeed = 0.55;
-  orbit.addEventListener('start', () => { orbit.autoRotate = false; });
+  orbit.addEventListener('start', () => { orbit.autoRotate = false; orbit.minAzimuthAngle = -Infinity; orbit.maxAzimuthAngle = Infinity; }); // V13.1: a drag frees the intro's azimuth limits
   let lastDollPos = new THREE.Vector3(HOUSE_C.x + 13.5, 12.5, HOUSE_C.z + 16.5);
+  // V13.1: opening (intro) view — orbit target between the house and the helipad, camera from the front-right, high
+  // enough to look over the roof into the back yard; farther back on a portrait phone (narrow horizontal FOV).
+  // az 0.7–0.85 rad (front-right); the big back-yard tree (crown r 7.2 m) was moved off the house → pad line to
+  // (−3.4, −16.5) in plan.js (it still clipped the rotor at (4.5, −14) during the ±0.22 auto-rotate);
+  // a portrait phone needs a lower, farther view so the house–pad axis fits its narrow width. Tuned with tests/v13.1-intro.mjs.
+  const INTRO = { land: { mix: 0.35, az: 0.95, pitch: 0.70, dist: 36 }, port: { mix: 0.45, az: 0.65, pitch: 0.85, dist: 68 }, swing: 0.22 }; // portrait: no auto-rotate (it swung the tree crown over the pad); az 0.90/74 → 0.65/68 once the big tree moved west: helicopter off the right edge, clear of the back-right tree
+  function introView() {
+    const hp = new THREE.Vector3(4.8, 0, -27.5);
+    try { const g = heliParked && heliParked.model && heliParked.model.group; if (g) hp.set(g.position.x, 0, g.position.z); } catch (_) {}
+    const asp = (window.innerWidth || 1) / (window.innerHeight || 1);
+    const F = asp < 1 ? INTRO.port : INTRO.land;
+    const target = new THREE.Vector3().lerpVectors(HOUSE_C, hp, F.mix); target.y = 0.8;
+    const h = Math.cos(F.pitch) * F.dist;
+    const eye = new THREE.Vector3(target.x + Math.sin(F.az) * h, target.y + Math.sin(F.pitch) * F.dist, target.z + Math.cos(F.az) * h);
+    return { target, eye, az: F.az };
+  }
 
   /* ================================================================ view filters (dollhouse / plan) */
   const hiddenLayers = new Map();
@@ -645,6 +662,7 @@ export async function boot() {
   /* ================================================================ V10 worlds */
   const worldLabels = { limo: 'לימוזינה', casino: 'קזינו', test: 'עולם בדיקה' };
   let picker = null;
+  let heliWalk = null, heliParked = null; // V13.1
   try {
     worlds = createWorlds({
       THREE, scene, ctx, player, homeColl, collision: world, createCollision: () => createWorld(),
@@ -856,11 +874,18 @@ export async function boot() {
         viewFloor = opts.floor || viewFloor;
         applyView('dollhouse', viewFloor);
         orbit.target.copy(HOUSE_C);
-        const to = opts.from ? opts.from.clone() : lastDollPos.clone();
-        if (opts.intro) { camera.position.set(HOUSE_C.x + 40, 30, HOUSE_C.z + 46); camera.lookAt(HOUSE_C); }
+        orbit.minAzimuthAngle = -Infinity; orbit.maxAzimuthAngle = Infinity; // V13.1: the intro's azimuth limits end with it
+        let to = opts.from ? opts.from.clone() : lastDollPos.clone();
+        let tgt = HOUSE_C;
+        if (opts.intro) {
+          // V13.1: the opening view frames the house AND the parked helicopter in the back yard (portrait + landscape)
+          const iv = introView(); tgt = iv.target; to = iv.eye; orbit.target.copy(tgt);
+          orbit.minAzimuthAngle = iv.az - INTRO.swing; orbit.maxAzimuthAngle = iv.az + INTRO.swing; // the slow auto-rotate stays on the composition
+          camera.position.copy(iv.eye).sub(tgt).multiplyScalar(1.7).add(tgt); camera.lookAt(tgt);
+        }
         const scanP = runScan();
-        await flyTo(to, quatLook(to, HOUSE_C), opts.intro ? 2.8 : 1.6, 55);
-        orbit.enabled = true; orbit.autoRotate = !!opts.intro; orbit.update();
+        await flyTo(to, quatLook(to, tgt), opts.intro ? 2.8 : 1.6, 55);
+        orbit.enabled = true; orbit.autoRotate = !!opts.intro && window.innerWidth >= window.innerHeight; orbit.update(); // V13.1: portrait opening view stays still
         void scanP;
       } else if (next === 'plan') {
         await fade(1, 240);
@@ -1243,7 +1268,7 @@ export async function boot() {
 
   // V3 UI: arrow D-pad (replaces the joystick): hold = continuous move / turn with acceleration, tap = short step / turn.
   // Always on touch in walk mode; optional on desktop (✥ button in the tools, remembered).
-  const dpad = createDpad($('dpad'), { onStep: (dir) => { if (mode === 'walk' && nav) nav.step(dir); }, onPress: () => audio.resume() });
+  const dpad = createDpad($('dpad'), { onStep: (dir) => { if (mode === 'walk' && nav) nav.step(dir); }, onPress: () => { audio.resume(); try { heliWalk && heliWalk.userInput(); } catch (_) {} } }); // V13.1: an arrow press cancels the helicopter walk
   const dpBtn = $('btnDpad');
   const setDpadDesk = (on) => { document.body.classList.toggle('dpad-on', !!on); dpBtn && dpBtn.classList.toggle('on', !!on); store('dpad', on ? '1' : '0'); };
   if (!isTouch) setDpadDesk(store('dpad') === '1');
@@ -1422,6 +1447,7 @@ export async function boot() {
     }
     if (worlds) worlds.update(dt, t); // V10: the active world's own update()
     if (picker) try { picker.update(dt); } catch (e) { if (!frame._pkErr) { frame._pkErr = true; reportError('בחירת חדר', e); } }
+    if (heliWalk) try { heliWalk.update(dt); } catch (e) { if (!frame._hwErr) { frame._hwErr = true; reportError('סיור במסוק', e); } } // V13.1
     if (mode === 'plan' || pendingMode === 'plan') updatePlanLabels();
     measure.update(activeCam, window.innerWidth, window.innerHeight);
 
@@ -1577,6 +1603,15 @@ export async function boot() {
     });
   } catch (e) { picker = null; reportError('בחירת חדר', e); }
   $('btnHome') && $('btnHome').addEventListener('click', (e) => { e.stopPropagation(); audio.resume(); worlds && worlds.goHome(); });
+  // V13.1: "🚁 סיור במסוק" pill (js/core-heliwalk.js): front of the house → natural walk around it → the parked
+  // helicopter's door opens → board (worlds.enter('heli'), the autopilot tour then takes off by itself)
+  try {
+    heliWalk = createHeliWalk({
+      THREE, plan, player, btn: $('btnHeliTour'), nav: () => nav, worlds: () => worlds, atHome, getMode: () => mode,
+      fade, toast: (m, ms) => toast(m, ms), showHint: (m, ms) => showHint(m, ms), audio, tr: i18nTr, getParked: () => heliParked,
+    });
+    worlds && worlds.onChange((id) => { try { heliWalk.onWorld(id); } catch (_) {} });
+  } catch (e) { heliWalk = null; reportError('סיור במסוק', e); }
 
   /* ================================================================ load modules */
   const styles = createStyles(ctx); ctx.styles = styles; // V3 STYLE: list() works now; set() before init() is queued
@@ -1590,7 +1625,7 @@ export async function boot() {
     perf: PERF, texCache: texCacheStats, // V6 PERF
     toast: (m, ms) => toast(m, ms), // V9: used by the renders viewer after "apply this style"
     // V10: worlds + room picker
-    get worlds() { return worlds; }, enterWorld: (id, o) => (worlds ? worlds.enterWorld(id, o) : Promise.resolve(false)), get picker() { return picker; }, pickRoom, frameSpot, get lastPick() { return lastPick; },
+    get worlds() { return worlds; }, enterWorld: (id, o) => (worlds ? worlds.enterWorld(id, o) : Promise.resolve(false)), get picker() { return picker; }, get heliWalk() { return heliWalk; }, get heliParked() { return heliParked; }, introView, INTRO, orbit, pickRoom, frameSpot, get lastPick() { return lastPick; },
     get limoSpot() { return ctx.limoSpot || null; }, LIMO_SPOT, homeColl,
     // V9: where the visitor is now (renders viewer opens at this room): {mode, key, floor, x, z, node}
     roomInfo() {
@@ -1694,13 +1729,14 @@ export async function boot() {
   // V13 HELI: the 'heli' world (js/heli.js, lazy) + the parked helicopter on a pad in the back yard (buildParked adds
   // itself to the scene; tap → "🚁 טיסה במסוק" → enterWorld('heli')). A missing module just means no helicopter.
   try { worlds && worlds.registerModule('heli', './heli.js', { he: 'מסוק' }); } catch (_) {}
-  setTimeout(() => {
-    import('./heli.js').then((m) => {
-      if (m && m.I18N) { try { i18nExtend(m.I18N); } catch (_) {} }
-      if (!m || typeof m.buildParked !== 'function') return;
-      return Promise.resolve(m.buildParked(ctx)).then(() => { renderer.shadowMap.needsUpdate = true; perfMark('heli-parked'); });
-    }).catch((e) => console.info('[heli] parked helicopter not available', (e && e.message) || e));
-  }, 3200);
+  // V13.1: built right away (was 3.2 s after the tour became interactive) and awaited (capped) before the opening view,
+  // so the helicopter is already on its pad in the first dollhouse frame
+  const heliP = import('./heli.js').then((m) => {
+    if (m && m.I18N) { try { i18nExtend(m.I18N); } catch (_) {} }
+    if (!m || typeof m.buildParked !== 'function') return;
+    return Promise.resolve(m.buildParked(ctx)).then((res) => { heliParked = res || null; ctx.heliParked = heliParked; renderer.shadowMap.needsUpdate = true; perfMark('heli-parked'); try { heliWalk && heliWalk.layout(); } catch (_) {} }); // V13.1: kept for the helicopter-tour walk
+  }).catch((e) => console.info('[heli] parked helicopter not available', (e && e.message) || e));
+  await Promise.race([heliP, new Promise((r) => setTimeout(r, 4000))]);
   mode = 'intro';
   await setMode('dollhouse', { intro: true, force: true });
   if (mode === 'dollhouse') $('intro') && $('intro').classList.add('show');

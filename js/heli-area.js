@@ -28,21 +28,24 @@ import * as SH from './heli-area-shaders.js';
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 export async function loadArea(url) {
-  const u = url || new URL('../data/heli-area.json', import.meta.url).href;
+  // V13.1 cache busting: the data files carry the site version (?v=TOUR_VERSION) like the modules
+  const VQ = typeof window !== 'undefined' && window.TOUR_VERSION ? '?v=' + encodeURIComponent(window.TOUR_VERSION) : '';
+  const u = url || new URL('../data/heli-area.json' + VQ, import.meta.url).href;
+  const side = (f) => { const b = new URL(u, typeof location !== 'undefined' ? location.href : import.meta.url), x = new URL(f, b); x.search = b.search || VQ; return x.href; };
   const r = await fetch(u);
   if (!r.ok) throw new Error('heli-area.json ' + r.status);
   const data = await r.json();
   // optional: traced house footprints (same encoding as data.buildings.list) — never required
   if (!data.houses) {
     try {
-      const h = await fetch(new URL('heli-area-houses.json', new URL(u, typeof location !== 'undefined' ? location.href : import.meta.url)).href);
+      const h = await fetch(side('heli-area-houses.json'));
       if (h.ok) { const j = await h.json(); if (j && Array.isArray(j.list)) data.houses = j; }
     } catch (_) {}
   }
   // optional: the downtown / Short North / Ohio State extension (finer imagery tiles + OSM there) — never required
   if (!data.ext) {
     try {
-      const h = await fetch(new URL('heli-area-ext.json', new URL(u, typeof location !== 'undefined' ? location.href : import.meta.url)).href);
+      const h = await fetch(side('heli-area-ext.json'));
       if (h.ok) { const j = await h.json(); if (j && j.v) mergeExt(data, j); }
     } catch (e) { console.warn('[heli-area] ext data', e); }
   }

@@ -211,10 +211,13 @@ export function createCasinoUI({ wallet, sfx = {}, games = {}, onOpen, onClose, 
     },
     /* -------- HUD (in the casino world, outside the overlay) */
     showHud(on) { hudShown = !!on; ensureHud(); hud.classList.toggle('on', !!on && !api.isOpen); setBank(); },
+    /** V13.1: how the visitor arrived ('heli' | 'limo' | null) — the exit sheet offers the matching ride back */
+    setArrival(a) { arrival = a === 'heli' ? 'heli' : a || null; relabelHud(); },
+    get arrival() { return arrival; },
     relabel,
     dispose() { try { offLang && offLang(); } catch (_) {} root && root.remove(); hud && hud.remove(); root = null; hud = null; },
   };
-  let hudShown = false;
+  let hudShown = false, arrival = null;
   function ensureHud() {
     if (hud) return;
     ensure();
@@ -233,7 +236,7 @@ export function createCasinoUI({ wallet, sfx = {}, games = {}, onOpen, onClose, 
     hud.dir = L('dir');
     hud.querySelector('.pm').textContent = L('playShort');
     hud.querySelector('[data-h="games"]').textContent = L('hudGames');
-    hud.querySelector('[data-h="exit"]').textContent = L('hudExit');
+    hud.querySelector('[data-h="exit"]').textContent = L(arrival === 'heli' ? 'hudExitHeli' : 'hudExit');
     hud.querySelector('[data-h="bank"]').setAttribute('aria-label', L('g_cage'));
   }
 
@@ -267,10 +270,12 @@ export function createCasinoUI({ wallet, sfx = {}, games = {}, onOpen, onClose, 
     exit(body, a) {
       const w = h('div', 'cz-sheet');
       const draw = () => {
-        w.innerHTML = `<h3>${L('exitTitle')}</h3><p>${L('exitText')}</p>`;
+        const byHeli = arrival === 'heli';
+        w.innerHTML = `<h3>${L('exitTitle')}</h3><p>${L(byHeli ? 'exitTextHeli' : 'exitText')}</p>`;
         const r = h('div', 'cz-row');
-        const b1 = btn(L('toLimo'), 'big', 'limo'), b2 = btn(L('toHome'), 'big alt', 'home');
-        b1.addEventListener('click', () => { a.close(); actions.exitTo && actions.exitTo('limo'); });
+        const ride = byHeli ? 'heli' : 'limo';
+        const b1 = btn(L(byHeli ? 'toHeli' : 'toLimo'), 'big', ride), b2 = btn(L('toHome'), 'big alt', 'home');
+        b1.addEventListener('click', () => { a.close(); actions.exitTo && actions.exitTo(ride); });
         b2.addEventListener('click', () => { a.close(); actions.exitTo && actions.exitTo('home'); });
         r.append(b1, b2); w.appendChild(r);
         w.appendChild(h('p', 'cz-note', L('exitNote')));

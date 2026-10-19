@@ -1,6 +1,6 @@
 {
  "version": 7,
- "generated": "2026-10-18T05:33:25.438Z",
+ "generated": "2026-10-18T14:43:19.715Z",
  "size": [
   4096,
   2048
@@ -404,9 +404,9 @@
   "japandi/bed3": {
    "full": "renders/japandi/bed3.jpg",
    "sm": "renders/japandi/bed3_sm.jpg",
-   "bytes": 407718,
-   "smBytes": 41100,
-   "yaw": 1.3962634015954636
+   "bytes": 404875,
+   "smBytes": 40411,
+   "yaw": 1.4835
   },
   "japandi/bath2": {
    "full": "renders/japandi/bath2.jpg",
@@ -453,9 +453,9 @@
   "industrial/bed3": {
    "full": "renders/industrial/bed3.jpg",
    "sm": "renders/industrial/bed3_sm.jpg",
-   "bytes": 330169,
-   "smBytes": 33036,
-   "yaw": 1.3962634015954636
+   "bytes": 314086,
+   "smBytes": 31053,
+   "yaw": 1.4835
   },
   "industrial/bath2": {
    "full": "renders/industrial/bath2.jpg",
@@ -488,8 +488,8 @@
   "sow/bed1": {
    "full": "renders/sow/bed1.jpg",
    "sm": "renders/sow/bed1_sm.jpg",
-   "bytes": 536719,
-   "smBytes": 49840,
+   "bytes": 533127,
+   "smBytes": 49426,
    "yaw": 1.7453292519943295
   },
   "sow/bath1": {
@@ -502,9 +502,9 @@
   "sow/bed3": {
    "full": "renders/sow/bed3.jpg",
    "sm": "renders/sow/bed3_sm.jpg",
-   "bytes": 409175,
-   "smBytes": 41754,
-   "yaw": 1.3962634015954636
+   "bytes": 401069,
+   "smBytes": 40571,
+   "yaw": 1.4835
   },
   "sow/bath2": {
    "full": "renders/sow/bath2.jpg",
@@ -521,7 +521,7 @@
    "yaw": 6.283185307179586
   }
  },
- "totalBytes": 28421337,
+ "totalBytes": 28386444,
  "renderLog": [
   {
    "style": "mediterranean",

@@ -377,6 +377,7 @@ export function createNav(env) {
   const mouse = { x: 0, y: 0, inside: false, moved: true, type: 'mouse' };
   let lastClick = null, lastPairT = -1e9, hoverItem = null, lastMode = '', touchHinted = false;
   let glide = null;
+  let testSpeed = 1; // V13.1: tests on slow SwiftShader runs speed the glide up (nav.testSpeed = 3); never set by the UI
   let settle = null; // V3: after an arrow glide into a room, ease the heading to the framed view
   const framer = createFramer({ world, plan, isHome: env.isHome });
   let homeGraph = null; // V10: the house graph (other worlds swap in their own via setGraph)
@@ -529,11 +530,11 @@ export function createNav(env) {
       else { inp.yawTo = settle.yaw; inp.yawRate = 2.6; if (settle.pitch != null) inp.yawMax = 1.7; if (settle.pitch != null) { inp.pitchTo = settle.pitch; inp.pitchRate = 2; } settle.t -= dt; if (settle.t <= 0 || angDiff(player.state.yaw, settle.yaw) < 0.01) settle = null; }
     }
     if (!glide) return;
-    if (getMode() !== 'walk') { stopGlide(); return; }
-    if (Math.abs(inp.forward || 0) > 0.1 || Math.abs(inp.strafe || 0) > 0.1) { stopGlide(); return; }
+    if (getMode() !== 'walk') { glide.why = 'mode'; stopGlide(); return; }
+    if (Math.abs(inp.forward || 0) > 0.1 || Math.abs(inp.strafe || 0) > 0.1) { glide.why = 'input'; stopGlide(); return; } // V13.1: glide.why → onEnd(arrived, g) reads g.why
     if (Math.abs(inp.lookX || 0) + Math.abs(inp.lookY || 0) > 1e-5) glide.manualT = 1.4; else glide.manualT -= dt;
     const s = player.state;
-    if (glide.lx != null && Math.hypot(s.x - glide.lx, s.z - glide.lz) > 1.5) { stopGlide(); return; } // teleported elsewhere
+    if (glide.lx != null && Math.hypot(s.x - glide.lx, s.z - glide.lz) > 1.5) { glide.why = 'jump'; stopGlide(); return; } // teleported elsewhere
     glide.lx = s.x; glide.lz = s.z;
     glide.t += dt;
     if (glide.wait) { inp.moveX = 0; inp.moveZ = 0; glide.chkT = 0; glide.chkX = s.x; glide.chkZ = s.z; return; }
@@ -575,7 +576,7 @@ export function createNav(env) {
       dx = dx * (1 - w) + nx * w; dz = dz * (1 - w) + nz * w; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
     }
     const remaining = d + glide.suffix[glide.i];
-    const vmax = GLIDE_V * (inp.run ? 1.5 : 1); // V7: ~1.0 m/s (was 1.6, Shift ×1.7)
+    const vmax = GLIDE_V * (inp.run ? 1.5 : 1) * testSpeed; // V7: ~1.0 m/s (was 1.6, Shift ×1.7); V13.1: testSpeed (tests only, default 1)
     let v = Math.min(vmax, 0.22 + remaining * 1.0);
     let turning = false; // V11: deliberately turning in place (turn-first) — not "stuck"
     if (glide.level && !glide.keepYaw && glide.manualT <= 0) { // V10: turn first, then walk (slow down while the heading is far off)
@@ -601,10 +602,10 @@ export function createNav(env) {
       if (m < 0.1) {
         glide.stuck++;
         if (!last && d < 0.8) glide.i++;
-        else if (glide.stuck >= 2) { stopGlide(last && d < 0.45 ? null : 'הדרך חסומה — עצרתי', last && d < 0.45); return; }
+        else if (glide.stuck >= 2) { glide.why = 'stuck@' + glide.i + '/' + pts.length; stopGlide(last && d < 0.45 ? null : 'הדרך חסומה — עצרתי', last && d < 0.45); return; }
       } else glide.stuck = 0;
     }
-    if (glide.t > glide.limit) stopGlide();
+    if (glide.t > glide.limit) { glide.why = 'limit'; stopGlide(); }
   }
 
   /* ---------------- walk arrows */
@@ -948,6 +949,7 @@ export function createNav(env) {
     get settling() { return !!settle; },
     surfaceAt, groundY, panoArrowList, panoRoute, panoInDirection, startGlide, stopGlide, planRoute, walkDouble,
     walkTo, setGraph, get homeGraph() { return homeGraph; }, get glideKey() { return glide ? glide.key : null; }, // V10
+    get testSpeed() { return testSpeed; }, set testSpeed(v) { testSpeed = Math.max(0.2, Math.min(6, +v || 1)); },
     get graph() { return graph; }, get ready() { return !!graph; }, get clickMode() { return clickMode; }, get gliding() { return !!glide; },
     get arrows() { return arrows; }, get cursor() { return cursor; }, get info() { return buildInfo; },
     // test / debug helpers

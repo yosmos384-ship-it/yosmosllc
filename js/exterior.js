@@ -74,7 +74,7 @@ export async function build(ctx) {
   const hi = ctx.quality !== 'low';
   try { if (ctx.renderer && ctx.renderer.capabilities) setAniso(Math.min(8, ctx.renderer.capabilities.getMaxAnisotropy())); } catch (e) { /* ignore */ }
 
-  const bt = plan.bigTree || { x: 4.5, z: -14, trunkR: 0.45, height: 17 };
+  const bt = plan.bigTree || { x: -3.4, z: -16.5, trunkR: 0.45, height: 17 };
   const W = {
     ctx, plan, hi, root,
     B: {}, mats: null,

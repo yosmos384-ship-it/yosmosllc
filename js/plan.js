@@ -116,7 +116,7 @@ const plan = {
   lot: { x0: -6.0, x1: 15.0, z0: -38.0, z1: 16.5 },   // ~21 m wide x 54 m deep, house set back ~9 m from front lot line
   street: { name: 'Eakin Rd', zCenter: 22.0, width: 7.2, sidewalk: false, ditch: false, curb: true, direction: 'x' },
   driveway: { x0: -4.6, x1: -1.6, z0: -6.0, z1: 18.4, material: 'gravel' }, // west side, street → back yard
-  bigTree: { x: 4.5, z: -14.0, trunkR: 0.45, height: 17 },
+  bigTree: { x: -3.4, z: -16.5, trunkR: 0.45, height: 17 }, // V13.1: was (4.5, −14) — right on the house → helipad line (hid the helicopter in the opening view); now west back yard, ~3 m off the walk-to-heli route
 
   // Suggested 360-tour nodes (eye height 1.6 m above floor). core may add more.
   // yaw convention: initial LOOK DIRECTION = (sin yaw, 0, cos yaw) in world x/z — yaw 0 looks south (+z, toward the street),

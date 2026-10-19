@@ -26,6 +26,14 @@ export const HELI_STRINGS = {
     say_start: 'מתניעים. בעוד רגע ממריאים לסיור מעל השכונה.', say_takeoff: 'ממריאים. שבו בנוח ותיהנו מהנוף.',
     say_home: 'מסיימים את הסיור וחוזרים הביתה.', say_landing: 'מתחילים בגישה לנחיתה בחצר.', say_landed: 'נחתנו בבית. תודה שטסתם איתנו!',
     say_poi: '{0}. {1}', say_next: 'היעד הבא: {0}.',
+    // V13.1 — direct flight to the casino (rail button 🎰), landing at its entrance (play money only, 21+)
+    exitS: 'יציאה', casinoS: 'לקזינו', casinoBtn: '🎰 לקזינו', aCasino: 'טיסה ישירה לקזינו ונחיתה בכניסה', casinoName: 'Eakin Grand Casino',
+    casinoGo: '🎰 טסים לקזינו…', casinoFlying: 'טסים לקזינו…', casinoSub: 'נחיתה מול הכניסה · כסף משחק בלבד · 21+', casinoInfo: '{0} · עוד {1}',
+    casinoCap: 'טיסה ישירה ל־Eakin Grand Casino — נוחתים על הדשא מול הכניסה הראשית.', casinoLanding: 'נוחתים מול הכניסה לקזינו',
+    casinoLanded: 'נחתנו בקזינו ✓', casinoDoor: 'הדלת נפתחת — נכנסים לקזינו…', casinoPilot: 'קיבלתי — טסים ישר לקזינו!',
+    casinoWelcome: 'הגענו! ברוכים הבאים ל־Eakin Grand Casino. בהצלחה — כסף משחק בלבד.', casinoParked: 'המסוק חונה מול הקזינו — ממריאים הביתה בעוד רגע',
+    casinoBack: 'ממריאים מהקזינו — חוזרים הביתה', casinoDest: 'הקזינו', casinoFail: 'לא הצלחנו להיכנס לקזינו — נסו שוב',
+    say_casino: 'קיבלתי. טסים ישר לקזינו.', say_casinoLanding: 'מתחילים בגישה לנחיתה מול הכניסה לקזינו.', say_casinoLanded: 'נחתנו בקזינו. בהצלחה!',
     // heli-ui.js short labels / hints / HUD (v13-strings-needed.md)
     viewInS: 'בפנים', viewOutS: 'בחוץ', viewTopS: 'מפה', camBar: 'מצלמה',
     dragLook: 'גררו כדי להסתכל סביב · הקישו שוב למושב אחר', dragOrbit: 'גררו כדי להקיף את המסוק · גלגלת למרחק', topHint: 'מבט מלמעלה, צפון למעלה · גלגלת לגובה',
@@ -61,6 +69,12 @@ export const HELI_STRINGS = {
     cap_downtown: 'קו הרקיע של מרכז העיר קולומבוס, בירת אוהיו.',
     cap_hilltonia: 'פארק שכונתי קטן ליד חטיבת הביניים הילטוניה.',
     cap_briggs: 'תיכון ציבורי בדרום-מערב השכונה.',
+    // V14 — Google Photorealistic 3D Tiles (heli-google3d.js): rail toggle, notes, data sources
+    g3dS: 'Google 3D', g3dClassicS: 'קלאסי', aG3d: 'החלפה בין העיר בתלת־ממד של Google למפה הקלאסית',
+    g3dLoading: 'טוען את העיר בתלת־ממד של Google…', g3dOnMsg: '🌍 העיר בתלת־ממד של Google Maps', g3dOffMsg: '🗺 מפה קלאסית (USGS / OpenStreetMap)',
+    g3dFail: 'Google 3D לא זמין כרגע — מוצגת המפה הקלאסית', g3dData: 'מקורות נתונים',
+    g3dHybrid: 'העיר בתלת־ממד: Google Maps · המסוק, הבית, מנחת המסוקים והתוויות: שלנו', g3dOwn: 'המסוק, הבית והתוויות שלנו · שמות מקומות © OpenStreetMap contributors',
+    g3dLabels: 'שמות מקומות ותוויות: © OpenStreetMap contributors (ODbL) · המפה הקטנה: OpenStreetMap',
   },
   en: {
     world: 'Helicopter', board: '🚁 Helicopter flight', boardShort: 'Helicopter flight',
@@ -82,6 +96,14 @@ export const HELI_STRINGS = {
     say_start: 'Starting up. We’ll lift off in a moment for a tour over the neighborhood.', say_takeoff: 'Taking off. Sit back and enjoy the view.',
     say_home: 'That wraps up the tour — heading home.', say_landing: 'Beginning our approach to land in the yard.', say_landed: 'We’re home. Thanks for flying with us!',
     say_poi: '{0}. {1}', say_next: 'Next stop: {0}.',
+    // V13.1 — direct flight to the casino (rail button 🎰), landing at its entrance (play money only, 21+)
+    exitS: 'Exit', casinoS: 'Casino', casinoBtn: '🎰 Fly to the Casino', aCasino: 'Fly straight to the casino and land at the entrance', casinoName: 'Eakin Grand Casino',
+    casinoGo: '🎰 Flying to the casino…', casinoFlying: 'Flying to the casino…', casinoSub: 'Landing at the entrance · play money only · 21+', casinoInfo: '{0} · {1} to go',
+    casinoCap: 'Straight to Eakin Grand Casino — we land on the lawn in front of the main entrance.', casinoLanding: 'Landing at the casino entrance',
+    casinoLanded: 'Landed at the casino ✓', casinoDoor: 'The door is opening — heading inside…', casinoPilot: 'Copy that — flying straight to the casino!',
+    casinoWelcome: 'We’re here! Welcome to Eakin Grand Casino. Good luck — play money only.', casinoParked: 'Parked at the casino — taking off for home in a moment',
+    casinoBack: 'Taking off from the casino — heading home', casinoDest: 'Casino', casinoFail: 'Couldn’t enter the casino — please try again',
+    say_casino: 'Copy that. Flying straight to the casino.', say_casinoLanding: 'Beginning our approach to land at the casino entrance.', say_casinoLanded: 'We’ve landed at the casino. Good luck!',
     viewInS: 'Inside', viewOutS: 'Outside', viewTopS: 'Map', camBar: 'Camera',
     dragLook: 'Drag to look around · tap again to switch seats', dragOrbit: 'Drag to orbit the helicopter · scroll to zoom', topHint: 'Top-down, north up · scroll to change height',
     spd: 'Speed', altS: 'Altitude', aglS: 'above ground', hdgS: 'Heading', nextPoi: 'Next stop', nowPoi: 'Circling now', nearPoi: 'Nearest place', homeDest: 'Home — 3351 Eakin Rd', km: 'km',
@@ -114,6 +136,12 @@ export const HELI_STRINGS = {
     cap_downtown: 'The skyline of downtown Columbus, the capital of Ohio.',
     cap_hilltonia: 'A small neighborhood park by Hilltonia Middle School.',
     cap_briggs: 'A public high school in the southwest of the neighborhood.',
+    // V14 — Google Photorealistic 3D Tiles (heli-google3d.js): rail toggle, notes, data sources
+    g3dS: 'Google 3D', g3dClassicS: 'Classic', aG3d: 'Switch between Google’s 3D city and the classic map',
+    g3dLoading: 'Loading Google’s 3D city…', g3dOnMsg: '🌍 3D city by Google Maps', g3dOffMsg: '🗺 Classic map (USGS / OpenStreetMap)',
+    g3dFail: 'Google 3D isn’t available right now — showing the classic map', g3dData: 'Data sources',
+    g3dHybrid: '3D city: Google Maps · helicopter, house, helipad and labels: ours', g3dOwn: 'Helicopter, house and labels are ours · place names © OpenStreetMap contributors',
+    g3dLabels: 'Place names and labels: © OpenStreetMap contributors (ODbL) · mini map: OpenStreetMap',
   },
   es: {
     world: 'Helicóptero', board: '🚁 Vuelo en helicóptero', boardShort: 'Vuelo en helicóptero',
@@ -135,6 +163,14 @@ export const HELI_STRINGS = {
     say_start: 'Arrancamos. En un momento despegamos para recorrer el barrio.', say_takeoff: 'Despegamos. Póngase cómodo y disfrute la vista.',
     say_home: 'Terminamos el recorrido y volvemos a casa.', say_landing: 'Iniciamos la aproximación para aterrizar en el patio.', say_landed: 'Llegamos a casa. ¡Gracias por volar con nosotros!',
     say_poi: '{0}. {1}', say_next: 'Próxima parada: {0}.',
+    // V13.1 — direct flight to the casino (rail button 🎰), landing at its entrance (play money only, 21+)
+    exitS: 'Salir', casinoS: 'Casino', casinoBtn: '🎰 Volar al Casino', aCasino: 'Volar directo al casino y aterrizar en la entrada', casinoName: 'Eakin Grand Casino',
+    casinoGo: '🎰 Volando al casino…', casinoFlying: 'Volando al casino…', casinoSub: 'Aterrizaje en la entrada · solo dinero de juego · 21+', casinoInfo: '{0} · faltan {1}',
+    casinoCap: 'Directo a Eakin Grand Casino — aterrizamos en el césped frente a la entrada principal.', casinoLanding: 'Aterrizando en la entrada del casino',
+    casinoLanded: 'Aterrizamos en el casino ✓', casinoDoor: 'Se abre la puerta — vamos adentro…', casinoPilot: 'Entendido — ¡volamos directo al casino!',
+    casinoWelcome: '¡Llegamos! Bienvenidos a Eakin Grand Casino. Buena suerte — solo dinero de juego.', casinoParked: 'Estacionados frente al casino — despegamos a casa en un momento',
+    casinoBack: 'Despegando del casino — volvemos a casa', casinoDest: 'Casino', casinoFail: 'No pudimos entrar al casino — inténtelo de nuevo',
+    say_casino: 'Entendido. Volamos directo al casino.', say_casinoLanding: 'Iniciamos la aproximación para aterrizar en la entrada del casino.', say_casinoLanded: 'Aterrizamos en el casino. ¡Buena suerte!',
     viewInS: 'Dentro', viewOutS: 'Fuera', viewTopS: 'Mapa', camBar: 'Cámara',
     dragLook: 'Arrastre para mirar alrededor · toque otra vez para cambiar de asiento', dragOrbit: 'Arrastre para girar alrededor del helicóptero · rueda para acercar', topHint: 'Vista cenital, norte arriba · rueda para cambiar la altura',
     spd: 'Velocidad', altS: 'Altitud', aglS: 'sobre el suelo', hdgS: 'Rumbo', nextPoi: 'Próxima parada', nowPoi: 'Sobrevolando ahora', nearPoi: 'Lugar más cercano', homeDest: 'La casa — 3351 Eakin Rd', km: 'km',
@@ -167,6 +203,12 @@ export const HELI_STRINGS = {
     cap_downtown: 'El horizonte del centro de Columbus, la capital de Ohio.',
     cap_hilltonia: 'Un pequeño parque de barrio junto a la secundaria Hilltonia.',
     cap_briggs: 'Una preparatoria pública en el suroeste del barrio.',
+    // V14 — Google Photorealistic 3D Tiles (heli-google3d.js): rail toggle, notes, data sources
+    g3dS: 'Google 3D', g3dClassicS: 'Clásico', aG3d: 'Cambiar entre la ciudad 3D de Google y el mapa clásico',
+    g3dLoading: 'Cargando la ciudad 3D de Google…', g3dOnMsg: '🌍 Ciudad 3D de Google Maps', g3dOffMsg: '🗺 Mapa clásico (USGS / OpenStreetMap)',
+    g3dFail: 'Google 3D no está disponible ahora — se muestra el mapa clásico', g3dData: 'Fuentes de datos',
+    g3dHybrid: 'Ciudad 3D: Google Maps · helicóptero, casa, helipuerto y etiquetas: nuestros', g3dOwn: 'Helicóptero, casa y etiquetas son nuestros · nombres © OpenStreetMap contributors',
+    g3dLabels: 'Nombres de lugares y etiquetas: © OpenStreetMap contributors (ODbL) · minimapa: OpenStreetMap',
   },
 };
 // tour-place type icons

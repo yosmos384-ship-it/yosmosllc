@@ -8,7 +8,7 @@
 //   ctx.worlds.register(id, { load: () => import('./limo.js').then((m) => m.buildWorld) })   // load → fn OR module
 //        (a module is searched for buildWorld | build | default; its I18N export is merged into i18n)
 //   ctx.worlds.registerModule(id, './limo.js', { he: 'לימוזינה' })              // lazy dynamic import; missing file → toast "בקרוב"
-//   ctx.worlds.enter(id, { spawn: { pos: Vector3 | [x, y, z] (FEET point), yaw } }) → Promise<boolean>   (= enterWorld)
+//   ctx.worlds.enter(id, { spawn: { pos: Vector3 | [x, y, z] (FEET point), yaw } | 'name' (res.spawns[name]), from? }) → Promise<boolean>   (= enterWorld)
 //   ctx.worlds.goHome(opts)  ·  ctx.worlds.current() → 'home' | id  (also .id getter)  ·  ctx.worlds.onChange(fn(id, prevId))
 //
 // build(wctx) is called once, the first time the world is entered (loading overlay over a black fade). It returns
@@ -85,7 +85,8 @@ export function createWorlds(env) {
   }
 
   /* ------------------------------------------------------------------ lazy build */
-  const TIMEOUT = 90000;
+  // V13.1: 180 s — the heli city (imagery, terrain, buildings) can take > 90 s on a slow phone / busy CPU
+  const TIMEOUT = 180000;
   function missing(msg) { const e = new Error(msg || 'missing'); e.code = 'missing'; return e; }
   async function build(W) {
     if (W.built) return W;
@@ -279,14 +280,15 @@ export function createWorlds(env) {
       }
       // ---- spawn (feet point → eye)
       let eye, yaw;
-      const sp = o.spawn ? spawnFrom(o.spawn) : null;
+      // V13.1: a named spawn ('entrance', …) is looked up in the world's res.spawns (falls back to its default spawn)
+      const sp = o.spawn ? (typeof o.spawn === 'string' ? (W.res && W.res.spawns && W.res.spawns[o.spawn] ? spawnFrom(W.res.spawns[o.spawn]) : null) : spawnFrom(o.spawn)) : null;
       if (sp) { eye = [sp.x, sp.y + 1.6, sp.z]; yaw = sp.yaw; }
       else if (id === HOME && homeSaved) { eye = homeSaved.eye; yaw = homeSaved.yaw; if (env.homeReturnYaw) { const y2 = env.homeReturnYaw(eye); if (isFinite(y2)) yaw = y2; } }
       else if (id === HOME) { eye = env.homeStart.p; yaw = env.homeStart.yaw; }
       else { const s = spawnOf(W) || { x: 0, y: 0, z: 0, yaw: 0 }; eye = [s.x, s.y + 1.6, s.z]; yaw = s.yaw; }
       try { env.onWorld && env.onWorld(id, prevId, W); } catch (e) { console.warn('[worlds] onWorld', e); }
       await env.placePlayer(eye, yaw);
-      try { W.res && W.res.onEnter && W.res.onEnter({ from: prevId }); } catch (e) { console.warn('[worlds] onEnter', e); }
+      try { W.res && W.res.onEnter && W.res.onEnter({ from: prevId, via: o.from || null, spawn: typeof o.spawn === 'string' ? o.spawn : null }); } catch (e) { console.warn('[worlds] onEnter', e); }
       for (const f of subs) { try { f(id, prevId); } catch (_) {} }
       await env.nextFrame(); await env.nextFrame();
       await env.fade(0, ms);

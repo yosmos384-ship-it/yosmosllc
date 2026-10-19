@@ -6,7 +6,8 @@
 //     heading, a north-up moving mini map (aerial map, route, places, home, helicopter), and the next place with its
 //     distance and a relative-bearing arrow;
 //   • tour card (place name + type + caption, progress with stop ticks, ⏮ ⏸ ⏭ ×speed, take-off);
-//   • rail: manual ⇄ autopilot, fly home & land, radio; manual-flight touch sticks + key hint;
+//   • rail: manual ⇄ autopilot, fly home & land, 🎰 fly to the casino (V13.1), radio; manual-flight touch sticks + key hint;
+//     update({ casinoOn, casinoDim, atCasino, trip: { icon, name, kind, cap } }) drives the casino button / trip card;
 //   • pilot bubble, messages, place labels, attribution.
 // createHeliUI({ S, ICON, lang, actions }) → { mount, unmount, update(state), labels(list), bubble, message, stick, mounted, root }
 //   update(state) also accepts optional { x, z, h, agl, pois, route, home, next } — when heli.js does not pass them the HUD
@@ -75,6 +76,13 @@ const CSS = `
 #heliRail button .i{font-size:15px;line-height:1;width:18px;text-align:center}
 #heliRail button.on{background:rgba(67,224,255,.2);box-shadow:0 0 0 1px rgba(67,224,255,.7) inset;color:#dffbff}
 #heliRail button.dim{opacity:.45}
+/* V13.1 🎰 fly to the casino: a quiet gold accent so it reads as a destination, not a flight control */
+#heliRail [data-a=casino]{color:#ffe7ad}
+#heliRail [data-a=casino]:hover{background:rgba(255,206,110,.12)}
+#heliRail [data-a=casino].on{background:linear-gradient(180deg,rgba(255,214,120,.30),rgba(214,160,60,.24));box-shadow:0 0 0 1px rgba(255,214,130,.75) inset;color:#fff4d8}
+#heliCard.trip .hc-ico{background:rgba(255,206,110,.16)}
+#heliCard.trip .hc-bar i{background:linear-gradient(90deg,#ffd27a,#ffefc2)}
+#heliCard.trip .hc-stop{color:#ffe7ad;font-weight:700}
 #heliRail .hr-radio{display:flex;flex-direction:column;gap:2px;padding-top:3px;border-top:1px solid rgba(255,255,255,.08)}
 #heliRail [data-a=radio] .t{display:flex;flex-direction:column;line-height:1.1;min-width:0}
 #heliRail [data-a=radio] .t b{font-weight:700;font-size:12px;max-width:118px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;unicode-bidi:isolate}
@@ -184,17 +192,72 @@ body.heli-compact #heliRail [data-a=radio] .eq{display:none!important}
 body.heli-compact #heliRail .hr-rc{flex-direction:column}
 body.heli-compact #heliRail .hr-rc button{min-height:34px}
 body.heli-compact #heliViews .hv{min-height:32px}
+/* ==== V13.1 TOP BAND: every heli control lives in one slim band at the top (safe-area aware); the landscape stays
+   clear — the lower half only ever shows the manual-flight sticks. Row 1: ⟵ exit · camera · rail (🕹 🏠 🎰 🗣 📻);
+   row 2: the tour / trip strip (icon, place, n/16, ⏮ ⏸ ⏭ ×2 or ▶, thin progress) + one tiny credits line; the place
+   caption fades in under the band for a few seconds. */
+body.world-is-heli #topbar{display:none!important}
+#heliTop{top:calc(6px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:4px 5px 3px;border-radius:15px;width:max-content;max-width:calc(100vw - 12px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px));box-sizing:border-box}
+#heliTop .ht-row{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0}
+#heliTop .ht-sep{flex:0 0 1px;align-self:stretch;margin:5px 1px;background:rgba(255,255,255,.14)}
+#heliTop #heliViews,#heliTop #heliRail,#heliTop #heliCard{position:relative;top:auto;left:auto;right:auto;bottom:auto;transform:none;background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;border-radius:0;width:auto;visibility:visible}
+#heliTop #heliViews{gap:2px}
+#heliTop #heliViews .hv{min-height:36px;padding:0 9px;border-radius:9px;font-size:12.5px}
+#heliTop #heliRail{flex-direction:row;align-items:center;gap:2px}
+#heliTop #heliRail button{min-height:36px;padding:0 8px;border-radius:9px;font-size:12px;gap:5px}
+#heliTop #heliRail .hr-radio{flex-direction:row;align-items:center;gap:2px;padding:0;border:0}
+#heliTop #heliRail [data-a=radio] .t small{display:none}
+#heliTop #heliRail .hr-rc{flex-direction:row;gap:2px}
+#heliTop #heliRail .hr-rc button{min-height:36px;min-width:30px;padding:0 6px;flex:0 0 auto}
+#heliTop #heliRail .hr-rc.off{display:none}
+#heliExit{display:flex;align-items:center;gap:5px;min-height:36px;padding:0 10px;border-radius:9px;font-size:12.5px;font-weight:700;color:#04261b;background:linear-gradient(180deg,rgba(124,243,200,.92),rgba(70,200,160,.92));white-space:nowrap}
+#heliExit .i{font-size:14px;line-height:1}
+/* strip (the old bottom card) */
+#heliTop #heliCard{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;min-width:0;max-width:100%}
+#heliTop #heliCard .hc-top{flex:1 1 120px;min-width:0;gap:7px;order:0}
+#heliTop #heliCard .hc-ctl{order:1}#heliTop #heliCard .hc-bar{order:2}#heliTop #heliAttr{order:3}
+#heliTop #heliCard .hc-ico{flex:0 0 26px;height:26px;font-size:15px;border-radius:8px}
+#heliTop #heliCard .hc-kind,#heliTop #heliCard .hc-tg{display:none}
+#heliTop #heliCard .hc-name{font-size:13px}
+#heliTop #heliCard .hc-stop{font-size:10.5px}
+#heliTop #heliCard .hc-ctl{margin:0;gap:3px;flex:0 0 auto}
+#heliTop #heliCard .hc-ctl button{min-width:32px;min-height:28px;padding:0 6px;border-radius:8px;font-size:12.5px}
+#heliTop #heliCard .hc-ctl .hc-go{padding:0 14px}
+#heliTop #heliCard .hc-bar{flex:0 0 100%;height:3px;margin:1px 0 0}
+#heliTop #heliCard .hc-bar b{top:-1.5px;width:6px;height:6px;margin-left:-3px}
+#heliTop #heliAttr{flex:0 0 100%;margin:0;font-size:7.5px;opacity:.45;line-height:1.2;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr}
+#heliTop #heliCard .hc-cap{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);width:min(520px,calc(100vw - 24px));margin:0;padding:6px 12px;border-radius:12px;background:rgba(10,14,24,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:12.5px;line-height:1.35;text-align:center;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .6s;min-height:0;box-sizing:border-box}
+#heliTop #heliCard .hc-cap:empty{display:none}
+#heliTop #heliCard .hc-cap.show{opacity:1}
+#heliTop #heliCard.mini .hc-bar,#heliTop #heliCard.mini .hc-cap{display:block}
+#heliTop #heliCard.mini .hc-cap:empty{display:none}
+/* below the band */
+#heliHud{top:calc(var(--heli-top-h,96px) + 12px + env(safe-area-inset-top,0px))!important}
+#heliViewHint{top:calc(var(--heli-top-h,96px) + 12px + env(safe-area-inset-top,0px))!important}
+#heliHint{top:calc(var(--heli-top-h,96px) + 12px + env(safe-area-inset-top,0px));bottom:auto!important}
+body.heli-capshow #heliViewHint{opacity:0}
+#heliMsg{top:calc(var(--heli-top-h,96px) + 120px)}
+/* phones / narrow: icon-only row, the caption beside the (mini) HUD */
+body.heli-compact #heliTop #heliViews .hv .t,body.heli-compact #heliTop #heliRail button .t,body.heli-compact #heliExit .t{display:none!important}
+body.heli-compact #heliTop #heliViews .hv,body.heli-compact #heliTop #heliRail button,body.heli-compact #heliExit{width:32px;min-width:32px;min-height:36px;padding:0;justify-content:center;gap:0;flex-direction:row}
+body.heli-compact #heliTop #heliRail [data-a=radio] .fq{display:none!important}
+body.heli-compact #heliTop #heliRail [data-a=radioPrev]{display:none}
+body.heli-compact #heliTop #heliRail .hr-rc button{width:30px;min-width:30px}
+body.heli-compact #heliTop .ht-row{gap:3px}
+body.heli-compact #heliTop #heliCard .hc-cap{left:auto;right:0;transform:none;width:calc(100vw - 186px);font-size:11.5px;padding:5px 9px}
+body.heli-compact #heliHud{left:calc(8px + env(safe-area-inset-left,0px))}
+@media (max-width:360px){body.heli-compact #heliTop #heliViews .hv,body.heli-compact #heliTop #heliRail button,body.heli-compact #heliExit{width:29px;min-width:29px}}
 `;
 
 // strings this module needs that heli-strings.js may not have yet (used only when S(key) returns the key itself)
 const FALLBACK = {
-  he: { viewInS: 'בפנים', viewOutS: 'בחוץ', viewTopS: 'מפה', dragLook: 'גררו כדי להסתכל סביב · הקישו שוב למושב אחר', dragOrbit: 'גררו כדי להקיף את המסוק · גלגלת למרחק', topHint: 'מבט מלמעלה, צפון למעלה · גלגלת לגובה',
+  he: { exitS: 'יציאה', viewInS: 'בפנים', viewOutS: 'בחוץ', viewTopS: 'מפה', dragLook: 'גררו כדי להסתכל סביב · הקישו שוב למושב אחר', dragOrbit: 'גררו כדי להקיף את המסוק · גלגלת למרחק', topHint: 'מבט מלמעלה, צפון למעלה · גלגלת לגובה',
     spd: 'מהירות', altS: 'גובה', aglS: 'מעל הקרקע', hdgS: 'כיוון', nextPoi: 'היעד הבא', nowPoi: 'מקיפים עכשיו', nearPoi: 'המקום הקרוב', homeDest: 'הבית — 3351 Eakin Rd', km: 'ק״מ',
     manualS: 'ידני', autoS: 'אוטומטי', flyHomeS: 'הביתה', radioS: 'רדיו', stickL: 'גובה · סיבוב', stickR: 'כיוון טיסה', up: 'עלייה', down: 'ירידה', fwd: 'קדימה', back: 'אחורה', camBar: 'מצלמה', mps: 'מ׳/ש', hudMore: 'הקישו להרחבה', hudLess: 'הקישו לצמצום', cardMore: 'הקישו לפרטי המקום', voice: '🗣 קול הטייסת', voiceOn: 'קול הטייסת פועל', voiceOff: 'קול הטייסת כבוי', noVoice: 'אין בדפדפן קול דיבור בשפה הזו — מוצגות כתוביות בלבד', radioTitle: 'רדיו המסוק', radioOff: 'הרדיו כבוי', radioConnecting: 'מתחבר…', radioHits: 'להיטים', radioUnavail: 'השידור לא זמין כרגע', radioBackup: 'רדיו גיבוי', radioOnMsg: '📻 הרדיו מתנגן באוזניות', radioOffMsg: '📻 הרדיו כובה', aRadio: 'הפעלה / כיבוי רדיו', aRadioPrev: 'התחנה הקודמת', aRadioNext: 'התחנה הבאה', aPrev: 'היעד הקודם', aNext: 'היעד הבא', aPause: 'השהיית הסיור', aPlay: 'המשך הסיור', aSpeed: 'מהירות הסיור' },
-  en: { viewInS: 'Inside', viewOutS: 'Outside', viewTopS: 'Map', dragLook: 'Drag to look around · tap again to switch seat', dragOrbit: 'Drag to orbit the helicopter · wheel for distance', topHint: 'Top-down, north up · wheel for height',
+  en: { exitS: 'Exit', viewInS: 'Inside', viewOutS: 'Outside', viewTopS: 'Map', dragLook: 'Drag to look around · tap again to switch seat', dragOrbit: 'Drag to orbit the helicopter · wheel for distance', topHint: 'Top-down, north up · wheel for height',
     spd: 'Speed', altS: 'Altitude', aglS: 'above ground', hdgS: 'Heading', nextPoi: 'Next stop', nowPoi: 'Circling now', nearPoi: 'Nearest place', homeDest: 'Home — 3351 Eakin Rd', km: 'km',
     manualS: 'Manual', autoS: 'Autopilot', flyHomeS: 'Home', radioS: 'Radio', stickL: 'Height · yaw', stickR: 'Direction', up: 'Up', down: 'Down', fwd: 'Fwd', back: 'Back', camBar: 'Camera', mps: 'm/s', hudMore: 'Tap to expand', hudLess: 'Tap to collapse', cardMore: 'Tap for place details', voice: '🗣 Pilot voice', voiceOn: 'Pilot voice on', voiceOff: 'Pilot voice off', noVoice: 'Your browser has no speech voice for this language — captions only', radioTitle: 'Helicopter radio', radioOff: 'Radio off', radioConnecting: 'Connecting…', radioHits: 'Hits', radioUnavail: 'Stream unavailable right now', radioBackup: 'Backup radio', radioOnMsg: '📻 Radio playing in your headset', radioOffMsg: '📻 Radio off', aRadio: 'Radio on / off', aRadioPrev: 'Previous station', aRadioNext: 'Next station', aPrev: 'Previous stop', aNext: 'Next stop', aPause: 'Pause the tour', aPlay: 'Resume the tour', aSpeed: 'Tour speed' },
-  es: { viewInS: 'Dentro', viewOutS: 'Fuera', viewTopS: 'Mapa', dragLook: 'Arrastre para mirar alrededor · toque otra vez para cambiar de asiento', dragOrbit: 'Arrastre para girar alrededor del helicóptero · rueda para la distancia', topHint: 'Vista cenital, norte arriba · rueda para la altura',
+  es: { exitS: 'Salir', viewInS: 'Dentro', viewOutS: 'Fuera', viewTopS: 'Mapa', dragLook: 'Arrastre para mirar alrededor · toque otra vez para cambiar de asiento', dragOrbit: 'Arrastre para girar alrededor del helicóptero · rueda para la distancia', topHint: 'Vista cenital, norte arriba · rueda para la altura',
     spd: 'Velocidad', altS: 'Altitud', aglS: 'sobre el suelo', hdgS: 'Rumbo', nextPoi: 'Próxima parada', nowPoi: 'Rodeando ahora', nearPoi: 'Lugar más cercano', homeDest: 'Casa — 3351 Eakin Rd', km: 'km',
     manualS: 'Manual', autoS: 'Piloto auto', flyHomeS: 'A casa', radioS: 'Radio', stickL: 'Altura · giro', stickR: 'Dirección', up: 'Subir', down: 'Bajar', fwd: 'Avance', back: 'Atrás', camBar: 'Cámara', mps: 'm/s', hudMore: 'Toque para ampliar', hudLess: 'Toque para reducir', cardMore: 'Toque para ver el lugar', voice: '🗣 Voz de la piloto', voiceOn: 'Voz de la piloto activada', voiceOff: 'Voz de la piloto desactivada', noVoice: 'Su navegador no tiene voz para este idioma — solo subtítulos', radioTitle: 'Radio del helicóptero', radioOff: 'Radio apagada', radioConnecting: 'Conectando…', radioHits: 'Éxitos', radioUnavail: 'La transmisión no está disponible ahora', radioBackup: 'Radio de respaldo', radioOnMsg: '📻 La radio suena en sus audífonos', radioOffMsg: '📻 Radio apagada', aRadio: 'Encender / apagar la radio', aRadioPrev: 'Estación anterior', aRadioNext: 'Siguiente estación', aPrev: 'Parada anterior', aNext: 'Siguiente parada', aPause: 'Pausar el recorrido', aPlay: 'Reanudar el recorrido', aSpeed: 'Velocidad del recorrido' },
 };
@@ -218,10 +281,10 @@ export function createHeliUI(o = {}) {
     return v;
   };
   const hasDom = typeof document !== 'undefined' && !!document.body;
-  let mounted = false, views, vhint, card, rail, hud, msg, bub, attr, labelsEl, hint, sL, sR, mapCv, raf = 0;
+  let mounted = false, views, vhint, card, rail, hud, msg, bub, attr, labelsEl, hint, sL, sR, mapCv, raf = 0, top = null, exitB = null, capT = 0, lastCap = '', topH = 0;
   const stick = { l: { x: 0, y: 0, id: null }, r: { x: 0, y: 0, id: null } };
   const pool = [];
-  const nodes = () => [labelsEl, views, vhint, card, rail, hud, msg, bub, hint, sL, sR];
+  const nodes = () => [labelsEl, top, vhint, hud, msg, bub, hint, sL, sR];
   let last = {}; // last update() state
   function mount() {
     if (!hasDom || mounted) return; mounted = true;
@@ -233,7 +296,7 @@ export function createHeliUI(o = {}) {
     card = el('div', { id: 'heliCard', class: 'heli-ui heli-glass' }, '<div class="hc-top" data-a="cardToggle" role="button" tabindex="0"><div class="hc-ico"></div><div class="hc-tx"><div class="hc-name"></div><div class="hc-kind"></div></div><div class="hc-stop"></div><div class="hc-tg" aria-hidden="true"></div></div><div class="hc-cap" data-a="cardToggle"></div><div class="hc-bar"><i></i></div>'
       + '<div class="hc-ctl"><button class="hc-tour" data-a="prev"></button><button class="hc-tour" data-a="pause"></button><button class="hc-go" data-a="go"></button><button class="hc-tour" data-a="next"></button><button class="hc-tour" data-a="speed"></button></div>');
     rail = el('div', { id: 'heliRail', class: 'heli-ui heli-glass' },
-      '<button data-a="manual"><span class="i">🕹</span><span class="t"></span></button><button data-a="flyhome"><span class="i">🏠</span><span class="t"></span></button><button data-a="voice" style="display:none"><span class="i">🗣</span><span class="t"></span></button>'
+      '<button data-a="manual"><span class="i">🕹</span><span class="t"></span></button><button data-a="flyhome"><span class="i">🏠</span><span class="t"></span></button><button data-a="casino"><span class="i">🎰</span><span class="t"></span></button><button data-a="voice" style="display:none"><span class="i">🗣</span><span class="t"></span></button>'
       + '<div class="hr-radio"><button data-a="radio"><span class="i">📻</span><span class="t"><b></b><small></small></span><span class="fq"></span><span class="eq"><i></i><i></i><i></i></span></button>'
       + '<div class="hr-rc"><button data-a="radioPrev">⏮</button><button data-a="radioNext">⏭</button></div></div>');
     hud = el('div', { id: 'heliHud', class: 'heli-ui heli-glass', 'aria-live': 'off', 'data-a': 'hudToggle', role: 'button', tabindex: '0' },
@@ -250,12 +313,18 @@ export function createHeliUI(o = {}) {
     const stickHtml = '<b class="t"></b><b class="d"></b><b class="lf">⟲</b><b class="rt">⟳</b><i></i><span></span>';
     sL = el('div', { class: 'heli-stick l heli-ui' }, stickHtml); sR = el('div', { class: 'heli-stick r heli-ui' }, stickHtml.replace('⟲', '◀').replace('⟳', '▶'));
     card.appendChild(attr);
+    // V13.1 top band: ⟵ exit · camera · rail on one row, the tour strip under it
+    top = el('div', { id: 'heliTop', class: 'heli-ui heli-glass', role: 'toolbar' });
+    exitB = el('button', { id: 'heliExit', 'data-a': 'exit' }, '<span class="i">⟵</span><span class="t"></span>');
+    const rowA = el('div', { class: 'ht-row' });
+    rowA.append(exitB, el('i', { class: 'ht-sep' }), views, el('i', { class: 'ht-sep' }), rail);
+    top.append(rowA, card);
     for (const n of nodes()) document.body.appendChild(n);
-    for (const n of [views, card, rail, hud]) {
+    for (const n of [top, hud]) {
       for (const ev of ['pointerdown', 'mousedown', 'dblclick', 'wheel']) n.addEventListener(ev, stop, ev === 'wheel' ? { passive: true } : undefined);
       n.addEventListener('touchstart', stop, { passive: true });
       n.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-a]'); if (!b) return; const a = b.getAttribute('data-a');
-        try { if (LOCAL[a]) LOCAL[a](); else if (RADIO[a]) RADIO[a](); else if (act[a]) act[a](); } catch (err) { console.warn('[heli-ui]', a, err); } });
+        try { if (LOCAL[a]) LOCAL[a](); else if (RADIO[a]) RADIO[a](); else if (act[a]) act[a](); else if (a === 'exit') { const hb = document.getElementById('btnHome'); if (hb) hb.click(); } } catch (err) { console.warn('[heli-ui]', a, err); } });
     }
     for (const n of [hud, card.querySelector('.hc-top')]) n.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); n.click(); } });
     applyCompact(true);
@@ -264,7 +333,8 @@ export function createHeliUI(o = {}) {
     bindStick(sL, stick.l); bindStick(sR, stick.r);
     try { unRadio = heliRadio.onChange(() => radioUI()); } catch (_) { unRadio = null; }
     lastView = null; lastSig = ''; p0sig = null;
-    const loop = () => { if (!mounted) return; raf = requestAnimationFrame(loop); const t = performance.now(); if (t - hudT > 80) { hudT = t; try { drawHud(); } catch (e) { if (!hudErr) { hudErr = true; console.warn('[heli-ui] hud', e); } } } };
+    const loop = () => { if (!mounted) return; raf = requestAnimationFrame(loop); const t = performance.now(); if (t - hudT > 80) { hudT = t; measureTop(); try { drawHud(); } catch (e) { if (!hudErr) { hudErr = true; console.warn('[heli-ui] hud', e); } } } };
+    measureTop();
     if (typeof requestAnimationFrame === 'function') raf = requestAnimationFrame(loop);
   }
   let hudT = 0, hudErr = false, unRadio = null, radioSig = '', unVoice = null, mq = null, mqFn = null;
@@ -273,6 +343,14 @@ export function createHeliUI(o = {}) {
   const ui = { compact: false, hudOpen: true, cardOpen: true, userHud: null, userCard: null };
   const lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
+  // the band's height → --heli-top-h (the HUD, hints and messages sit just below it)
+  function measureTop() { if (!top) return; const h = Math.round(top.getBoundingClientRect().height); if (h && h !== topH) { topH = h; document.body.style.setProperty('--heli-top-h', h + 'px'); } }
+  // the place / trip description fades in under the band for a few seconds when it changes (tap the strip to see it again)
+  function showCap(ms = 6500) {
+    if (!mounted || !card) return; const c = card.querySelector('.hc-cap'); if (!c || !c.textContent) return;
+    c.classList.add('show'); document.body.classList.add('heli-capshow'); clearTimeout(capT);
+    capT = setTimeout(() => { c.classList.remove('show'); document.body.classList.remove('heli-capshow'); }, ms);
+  }
   function applyCompact(reset) {
     if (!mounted) return;
     let c = false; try { c = typeof matchMedia === 'function' && matchMedia(COMPACT_MQ).matches; } catch (_) {}
@@ -282,7 +360,7 @@ export function createHeliUI(o = {}) {
       ui.hudOpen = h != null ? h === '1' : !c; ui.cardOpen = k != null ? k === '1' : !c;
     }
     document.body.classList.toggle('heli-compact', c);
-    hud.classList.toggle('mini', !ui.hudOpen); card.classList.toggle('mini', !ui.cardOpen);
+    hud.classList.toggle('mini', !ui.hudOpen); card.classList.remove('mini');
     hud.setAttribute('aria-expanded', ui.hudOpen ? 'true' : 'false'); card.querySelector('.hc-top').setAttribute('aria-expanded', ui.cardOpen ? 'true' : 'false');
     setText(hud.querySelector('.hx-tg'), ui.hudOpen ? '▴' : '▾'); setText(card.querySelector('.hc-tg'), ui.cardOpen ? '▾' : '▴');
     hud.title = ui.hudOpen ? T('hudLess') : T('hudMore'); card.querySelector('.hc-top').title = ui.cardOpen ? T('hudLess') : T('cardMore');
@@ -290,7 +368,7 @@ export function createHeliUI(o = {}) {
   }
   const LOCAL = {
     hudToggle: () => { ui.hudOpen = !ui.hudOpen; lsSet('heli.hud.' + (ui.compact ? 'c' : 'd'), ui.hudOpen ? '1' : '0'); applyCompact(false); drawHud(); },
-    cardToggle: () => { ui.cardOpen = !ui.cardOpen; lsSet('heli.card.' + (ui.compact ? 'c' : 'd'), ui.cardOpen ? '1' : '0'); applyCompact(false); },
+    cardToggle: () => showCap(5000),
     voice: () => {
       const V = HA.heliVoice; if (!V) return;
       const on = typeof V.toggle === 'function' ? V.toggle() : V.set(!V.on);
@@ -352,7 +430,8 @@ export function createHeliUI(o = {}) {
     try { unRadio && unRadio(); } catch (_) {} unRadio = null; radioSig = '';
     try { unVoice && unVoice(); } catch (_) {} unVoice = null;
     try { if (mq && mqFn) { mq.removeEventListener ? mq.removeEventListener('change', mqFn) : mq.removeListener(mqFn); } } catch (_) {} mq = mqFn = null;
-    document.body.classList.remove('heli-compact');
+    document.body.classList.remove('heli-compact', 'heli-capshow'); clearTimeout(capT); lastCap = ''; topH = 0;
+    try { document.body.style.removeProperty('--heli-top-h'); } catch (_) {}
     for (const n of nodes()) n && n.remove();
     pool.length = 0;
     stick.l.x = stick.l.y = stick.r.x = stick.r.y = 0; stick.l.id = stick.r.id = null;
@@ -364,7 +443,7 @@ export function createHeliUI(o = {}) {
     if (!mounted) return;
     last = st;
     const L = lang(), rtl = L === 'he';
-    if (L !== lastLang) { lastLang = L; for (const n of [views, vhint, card, rail, hud, msg, hint, sL, sR]) n.setAttribute('dir', rtl ? 'rtl' : 'ltr'); lastSig = ''; }
+    if (L !== lastLang) { lastLang = L; for (const n of [top, views, vhint, card, rail, hud, msg, hint, sL, sR]) n.setAttribute('dir', rtl ? 'rtl' : 'ltr'); lastSig = ''; }
     // camera bar
     const bIn = views.querySelector('[data-a=in]'), bOut = views.querySelector('[data-a=out]'), bTop = views.querySelector('[data-a=top]');
     setText(bIn.querySelector('.t'), T('viewInS')); setText(bOut.querySelector('.t'), T('viewOutS')); setText(bTop.querySelector('.t'), T('viewTopS'));
@@ -381,17 +460,21 @@ export function createHeliUI(o = {}) {
     const bm = rail.querySelector('[data-a=manual]');
     setText(bm.querySelector('.i'), st.manual ? '🛬' : '🕹'); setText(bm.querySelector('.t'), st.manual ? T('autoS') : T('manualS'));
     bm.title = st.manual ? T('auto') : T('manual'); bm.classList.toggle('on', !!st.manual);
-    const bh = rail.querySelector('[data-a=flyhome]'); setText(bh.querySelector('.t'), T('flyHomeS')); bh.title = T('flyHome'); bh.classList.toggle('dim', !!st.parked);
+    const bh = rail.querySelector('[data-a=flyhome]'); setText(bh.querySelector('.t'), T('flyHomeS')); bh.title = T('flyHome'); bh.classList.toggle('dim', !!st.parked && !st.atCasino);
+    // V13.1 🎰 direct flight to the casino (on = flying there, dim = the landing / door sequence is running)
+    const bc = rail.querySelector('[data-a=casino]'); setText(bc.querySelector('.t'), T('casinoS'));
+    if (bc.title !== T('aCasino')) { bc.title = T('aCasino'); bc.setAttribute('aria-label', T('casinoBtn')); }
+    bc.classList.toggle('on', !!st.casinoOn); bc.classList.toggle('dim', !!st.casinoDim); bc.setAttribute('aria-pressed', st.casinoOn ? 'true' : 'false');
     radioUI(); voiceUI();
     // card
     card.classList.toggle('manual', !!st.manual);
     const go = card.querySelector('.hc-go');
     setText(go, st.parked ? T('takeoff') : '');
-    go.style.display = st.parked ? '' : 'none';
+    go.style.display = st.parked && !st.casinoDim ? '' : 'none';
     setText(card.querySelector('[data-a=prev]'), T('prev')); setText(card.querySelector('[data-a=next]'), T('next'));
     setText(card.querySelector('[data-a=pause]'), st.paused ? T('play') : T('pause'));
     setText(card.querySelector('[data-a=speed]'), T('speed', st.speedMul || 1));
-    for (const b of card.querySelectorAll('.hc-tour')) b.style.display = st.parked || st.manual ? 'none' : '';
+    for (const b of card.querySelectorAll('.hc-tour')) { const a = b.getAttribute('data-a'); b.style.display = st.parked || st.manual || st.casinoDim || (st.trip && (a === 'prev' || a === 'next')) ? 'none' : ''; }
     for (const [a, k] of [['prev', 'aPrev'], ['next', 'aNext'], ['pause', st.paused ? 'aPlay' : 'aPause'], ['speed', 'aSpeed']]) { const b = card.querySelector('[data-a=' + a + ']'); const v = T(k); if (b.getAttribute('aria-label') !== v) { b.setAttribute('aria-label', v); b.title = v; } }
     setText(attr, ui.cardOpen ? T('attr') : '© OpenStreetMap contributors · USGS · USDA NAIP');
     if (L !== update._lastL) { update._lastL = L; applyCompact(false); }
@@ -403,8 +486,11 @@ export function createHeliUI(o = {}) {
     document.body.classList.toggle('heli-manual', !!st.manual);
     document.body.classList.toggle('heli-touch', !!st.touch);
     const p = st.poi;
-    const sig = (p ? p.id : '-') + '|' + st.phase + '|' + L + '|' + st.cardMode;
-    if (sig !== lastSig) {
+    const tr = st.trip || null;
+    card.classList.toggle('trip', !!tr);
+    const sig = (p ? p.id : '-') + '|' + st.phase + '|' + L + '|' + st.cardMode + '|' + (tr ? tr.name + tr.kind : '');
+    if (tr) { lastSig = sig; setText(card.querySelector('.hc-ico'), tr.icon || '🎰'); setText(card.querySelector('.hc-name'), tr.name || ''); setText(card.querySelector('.hc-kind'), tr.kind || ''); setText(card.querySelector('.hc-cap'), tr.cap || ''); }
+    else if (sig !== lastSig) {
       lastSig = sig;
       const name = p ? (L === 'he' ? p.he || p.name : p.name) : T('tour');
       setText(card.querySelector('.hc-ico'), p ? ICON[p.kind] || '📍' : '🚁');
@@ -419,6 +505,9 @@ export function createHeliUI(o = {}) {
     let bs = bar.querySelectorAll('b');
     if (bs.length !== ticks.length) { for (const b of bs) b.remove(); for (let i = 0; i < ticks.length; i++) bar.appendChild(el('b')); bs = bar.querySelectorAll('b'); }
     ticks.forEach((t, i) => { bs[i].style.left = (100 * t).toFixed(2) + '%'; bs[i].classList.toggle('done', (st.progress || 0) >= t); });
+    // exit (⟵ back home) + the fading caption
+    setText(exitB.querySelector('.t'), T('exitS')); if (exitB.title !== T('home')) { exitB.title = T('home'); exitB.setAttribute('aria-label', T('home')); }
+    { const c = card.querySelector('.hc-cap').textContent; if (c !== lastCap) { lastCap = c; if (c) showCap(); } }
     drawHud();
   }
 

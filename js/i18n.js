@@ -48,6 +48,15 @@ export const DICT = {
   'גרסה 12': ['Version 12', 'Versión 12'],
   'גרסה 12.1': ['Version 12.1', 'Versión 12.1'],
   'גרסה 13': ['Version 13', 'Versión 13'],
+  'גרסה 14': ['Version 14', 'Versión 14'],
+  // ---- V13.1: helicopter tour button (js/core-heliwalk.js)
+  '🚁 סיור במסוק': ['🚁 Helicopter tour', '🚁 Tour en helicóptero'],
+  'סיור במסוק': ['Helicopter tour', 'Tour en helicóptero'],
+  'סיור במסוק — הולכים מסביב לבית אל המסוק ועולים לטיסה': ['Helicopter tour — walk around the house to the helicopter and board', 'Tour en helicóptero — camina alrededor de la casa hasta el helicóptero y sube'],
+  'המסוק עוד מתכונן — נסו שוב בעוד רגע': ['The helicopter is still getting ready — try again in a moment', 'El helicóptero todavía se está preparando — inténtalo de nuevo en un momento'],
+  '🚁 יוצאים לסיור במסוק — הולכים מסביב לבית': ['🚁 Off on a helicopter tour — walking around the house', '🚁 Salimos de tour en helicóptero — caminando alrededor de la casa'],
+  'הולכים אל המסוק · נגיעה בחצים עוצרת': ['Walking to the helicopter · touch the arrows to stop', 'Caminando al helicóptero · toca las flechas para detenerte'],
+  '🚁 עולים למסוק': ['🚁 Boarding the helicopter', '🚁 Subiendo al helicóptero'],
   // ---- V12: round floating buttons (the size of "פעולה") with a 1-line label
   'אקסל': ['Excel', 'Excel'],
   'פירוט': ['Details', 'Detalle'],

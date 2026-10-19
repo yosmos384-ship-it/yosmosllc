@@ -6,6 +6,23 @@
 <meta name="theme-color" content="#0b0f16">
 <title>3351 Eakin Rd — סיור 3D</title>
 <meta name="description" content="סיור תלת-ממדי אינטראקטיבי בבית ב-3351 Eakin Rd, Columbus OH — אחרי שיפוץ: הליכה, 360°, דולהאוס ותוכנית קומה.">
+<script>
+// V13.1 cache busting: the site version. Our modules load as ./js/<file>.js?v=TOUR_VERSION (importmap below, generated
+// by tests/gen-importmap.py). A stale cached index.html (iPhone Safari kept V12.1 after V13 went live) asks
+// version.json without the cache and reloads once with ?v=<new> when a newer version is live.
+window.TOUR_VERSION = '14';
+(function () {
+  try {
+    var V = window.TOUR_VERSION;
+    fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j || !j.v || j.v === V) return;
+      var k = 'eakin_vreload_' + j.v;
+      try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } catch (e) { return; }
+      var u = new URL(location.href); u.searchParams.set('v', j.v); location.replace(u.toString());
+    }).catch(function () {});
+  } catch (e) {}
+})();
+</script>
 <script type="importmap">
 {
   "imports": {
@@ -13,7 +30,108 @@
     "three/addons/": "./vendor/three/examples/jsm/",
     "three/examples/jsm/": "./vendor/three/examples/jsm/",
     "three-mesh-bvh": "./vendor/three-mesh-bvh/index.module.js",
-    "three-gpu-pathtracer": "./vendor/three-gpu-pathtracer/index.module.js"
+    "three-gpu-pathtracer": "./vendor/three-gpu-pathtracer/index.module.js",
+    "3d-tiles-renderer": "./vendor/3d-tiles-renderer/src/index.js",
+    "3d-tiles-renderer/plugins": "./vendor/3d-tiles-renderer/src/plugins/index.js",
+    "3d-tiles-renderer/": "./vendor/3d-tiles-renderer/",
+    "./js/casino-audio.js": "./js/casino-audio.js?v=14",
+    "./js/casino-baccarat.js": "./js/casino-baccarat.js?v=14",
+    "./js/casino-blackjack.js": "./js/casino-blackjack.js?v=14",
+    "./js/casino-cards.js": "./js/casino-cards.js?v=14",
+    "./js/casino-craps.js": "./js/casino-craps.js?v=14",
+    "./js/casino-holdem.js": "./js/casino-holdem.js?v=14",
+    "./js/casino-i18n.js": "./js/casino-i18n.js?v=14",
+    "./js/casino-npc.js": "./js/casino-npc.js?v=14",
+    "./js/casino-rng.js": "./js/casino-rng.js?v=14",
+    "./js/casino-roulette.js": "./js/casino-roulette.js?v=14",
+    "./js/casino-slots.js": "./js/casino-slots.js?v=14",
+    "./js/casino-symbols.js": "./js/casino-symbols.js?v=14",
+    "./js/casino-tex.js": "./js/casino-tex.js?v=14",
+    "./js/casino-ui-cards.js": "./js/casino-ui-cards.js?v=14",
+    "./js/casino-ui-holdem.js": "./js/casino-ui-holdem.js?v=14",
+    "./js/casino-ui-slots.js": "./js/casino-ui-slots.js?v=14",
+    "./js/casino-ui-table.js": "./js/casino-ui-table.js?v=14",
+    "./js/casino-ui.js": "./js/casino-ui.js?v=14",
+    "./js/casino-venue.js": "./js/casino-venue.js?v=14",
+    "./js/casino-videopoker.js": "./js/casino-videopoker.js?v=14",
+    "./js/casino.js": "./js/casino.js?v=14",
+    "./js/core-fx.js": "./js/core-fx.js?v=14",
+    "./js/core-heliwalk.js": "./js/core-heliwalk.js?v=14",
+    "./js/core-nav.js": "./js/core-nav.js?v=14",
+    "./js/core-pano.js": "./js/core-pano.js?v=14",
+    "./js/core-pathtrace.js": "./js/core-pathtrace.js?v=14",
+    "./js/core-picker.js": "./js/core-picker.js?v=14",
+    "./js/core-player.js": "./js/core-player.js?v=14",
+    "./js/core-render.js": "./js/core-render.js?v=14",
+    "./js/core-ui.js": "./js/core-ui.js?v=14",
+    "./js/core.js": "./js/core.js?v=14",
+    "./js/exterior-audio.js": "./js/exterior-audio.js?v=14",
+    "./js/exterior-ground.js": "./js/exterior-ground.js?v=14",
+    "./js/exterior-horizon.js": "./js/exterior-horizon.js?v=14",
+    "./js/exterior-houses.js": "./js/exterior-houses.js?v=14",
+    "./js/exterior-landscape.js": "./js/exterior-landscape.js?v=14",
+    "./js/exterior-limo.js": "./js/exterior-limo.js?v=14",
+    "./js/exterior-props.js": "./js/exterior-props.js?v=14",
+    "./js/exterior-tex.js": "./js/exterior-tex.js?v=14",
+    "./js/exterior-trees.js": "./js/exterior-trees.js?v=14",
+    "./js/exterior-util.js": "./js/exterior-util.js?v=14",
+    "./js/exterior-veg.js": "./js/exterior-veg.js?v=14",
+    "./js/exterior.js": "./js/exterior.js?v=14",
+    "./js/gallery.js": "./js/gallery.js?v=14",
+    "./js/heli-area-buildings.js": "./js/heli-area-buildings.js?v=14",
+    "./js/heli-area-imagery.js": "./js/heli-area-imagery.js?v=14",
+    "./js/heli-area-shaders.js": "./js/heli-area-shaders.js?v=14",
+    "./js/heli-area-trees.js": "./js/heli-area-trees.js?v=14",
+    "./js/heli-area.js": "./js/heli-area.js?v=14",
+    "./js/heli-audio.js": "./js/heli-audio.js?v=14",
+    "./js/heli-avionics.js": "./js/heli-avionics.js?v=14",
+    "./js/heli-flight.js": "./js/heli-flight.js?v=14",
+    "./js/heli-google3d.js": "./js/heli-google3d.js?v=14",
+    "./js/heli-model.js": "./js/heli-model.js?v=14",
+    "./js/heli-pilot.js": "./js/heli-pilot.js?v=14",
+    "./js/heli-strings.js": "./js/heli-strings.js?v=14",
+    "./js/heli-tex.js": "./js/heli-tex.js?v=14",
+    "./js/heli-ui.js": "./js/heli-ui.js?v=14",
+    "./js/heli.js": "./js/heli.js?v=14",
+    "./js/house-geo.js": "./js/house-geo.js?v=14",
+    "./js/house.js": "./js/house.js?v=14",
+    "./js/i18n.js": "./js/i18n.js?v=14",
+    "./js/interior-basement.js": "./js/interior-basement.js?v=14",
+    "./js/interior-bath.js": "./js/interior-bath.js?v=14",
+    "./js/interior-kitchen.js": "./js/interior-kitchen.js?v=14",
+    "./js/interior-lib.js": "./js/interior-lib.js?v=14",
+    "./js/interior-lux.js": "./js/interior-lux.js?v=14",
+    "./js/interior-radio.js": "./js/interior-radio.js?v=14",
+    "./js/interior-rooms.js": "./js/interior-rooms.js?v=14",
+    "./js/interior-tex.js": "./js/interior-tex.js?v=14",
+    "./js/interior-tv.js": "./js/interior-tv.js?v=14",
+    "./js/interior.js": "./js/interior.js?v=14",
+    "./js/limo-cabin.js": "./js/limo-cabin.js?v=14",
+    "./js/limo-car.js": "./js/limo-car.js?v=14",
+    "./js/limo-chauffeur.js": "./js/limo-chauffeur.js?v=14",
+    "./js/limo-drive.js": "./js/limo-drive.js?v=14",
+    "./js/limo-people.js": "./js/limo-people.js?v=14",
+    "./js/limo-strings.js": "./js/limo-strings.js?v=14",
+    "./js/limo-tex.js": "./js/limo-tex.js?v=14",
+    "./js/limo-util.js": "./js/limo-util.js?v=14",
+    "./js/limo.js": "./js/limo.js?v=14",
+    "./js/maps-config.js": "./js/maps-config.js?v=14",
+    "./js/mats.js": "./js/mats.js?v=14",
+    "./js/navgraph.js": "./js/navgraph.js?v=14",
+    "./js/plan.js": "./js/plan.js?v=14",
+    "./js/pool-ai.js": "./js/pool-ai.js?v=14",
+    "./js/pool-game.js": "./js/pool-game.js?v=14",
+    "./js/pool-physics.js": "./js/pool-physics.js?v=14",
+    "./js/pool-rules.js": "./js/pool-rules.js?v=14",
+    "./js/pool-table.js": "./js/pool-table.js?v=14",
+    "./js/radio-engine.js": "./js/radio-engine.js?v=14",
+    "./js/sow-build.js": "./js/sow-build.js?v=14",
+    "./js/sow-ui.js": "./js/sow-ui.js?v=14",
+    "./js/sow.js": "./js/sow.js?v=14",
+    "./js/styles.js": "./js/styles.js?v=14",
+    "./js/tex-cache.js": "./js/tex-cache.js?v=14",
+    "./js/world-test.js": "./js/world-test.js?v=14",
+    "./js/worlds.js": "./js/worlds.js?v=14"
   }
 }
 </script>
@@ -307,6 +425,13 @@ body.touch.hovering #btnAct{box-shadow:0 0 0 4px rgba(255,255,255,.6),0 8px 24px
 .pk-chip.pk-home{background:rgba(124,243,200,.16);border-color:rgba(124,243,200,.6)}
 @keyframes pkgo{50%{box-shadow:0 0 0 4px rgba(67,224,255,.25)}}
 body.touch .pk-chip{min-height:40px;padding:0 11px;font-size:12.5px}
+/* V13.1: "🚁 סיור במסוק" pill (js/core-heliwalk.js places it: phone — between the arrow pad and "פעולה", above the room bar;
+   desktop — above the room bar). Shown in walk mode in the house only. */
+#btnHeliTour{position:fixed;z-index:12;left:-999px;bottom:0;display:none;align-items:center;gap:5px;height:30px;padding:0 11px;border-radius:999px;font-size:12px;font-weight:650;line-height:1;white-space:nowrap;color:var(--text);background:var(--glass-strong);border:1px solid var(--line-strong);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 4px 14px rgba(0,0,0,.25);touch-action:manipulation;transition:background .15s,border-color .15s}
+#btnHeliTour.show{display:flex}
+#btnHeliTour:hover{background:rgba(30,40,56,.86)}
+#btnHeliTour.on{background:rgba(67,224,255,.22);border-color:rgba(67,224,255,.85);color:#dffbff;animation:pkgo 1.2s ease-in-out infinite}
+body.world-away #btnHeliTour,body:not(.mode-walk) #btnHeliTour,body:has(#intro.show) #btnHeliTour{display:none!important}
 body.picker-lift.touch.mode-walk #btnAct{bottom:calc(var(--gut) + 60px + env(safe-area-inset-bottom,0px))}
 /* ---------- V10: worlds (limo / casino) ---------- */
 #btnHome{display:none}
@@ -542,6 +667,7 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
   <button data-d="b" aria-label="אחורה">▼</button>
 </div>
 <button id="btnAct" aria-label="פעולה">פעולה</button>
+<button id="btnHeliTour" type="button" aria-pressed="false" title="סיור במסוק — הולכים מסביב לבית אל המסוק ועולים לטיסה">🚁 סיור במסוק</button>
 
 <div id="intro" class="glass" role="region" aria-label="3351 Eakin Rd — כניסה לסיור">
   <div class="in-txt" title="סיור בבית אחרי שיפוץ · או בחרו מצב תצוגה בסרגל העליון"><h1>3351 Eakin Rd</h1><p>סיור בבית אחרי שיפוץ</p></div>
@@ -617,7 +743,7 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
 
 <script type="module">
   // V7: languages first (Hebrew / English / Spanish; DOM translator + switchers), then the 3D core
-  import { initI18n, mountSwitcher, tr } from './js/i18n.js';
+  import { initI18n, mountSwitcher, tr } from './js/i18n.js'; // V13.1: the importmap maps it to ./js/i18n.js?v=TOUR_VERSION (one module instance with core's import)
   try {
     initI18n();
     const card = document.querySelector('#loader .card'); if (card) mountSwitcher(card, { className: 'lang-loader' });
@@ -644,10 +770,10 @@ body.mode-plan #btnFlash, body.mode-pano #btnFlash{display:none}
     const gl = document.createElement('canvas');
     if (!(gl.getContext('webgl2') || gl.getContext('webgl'))) throw new Error('WebGL unavailable');
   } catch (e) { fatal('הדפדפן אינו תומך ב-WebGL', e); }
-  import('./js/core.js')
+  import('./js/core.js?v=' + (window.TOUR_VERSION || '14'))
     .then((m) => m.boot())
     .catch((e) => fatal('טעינת מנוע התלת-ממד נכשלה (three.js / core.js) — בדקו חיבור לאינטרנט ורעננו', e));
 </script>
-<div id="ver-tag" style="position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));z-index:50;font:600 11px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.75);background:rgba(20,24,30,.45);padding:2px 8px;border-radius:9px;pointer-events:none">גרסה 13</div>
+<div id="ver-tag" style="position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(6px,env(safe-area-inset-bottom,0px));z-index:50;font:600 11px/1.4 system-ui,sans-serif;color:rgba(255,255,255,.75);background:rgba(20,24,30,.45);padding:2px 8px;border-radius:9px;pointer-events:none">גרסה 14</div>
 </body>
 </html>

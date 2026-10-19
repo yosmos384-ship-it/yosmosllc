@@ -112,7 +112,7 @@ export async function build(wctx) {
   }
   async function exitTo(id) {
     let ok = false;
-    try { if (id === 'limo' && typeof wctx.enterWorld === 'function') ok = await wctx.enterWorld('limo', { from: 'casino' }); } catch (_) { ok = false; }
+    try { if ((id === 'limo' || id === 'heli') && typeof wctx.enterWorld === 'function') ok = await wctx.enterWorld(id, { from: 'casino' }); } catch (_) { ok = false; }
     if (!ok) { try { if (typeof wctx.goHome === 'function') ok = await wctx.goHome(); else if (typeof wctx.enterWorld === 'function') ok = await wctx.enterWorld('home'); } catch (_) {} }
     return ok;
   }
@@ -143,10 +143,13 @@ export async function build(wctx) {
   return {
     group,
     spawn: { pos: new THREE.Vector3(venue.spawn.x, 0, venue.spawn.z), yaw: venue.spawn.yaw },
+    // V13.1 named spawns (worlds.enter('casino', { spawn: 'entrance' })): the plaza in front of the revolving doors
+    spawns: { entrance: { pos: new THREE.Vector3(venue.spawn.x, 0, venue.spawn.z), yaw: venue.spawn.yaw } },
     minimap: { rooms: venue.minimap.rooms.map((r) => ({ he: he[r.labelKey], r: r.r })), bounds: venue.minimap.bounds },
     nav: { nodes: venue.nav.nodes.map((n) => Object.assign({}, n, n.label ? { he: he[n.label] } : {})), edges: venue.nav.edges },
     env: { sky: false, sun: false, hemi: false, stars: false, fog: new THREE.Fog(0x0b0706, 45, 230), background: new THREE.Color(0x04050b), environment: envTex, exposure: 1.0 },
-    onEnter() { active = true; ui.showHud(true); try { audio.startAmbience(); } catch (_) {} },
+    // V13.1: arriving by helicopter → the exit sheet offers the flight back instead of the limo
+    onEnter(info) { active = true; try { ui.setArrival && ui.setArrival(info && (info.from === 'heli' || info.via === 'heli') ? 'heli' : info && info.from === 'limo' ? 'limo' : null); } catch (_) {} ui.showHud(true); try { audio.startAmbience(); } catch (_) {} },
     onExit() { active = false; try { ui.close(); } catch (_) {} ui.showHud(false); try { audio.stopAmbience(); } catch (_) {} },
     update(dt) { venue.update(Math.min(0.1, dt || 0)); },
     dispose() { try { offLang(); } catch (_) {} ui.dispose(); },

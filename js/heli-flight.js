@@ -291,23 +291,34 @@ function maxBy(vals, pos, half) {
 //   o.home {x, z, h}: the pad (take-off unless o.start; landing at the end unless o.land === false); h = parked heading
 //   o.start {x, y, z, h, speed}: start from the helicopter's current state (resume after manual flight)
 //   o.obstacle(x, z): roof heights (defaults to the one given to createFlight() with the same ground function)
+//   o.origin {x, z, h}: V13.1 take-off point when it is not the landing pad (e.g. lift off at the casino, land at home);
+//     defaults to o.home
+//   o.gate {dir, dist, r}: V13.1 approach gate — the final approach is flown along heading dir for the last `dist` m
+//     (a turning circle of radius r tangent to that line), i.e. always over a chosen open sector (e.g. over the lawn in
+//     front of the casino entrance, never across its roof)
 export function buildTour(pois = [], o = {}) {
   const ground = typeof o.ground === 'function' ? o.ground : () => 0;
   const obstacle = typeof o.obstacle === 'function' ? o.obstacle : (telemetry.obstacle && telemetry.ground === o.ground ? telemetry.obstacle : null);
   const home = o.home || { x: 0, z: 0, h: 0 };
   const homeH = isFinite(home.h) ? home.h : 0;
   const LAND = o.land !== false, TAKEOFF = !o.start;
-  const CRUISE = Math.min(MAX_SPEED * 0.95, o.cruise || 66), CRUISE_AGL = o.cruiseAgl || 200, ORBIT_V = o.orbitSpeed || 28;
+  const orig = TAKEOFF && o.origin && isFinite(o.origin.x) && isFinite(o.origin.z) ? o.origin : home;
+  const origH = isFinite(orig.h) ? orig.h : homeH;
+  const CRUISE = Math.min(MAX_SPEED * 0.95, o.cruise || 66), CRUISE_AGL = o.cruiseAgl || 200, ORBIT_V = o.orbitSpeed || 22;
+  // V13.1 low passes: each place is circled LOW (≈ 45 m above the ground, ≥ 30 m above the tallest roof within 40 m of the
+  // track, hard floor 35 m AGL / 25 m over roofs) and slowly; between places the helicopter climbs back to cruise
+  // (descent ramp ≈ 6.5 % ≈ 3–4.5 m/s before a place, climb ramp ≈ 8 % ≈ 3–5.5 m/s after it)
+  const LOW = o.lowAgl || 45, LOW_ROOF = 30, LOW_FLOOR = 35, LOW_ROOF_FLOOR = 25, RAMP_DN = 0.065, RAMP_UP = 0.08;
   const SWEEP = o.sweep != null ? o.sweep : Math.PI * 0.8;
   const FINAL_V = 30, ACC = 1.9, DEC = 1.5, LATG = G * Math.tan(0.44);
   const HOVER0 = 5, HOVER1 = 8;                         // take-off hover / landing hover heights (m AGL)
-  const VS_UP = 7, VS_DN = 5;                           // vertical speed limits on the route (m/s)
-  const gHome = ground(home.x, home.z);
+  const VS_UP = 5.5, VS_DN = 4.5;                         // vertical speed limits on the route (m/s)
+  const gHome = ground(home.x, home.z), gOrig = ground(orig.x, orig.z);
 
   /* ---- nodes: start (point or turning circle), the orbits, home */
   const nodes = [];
-  let startY = gHome + HOVER0, startV = 0;
-  if (TAKEOFF) nodes.push({ x: home.x, z: home.z, r: 0, ds: [0], minSweep: 0, role: 'start' });
+  let startY = gOrig + HOVER0, startV = 0;
+  if (TAKEOFF) nodes.push({ x: orig.x, z: orig.z, r: 0, ds: [0], minSweep: 0, role: 'start' });
   else {
     const s = o.start; startV = Math.max(0, s.speed || 0);
     startY = isFinite(s.y) ? s.y : ground(s.x, s.z) + 60;
@@ -321,32 +332,50 @@ export function buildTour(pois = [], o = {}) {
   }
   for (let i = 0; i < pois.length; i++) {
     const P = pois[i];
-    const R = clamp((P.r || 250) * (o.orbitK || 0.6) + (o.orbitR0 || 120), 200, 520);
-    nodes.push({ x: P.x, z: P.z, r: R, ds: [R, -R, Math.max(180, R * 0.72), -Math.max(180, R * 0.72)], minSweep: SWEEP, role: 'orbit', leg: i, agl: P.agl || 150, poi: P });
+    const R = clamp((P.r || 250) * (o.orbitK || 0.5) + (o.orbitR0 || 100), 170, 460);
+    nodes.push({ x: P.x, z: P.z, r: R, ds: [R, -R, Math.max(160, R * 0.72), -Math.max(160, R * 0.72)], minSweep: SWEEP, role: 'orbit', leg: i, agl: P.agl || LOW, poi: P });
+  }
+  // approach gate: a circle whose exit tangent is the final approach line (heading o.gate.dir, tangent point
+  // o.gate.dist before the pad), so the final is flown exactly along the chosen sector; both turn senses are tried.
+  // Skipped when the helicopter already starts close to the pad / the gate.
+  let gateVar = null;
+  if (LAND && o.gate && isFinite(o.gate.dir)) {
+    const gr = clamp(o.gate.r || 220, 80, 600), gd = Math.max(gr * 1.5, o.gate.dist || 750), s0 = nodes[0];
+    const ux = Math.sin(o.gate.dir), uz = -Math.cos(o.gate.dir);
+    const tx = home.x - ux * gd, tz = home.z - uz * gd;
+    if (Math.hypot(s0.x - tx, s0.z - tz) > gr * 2.2 + (s0.r || 0) && Math.hypot(s0.x - home.x, s0.z - home.z) > gd * 0.8) {
+      gateVar = [1, -1].map((d) => ({ x: tx + d * gr * -uz, z: tz + d * gr * ux, r: gr, ds: [d * gr], minSweep: 0, role: 'via' }));
+      nodes.push(gateVar[0]);
+    }
   }
   if (LAND) nodes.push({ x: home.x, z: home.z, r: 0, ds: [0], minSweep: 0, role: 'home' });
   else if (nodes.length === 1) nodes.push({ x: home.x, z: home.z, r: 0, ds: [0], minSweep: 0, role: 'home' });
   // the start circle: centre depends on the chosen sense → expand into two candidate nodes handled by trying both
-  let senses = null, startNode = nodes[0];
-  const tryStart = (d) => {
-    if (startNode.r <= 0) return chooseSenses(nodes);
-    const c = { ...startNode, x: startNode.sx + d * startNode.r * startNode.rx, z: startNode.sz + d * startNode.r * startNode.rz, ds: [d * startNode.r] };
-    c.th0 = Math.atan2(startNode.sz - c.z, startNode.sx - c.x);
-    const ns = nodes.slice(); ns[0] = c;
-    const sn = chooseSenses(ns);
-    return sn ? { sn, ns } : null;
-  };
-  let nodesUsed = nodes;
-  if (startNode.r > 0) {
-    let best = null;
-    for (const d of [1, -1]) {
-      const r = tryStart(d); if (!r) continue;
-      const len = routeLength(r.ns, r.sn);
-      if (!best || len < best.len) best = { ...r, len };
+  function select(nodesIn) {
+    const startNode = nodesIn[0];
+    if (startNode.r > 0) {
+      let best = null;
+      for (const d of [1, -1]) {
+        const c = { ...startNode, x: startNode.sx + d * startNode.r * startNode.rx, z: startNode.sz + d * startNode.r * startNode.rz, ds: [d * startNode.r] };
+        c.th0 = Math.atan2(startNode.sz - c.z, startNode.sx - c.x);
+        const ns = nodesIn.slice(); ns[0] = c;
+        const sn = chooseSenses(ns); if (!sn) continue;
+        const len = routeLength(ns, sn);
+        if (!best || len < best.len) best = { senses: sn, nodesUsed: ns, len };
+      }
+      if (best) return best;
+      const ns = nodesIn.slice(); ns[0] = { x: startNode.sx, z: startNode.sz, r: 0, ds: [0], minSweep: 0, role: 'start' };
+      const sn = chooseSenses(ns); return { senses: sn, nodesUsed: ns, len: sn ? routeLength(ns, sn) : Infinity };
     }
-    if (best) { senses = best.sn; nodesUsed = best.ns; }
-    else { nodesUsed = nodes.slice(); nodesUsed[0] = { x: startNode.sx, z: startNode.sz, r: 0, ds: [0], minSweep: 0, role: 'start' }; senses = chooseSenses(nodesUsed); }
-  } else senses = chooseSenses(nodesUsed);
+    const sn = chooseSenses(nodesIn); return { senses: sn, nodesUsed: nodesIn, len: sn ? routeLength(nodesIn, sn) : Infinity };
+  }
+  let sel = null;
+  if (gateVar) {
+    const gi = nodes.indexOf(gateVar[0]);
+    for (const g of gateVar) { const ns = nodes.slice(); ns[gi] = g; const r = select(ns); if (r.senses && (!sel || r.len < sel.len)) sel = r; }
+  }
+  if (!sel || !sel.senses) { if (gateVar) nodes.splice(nodes.indexOf(gateVar[0]), 1); sel = select(nodes); }
+  let senses = sel.senses, nodesUsed = sel.nodesUsed;
   if (!senses) {
     // degenerate (concentric places …): drop the orbits' radii to points
     nodesUsed = nodesUsed.map((n) => ({ ...n, r: 0, ds: [0], th0: null }));
@@ -362,7 +391,7 @@ export function buildTour(pois = [], o = {}) {
     if (A.r > 0) {
       const thOut = angOn(A, tg.ax, tg.az), thIn = entry != null ? entry : thOut;
       const sw = sweepOf(A, thIn, thOut, i === 0 ? 0 : A.minSweep);
-      if (sw * A.r > 0.5) prims.push({ type: 'arc', cx: A.x, cz: A.z, r: A.r, d: A.d, th0: thIn, sw, len: sw * A.r, role: A.role, leg: A.leg != null ? A.leg : -1, agl: A.agl });
+      if (sw * A.r > 0.5) prims.push({ type: 'arc', cx: A.x, cz: A.z, r: A.r, d: A.d, th0: thIn, sw, len: sw * A.r, role: A.role === 'via' ? 'return' : A.role, leg: A.leg != null ? A.leg : -1, agl: A.agl });
     }
     const roleL = B.role === 'orbit' ? 'approach' : 'return';
     if (tg.L > 0.5) prims.push({ type: 'line', ax: tg.ax, az: tg.az, ux: tg.ux, uz: tg.uz, len: tg.L, role: roleL, leg: B.role === 'orbit' ? B.leg : -1 });
@@ -411,19 +440,30 @@ export function buildTour(pois = [], o = {}) {
   const GR = new Float64Array(N), OB = new Float64Array(N);
   for (let i = 0; i < N; i++) { GR[i] = ground(X[i], Z[i]); OB[i] = obstacle ? obstacle(X[i], Z[i]) : -Infinity; if (!isFinite(OB[i])) OB[i] = -1e9; }
   const startAgl = startY - ground(X[0], Z[0]);
+  // distance along the route to the next orbit's start / since the last orbit's end (low-pass ramps)
+  const DN = new Float64Array(N).fill(Infinity), DP = new Float64Array(N).fill(Infinity), AN = new Float64Array(N).fill(LOW), AP = new Float64Array(N).fill(LOW);
+  { let sN = Infinity, aN = LOW; for (let i = N - 1; i >= 0; i--) { if (ROLE[i] === 'orbit') { sN = S[i]; aN = prims[PI[i]].agl || LOW; DN[i] = 0; } else DN[i] = sN - S[i]; AN[i] = aN; }
+    let sP = -Infinity, aP = LOW; for (let i = 0; i < N; i++) { if (ROLE[i] === 'orbit') { sP = S[i]; aP = prims[PI[i]].agl || LOW; DP[i] = 0; } else DP[i] = S[i] - sP; AP[i] = aP; } }
+  // roofs beside the track near the places (the low pass keeps a safe radius, not just the roof under the track)
+  const OBL = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    let m = OB[i];
+    if (obstacle && Math.min(DN[i], DP[i]) < 500) for (const rr of [20, 40]) for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, v = obstacle(X[i] + Math.cos(a) * rr, Z[i] + Math.sin(a) * rr); if (isFinite(v) && v > m) m = v; }
+    OBL[i] = m;
+  }
   const AT = new Float64Array(N);
   for (let i = 0; i < N; i++) {
     const r = ROLE[i], p = prims[PI[i]];
-    if (r === 'orbit') AT[i] = p.agl || 150;
-    else if (r === 'approach') {
-      const nextA = (pois[p.leg] && pois[p.leg].agl) || 150;
-      const prevP = PI[i] > 0 ? prims.slice(0, PI[i]).reverse().find((q) => q.role === 'orbit') : null;
-      const prevA = prevP ? prevP.agl || 150 : 140;
-      AT[i] = p.len > 1400 ? CRUISE_AGL : (prevA + nextA) / 2;
-    } else if (r === 'start') AT[i] = Math.max(startAgl, 120);
-    else AT[i] = CRUISE_AGL * 0.85;
+    let a;
+    if (r === 'orbit') a = p.agl || LOW;
+    else if (r === 'approach') a = p.len > 1400 ? CRUISE_AGL : 140;
+    else if (r === 'start') a = Math.max(startAgl, 120);
+    else a = CRUISE_AGL * 0.85;
+    // descend toward the next place, climb back after the last one
+    if (r !== 'orbit') a = Math.max(Math.min(a, AN[i] + DN[i] * RAMP_DN, AP[i] + DP[i] * RAMP_UP), Math.min(AN[i], AP[i]));
+    AT[i] = a;
   }
-  let ATs = boxBy(AT, S, 300, 2);
+  let ATs = boxBy(AT, S, 120, 2);
   // take-off climb ramp until the first orbit, landing glide ceiling after the last one (the orbits keep their height)
   let iFirstOrbit = N, iLastOrbit = -1;
   for (let i = 0; i < N; i++) if (ROLE[i] === 'orbit') { if (iFirstOrbit === N) iFirstOrbit = i; iLastOrbit = i; }
@@ -439,15 +479,18 @@ export function buildTour(pois = [], o = {}) {
   for (let i = 0; i < N; i++) {
     const ref = lerp(GR[i], Math.max(GR[i], GM[i]), smooth(10, 50, ATs[i]));
     const sFrom = S[i], sTo = SE(i);
-    let minAgl = 70, clr = 30;
+    // safety floor: 70 m AGL / 30 m over roofs in transit, easing down to 35 m AGL / 25 m over the roofs beside the
+    // track on a low pass
+    const dO = Math.min(DN[i], DP[i]);
+    let minAgl = Math.min(70, LOW_FLOOR + dO * 0.08), clr = Math.min(30, LOW_ROOF_FLOOR + dO * 0.02);
     if (TAKEOFF) { minAgl = Math.min(minAgl, HOVER0 + sFrom * 0.15); clr = Math.min(clr, 6 + sFrom * 0.1); }
     else { minAgl = Math.min(minAgl, startAgl + sFrom * 0.15); clr = Math.min(clr, Math.max(0, startY - Math.max(GR[0], OB[0]) - 2) + sFrom * 0.1); }
     if (LAND) { minAgl = Math.min(minAgl, HOVER1 + sTo * 0.08); clr = Math.min(clr, 6 + sTo * 0.1); }
-    FL[i] = Math.max(GR[i] + minAgl, OBM[i] + clr);
-    Y[i] = Math.max(ref + ATs[i], FL[i]);
+    FL[i] = Math.max(GR[i] + minAgl, OBM[i] + clr, dO < 500 ? OBL[i] + clr : -Infinity);
+    Y[i] = Math.max(ref + ATs[i], FL[i], dO < 1 ? OBL[i] + LOW_ROOF : -Infinity);
   }
   // pins (start altitude, landing hover)
-  Y[0] = TAKEOFF ? gHome + HOVER0 : startY;
+  Y[0] = TAKEOFF ? gOrig + HOVER0 : startY;
   if (LAND) Y[N - 1] = GR[N - 1] + HOVER1;
   // vertical speed limits (raise only → never below the safety floor)
   const dtAt = (i, j) => (S[j] - S[i]) / Math.max(1.5, (V[i] + V[j]) / 2);
@@ -455,7 +498,7 @@ export function buildTour(pois = [], o = {}) {
   for (let i = N - 2; i >= 0; i--) Y[i] = Math.max(Y[i], Y[i + 1] - VS_UP * dtAt(i, i + 1));
   { const Ys = boxBy(Y, S, 45, 2); for (let i = 1; i < N - 1; i++) Y[i] = Math.max(Ys[i], FL[i] - 4); }
   // the ends again (smoothing may have moved them by centimetres)
-  Y[0] = TAKEOFF ? gHome + HOVER0 : startY;
+  Y[0] = TAKEOFF ? gOrig + HOVER0 : startY;
   if (LAND) Y[N - 1] = GR[N - 1] + HOVER1;
 
   /* ---- time table (route only) */
@@ -483,9 +526,9 @@ export function buildTour(pois = [], o = {}) {
   /* ---- hover segments: take-off lift + pedal turn, landing pedal turn + touch-down */
   const h0 = H[0], hEnd = H[N - 1];
   const turnT = (dh) => Math.max(2.5, Math.abs(dh) / 0.24);
-  const LIFT_T = TAKEOFF ? 5.0 : 0, TURN0_T = TAKEOFF || startV < 8 ? turnT(wrapPi(h0 - (TAKEOFF ? homeH : o.start.h || 0))) : 0;
+  const LIFT_T = TAKEOFF ? 5.0 : 0, TURN0_T = TAKEOFF || startV < 8 ? turnT(wrapPi(h0 - (TAKEOFF ? origH : o.start.h || 0))) : 0;
   const TURN1_T = LAND ? turnT(wrapPi(homeH - hEnd)) : 0, DOWN_T = LAND ? 7.5 : 0;
-  const h00 = TAKEOFF ? homeH : o.start ? o.start.h || 0 : h0;
+  const h00 = TAKEOFF ? origH : o.start ? o.start.h || 0 : h0;
   const T0 = LIFT_T + TURN0_T, T1 = T0 + ROUTE_T, T2 = T1 + TURN1_T, duration = T2 + DOWN_T;
   const T = new Float64Array(N); for (let i = 0; i < N; i++) T[i] = TR[i] + T0;
 
@@ -521,7 +564,7 @@ export function buildTour(pois = [], o = {}) {
       out.x = x0; out.z = z0; out.speed = 0; out.tilt = 0; out.roll = 0;
       if (TAKEOFF && t < LIFT_T) {
         const u = t / LIFT_T, e = smoother(u);
-        out.y = gHome + HOVER0 * e; out.vy = HOVER0 * 30 * u * u * (1 - u) * (1 - u) / LIFT_T; out.h = homeH;
+        out.y = gOrig + HOVER0 * e; out.vy = HOVER0 * 30 * u * u * (1 - u) * (1 - u) / LIFT_T; out.h = origH;
         out.tilt = -0.025 * Math.sin(Math.PI * u); out.roll = 0.012 * Math.sin(TAU * u);
       } else {
         const u = TURN0_T > 0 ? (t - LIFT_T) / TURN0_T : 1;
@@ -553,7 +596,8 @@ export function buildTour(pois = [], o = {}) {
     if (t >= duration - 1e-6 && LAND) { out.y = gEnd; out.agl = 0; out.vy = 0; }
     let leg = -1, phase = 'transit';
     for (let k = 0; k < legs.length; k++) { if (t >= legs[k].tApproach - 1e-6 && t < legs[k].t1) { leg = k; phase = t >= legs[k].t0 ? 'orbit' : 'approach'; break; } }
-    if (leg < 0) phase = legs.length && t >= legs[legs.length - 1].t1 ? 'return' : TAKEOFF ? 'takeoff' : 'transit';
+    // (no places at all = a direct flight, e.g. to the casino: 'return' toward the destination once the climb-out is done)
+    if (leg < 0) phase = legs.length && t >= legs[legs.length - 1].t1 ? 'return' : !legs.length ? 'return' : TAKEOFF ? 'takeoff' : 'transit';
     if (TAKEOFF && (t < T0 || (out.agl < 45 && (!legs.length || t < legs[0].t0) && t < T0 + 60))) phase = 'takeoff';
     if (LAND && (t >= T1 || (phase === 'return' && out.agl < 60 && t > T1 - 90))) phase = 'landing';
     out.leg = leg; out.phase = phase;
@@ -561,7 +605,7 @@ export function buildTour(pois = [], o = {}) {
     return out;
   }
   let vmax = 0; for (let i = 0; i < N; i++) if (V[i] > vmax) vmax = V[i];
-  const path = { duration, legs, sample, n: N, points: { X, Y, Z, V, T, S, ROLE }, length: LEN, maxSpeed: vmax, home, takeoff: TAKEOFF, land: LAND,
+  const path = { duration, legs, sample, n: N, points: { X, Y, Z, V, T, S, ROLE }, length: LEN, maxSpeed: vmax, home, origin: orig, takeoff: TAKEOFF, land: LAND,
     times: { lift: LIFT_T, turn0: TURN0_T, route: ROUTE_T, turn1: TURN1_T, down: DOWN_T } };
   telemetry.path = path;
   return path;
